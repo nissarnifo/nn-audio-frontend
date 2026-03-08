@@ -82,11 +82,18 @@ export default function CheckoutPage() {
       }
 
       if (paymentMethod === 'RAZORPAY') {
+        // Guard: Razorpay SDK must be loaded (injected in layout.tsx)
+        type RazorpayWindow = Window & { Razorpay?: new (opts: Record<string, unknown>) => { open(): void } }
+        if (!(window as RazorpayWindow).Razorpay) {
+          toast.error('Payment service unavailable. Please refresh and try again.')
+          return
+        }
+
         // Create Razorpay order
         const { data: rpOrder } = await paymentsApi.createRazorpayOrder({ amount: total })
 
         await new Promise<void>((resolve, reject) => {
-          const rzp = new (window as Window & { Razorpay: new (opts: Record<string, unknown>) => { open(): void } }).Razorpay({
+          const rzp = new (window as RazorpayWindow).Razorpay!({
             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
             amount: rpOrder.amount,
             currency: rpOrder.currency,

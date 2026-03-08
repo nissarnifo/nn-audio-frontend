@@ -5,18 +5,33 @@ import Footer from '@/components/layout/Footer'
 import Providers from './providers'
 
 export const metadata: Metadata = {
-  title: 'N & N Audio Systems — Precision Audio, Made in India',
+  title: {
+    default: 'N & N Audio Systems — Precision Audio, Made in India',
+    template: '%s | N & N Audio Systems',
+  },
   description:
     'Premium amplifiers, speakers, subwoofers and audio equipment. Shop N & N Audio Systems — trusted by audiophiles across India.',
   keywords: 'audio systems, amplifier, speaker, subwoofer, car audio, India',
+  openGraph: {
+    siteName: 'N & N Audio Systems',
+    type: 'website',
+    locale: 'en_IN',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Google Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600&family=Share+Tech+Mono&display=swap"
+          rel="stylesheet"
+        />
+        {/* Razorpay SDK — loaded once globally so window.Razorpay is always available */}
+        <script src="https://checkout.razorpay.com/v1/checkout.js" async />
       </head>
       <body className="hud-grid flex flex-col min-h-screen">
         <Providers>

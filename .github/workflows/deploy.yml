@@ -1,52 +1,102 @@
-name: Deploy to Vercel
+name: CI / Deploy
 
 on:
   push:
     branches:
       - main
   pull_request:
+    types: [opened, synchronize, reopened]
     branches:
       - main
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  NODE_VERSION: '20'
 
+# ─────────────────────────────────────────────────────────────────────
+# JOB 1 — Lint & Type Check (runs on every push/PR)
+# ─────────────────────────────────────────────────────────────────────
 jobs:
-  # ── Lint & Type Check ─────────────────────────────────────────────
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
+      - name: ESLint
         run: npm run lint
 
-  # ── Deploy Preview (PRs) ──────────────────────────────────────────
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+# ─────────────────────────────────────────────────────────────────────
+# JOB 2 — Build check (runs on every push/PR — verifies the app builds)
+# ─────────────────────────────────────────────────────────────────────
+  build-check:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: lint
+    env:
+      # Provide dummy env vars so Next.js build doesn't fail on missing vars
+      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1' }}
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_dummy' }}
+      NEXTAUTH_URL: 'http://localhost:3000'
+      NEXTAUTH_SECRET: 'build-check-secret-32chars-placeholder'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js app
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build-${{ github.sha }}
+          path: .next/
+          retention-days: 1
+
+# ─────────────────────────────────────────────────────────────────────
+# JOB 3 — Deploy Preview (PRs only — test before merge)
+# ─────────────────────────────────────────────────────────────────────
   deploy-preview:
     name: Deploy Preview
     runs-on: ubuntu-latest
-    needs: lint
+    needs: build-check
     if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+      issues: write
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install Vercel CLI
@@ -55,46 +105,75 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Pull Vercel environment
+      - name: Pull Vercel environment (preview)
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Build project
+      - name: Build for Vercel (preview)
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to Vercel Preview
         id: deploy
         run: |
-          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-          echo "preview_url=$url" >> $GITHUB_OUTPUT
+          DEPLOY_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "preview_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Deployed preview to: $DEPLOY_URL"
 
-      - name: Comment preview URL on PR
-        uses: actions/github-script@v7
+      - name: Find existing bot comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
         with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Vercel Preview Deployed ✅\n\n🔗 **Preview URL:** ${{ steps.deploy.outputs.preview_url }}\n\n_Deployed from commit \`${{ github.sha }}\`_`
-            })
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- nn-audio-preview -->'
 
-  # ── Deploy Production (main branch) ──────────────────────────────
+      - name: Post / Update preview URL comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            <!-- nn-audio-preview -->
+            ## ⚡ Vercel Preview Deployed
+
+            | | |
+            |---|---|
+            | **Preview URL** | [${{ steps.deploy.outputs.preview_url }}](${{ steps.deploy.outputs.preview_url }}) |
+            | **Commit** | `${{ github.sha }}` |
+            | **Branch** | `${{ github.head_ref }}` |
+            | **Status** | ✅ Ready |
+
+            ### Test Checklist
+            - [ ] Home page loads with JARVIS theme
+            - [ ] Products catalog and search work
+            - [ ] Product detail page and gallery
+            - [ ] Cart add/remove/update quantity
+            - [ ] Checkout flow (address → payment → confirm)
+            - [ ] Login / Register
+            - [ ] Account pages (orders, profile, addresses)
+            - [ ] Admin pages (if applicable)
+
+            _Updated at: ${{ github.event.pull_request.updated_at }}_
+
+# ─────────────────────────────────────────────────────────────────────
+# JOB 4 — Deploy Production (main branch push only — after merge)
+# ─────────────────────────────────────────────────────────────────────
   deploy-production:
     name: Deploy Production
     runs-on: ubuntu-latest
-    needs: lint
+    needs: build-check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment:
       name: production
       url: ${{ steps.deploy.outputs.production_url }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install Vercel CLI
@@ -103,17 +182,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Pull Vercel environment
+      - name: Pull Vercel environment (production)
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Build project
+      - name: Build for Vercel (production)
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to Vercel Production
         id: deploy
         run: |
-          url=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "production_url=$url" >> $GITHUB_OUTPUT
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "production_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Production live at: $DEPLOY_URL"
 
-      - name: Print deployment URL
-        run: echo "Production deployed to ${{ steps.deploy.outputs.production_url }}"
+      - name: Create deployment summary
+        run: |
+          echo "## Production Deployment ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **URL** | ${{ steps.deploy.outputs.production_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Deployed by** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY

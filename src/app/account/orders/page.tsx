@@ -1,0 +1,100 @@
+'use client'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Package } from 'lucide-react'
+import { useOrders } from '@/hooks'
+import { useAuthStore } from '@/store/auth.store'
+import { StatusBadge, EmptyState, PageLoading } from '@/components/ui'
+import { fmt, fmtDate } from '@/lib/utils'
+import { useEffect } from 'react'
+
+const STATUS_STEPS = ['PROCESSING', 'SHIPPED', 'DELIVERED']
+
+export default function OrdersPage() {
+  const router = useRouter()
+  const { isLoggedIn } = useAuthStore()
+  const { data: orders, isLoading } = useOrders()
+
+  useEffect(() => {
+    if (!isLoggedIn) router.push('/auth/login')
+  }, [isLoggedIn, router])
+
+  if (isLoading) return <PageLoading />
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-10">
+      <h1 className="font-heading text-4xl text-[#E8F4FD] tracking-wider mb-2">MY ORDERS</h1>
+      <div className="h-0.5 w-10 bg-[#00D4FF] mb-8" />
+
+      {!orders || orders.length === 0 ? (
+        <EmptyState
+          icon={<Package size={56} />}
+          title="No Orders Yet"
+          description="Your order history will appear here."
+          action={<Link href="/products" className="btn-gold px-8 py-3">SHOP NOW</Link>}
+        />
+      ) : (
+        <div className="space-y-6">
+          {orders.map((order) => {
+            const stepIdx = STATUS_STEPS.indexOf(order.status)
+            return (
+              <div key={order.id} className="hud-card p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                  <div>
+                    <p className="font-mono text-xs text-[#4A7FA5] mb-1">ORDER ID</p>
+                    <p className="font-mono text-[#00D4FF]">{order.order_number}</p>
+                  </div>
+                  <div className="text-right">
+                    <StatusBadge status={order.status} />
+                    <p className="font-mono text-xs text-[#4A7FA5] mt-1">{fmtDate(order.created_at)}</p>
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div className="space-y-1 mb-4">
+                  {order.items.slice(0, 2).map((item) => (
+                    <p key={item.id} className="text-sm text-[#E8F4FD]">
+                      {item.product.name}
+                      <span className="text-[#4A7FA5]"> × {item.qty}</span>
+                    </p>
+                  ))}
+                  {order.items.length > 2 && (
+                    <p className="text-xs text-[#4A7FA5]">+{order.items.length - 2} more items</p>
+                  )}
+                </div>
+
+                {/* Tracking timeline */}
+                {order.status !== 'CANCELLED' && (
+                  <div className="flex items-center gap-0 mb-4">
+                    {STATUS_STEPS.map((s, i) => {
+                      const done = i <= stepIdx
+                      const active = i === stepIdx
+                      return (
+                        <div key={s} className="flex items-center flex-1">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-3 h-3 rounded-full border-2 ${done ? 'border-[#00FF88] bg-[#00FF88]' : 'border-[rgba(0,212,255,0.3)]'} ${active ? 'animate-cyanglow' : ''}`} />
+                            <p className={`font-mono text-[9px] mt-1 ${done ? 'text-[#00FF88]' : 'text-[#4A7FA5]'}`}>{s.split('')[0]+s.slice(1).toLowerCase()}</p>
+                          </div>
+                          {i < STATUS_STEPS.length - 1 && (
+                            <div className={`flex-1 h-0.5 mx-1 ${done && i < stepIdx ? 'bg-[#00FF88]' : 'bg-[rgba(0,212,255,0.15)]'}`} />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[#FFB700] font-bold">{fmt(order.total)}</span>
+                  <Link href={`/account/orders/${order.id}`} className="btn-cyan text-xs">
+                    VIEW DETAILS
+                  </Link>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}

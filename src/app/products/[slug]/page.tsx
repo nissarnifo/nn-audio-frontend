@@ -32,7 +32,7 @@ export default function ProductDetailPage() {
   function handleAdd() {
     if (!variant) return
     addItem(product!, variant, qty)
-    toast.success(`${product.name} added to cart!`)
+    toast.success(`${product!.name} added to cart!`)
   }
 
   return (

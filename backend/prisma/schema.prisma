@@ -61,6 +61,8 @@ model User {
   phone      String?
   password   String?
   googleId   String?  @unique @map("google_id")
+  githubId   String?  @unique @map("github_id")
+  discordId  String?  @unique @map("discord_id")
   role       Role     @default(CUSTOMER)
   createdAt  DateTime @default(now()) @map("created_at")
 

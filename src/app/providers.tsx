@@ -1,8 +1,8 @@
 'use client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { SessionProvider } from 'next-auth/react'
 import { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
-import { GoogleOAuthProvider } from '@react-oauth/google'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -18,22 +18,22 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}>
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#0D1B2A',
-            color: '#E8F4FD',
-            border: '1px solid rgba(0,212,255,0.2)',
-            fontFamily: 'Share Tech Mono, monospace',
-            fontSize: '13px',
-          },
-        }}
-      />
-    </QueryClientProvider>
-    </GoogleOAuthProvider>
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#0D1B2A',
+              color: '#E8F4FD',
+              border: '1px solid rgba(0,212,255,0.2)',
+              fontFamily: 'Share Tech Mono, monospace',
+              fontSize: '13px',
+            },
+          }}
+        />
+      </QueryClientProvider>
+    </SessionProvider>
   )
 }

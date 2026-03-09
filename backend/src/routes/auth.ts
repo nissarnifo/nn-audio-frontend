@@ -1,10 +1,7 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { OAuth2Client } from 'google-auth-library'
 import { prisma, requireAuth, AuthRequest } from '../middleware/auth'
-
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 const router = Router()
 
@@ -44,23 +41,44 @@ router.post('/login', async (req, res) => {
   res.json({ user: safeUser(user), token: signToken(user.id, user.role) })
 })
 
-// POST /api/v1/auth/google
-router.post('/google', async (req, res) => {
-  const { idToken } = req.body
-  if (!idToken) { res.status(400).json({ error: 'idToken required' }); return }
-  const ticket = await googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID })
-  const payload = ticket.getPayload()
-  if (!payload?.email) { res.status(400).json({ error: 'Invalid Google token' }); return }
-  let user = await prisma.user.findUnique({ where: { email: payload.email } })
+// POST /api/v1/auth/oauth  — unified for Google, GitHub, Discord via NextAuth
+router.post('/oauth', async (req, res) => {
+  const { provider, providerId, email, name } = req.body as {
+    provider: 'google' | 'github' | 'discord'
+    providerId: string
+    email: string
+    name: string
+  }
+  if (!provider || !providerId || !email) {
+    res.status(400).json({ error: 'provider, providerId and email are required' })
+    return
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = prisma.user as any
+
+  // Find by provider ID first, then by email
+  const providerWhere =
+    provider === 'google' ? { googleId: providerId }
+    : provider === 'github' ? { githubId: providerId }
+    : { discordId: providerId }
+
+  let user = (await db.findUnique({ where: providerWhere })) ?? (await db.findUnique({ where: { email } }))
+
+  const providerData =
+    provider === 'google' ? { googleId: providerId }
+    : provider === 'github' ? { githubId: providerId }
+    : { discordId: providerId }
+
   if (user) {
-    if (!user.googleId) {
-      user = await prisma.user.update({ where: { id: user.id }, data: { googleId: payload.sub } })
+    const alreadyLinked = user[`${provider}Id`]
+    if (!alreadyLinked) {
+      user = await db.update({ where: { id: user.id }, data: providerData })
     }
   } else {
-    user = await prisma.user.create({
-      data: { name: payload.name || payload.email, email: payload.email, googleId: payload.sub },
-    })
+    user = await db.create({ data: { name: name || email, email, ...providerData } })
   }
+
   res.json({ user: safeUser(user), token: signToken(user.id, user.role) })
 })
 

@@ -1,7 +1,10 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { OAuth2Client } from 'google-auth-library'
 import { prisma, requireAuth, AuthRequest } from '../middleware/auth'
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
 const router = Router()
 
@@ -9,8 +12,8 @@ function signToken(id: string, role: string) {
   return jwt.sign({ id, role }, process.env.JWT_SECRET!, { expiresIn: '30d' })
 }
 
-function safeUser(user: { id: string; name: string; email: string; phone: string; role: string; createdAt: Date }) {
-  return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role, created_at: user.createdAt }
+function safeUser(user: { id: string; name: string; email: string; phone?: string | null; role: string; createdAt: Date }) {
+  return { id: user.id, name: user.name, email: user.email, phone: user.phone ?? '', role: user.role, created_at: user.createdAt }
 }
 
 // POST /api/v1/auth/register
@@ -34,9 +37,29 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body
   const user = await prisma.user.findUnique({ where: { email } })
-  if (!user || !(await bcrypt.compare(password, user.password))) {
+  if (!user || !user.password || !(await bcrypt.compare(password as string, user.password))) {
     res.status(401).json({ error: 'Invalid credentials' })
     return
+  }
+  res.json({ user: safeUser(user), token: signToken(user.id, user.role) })
+})
+
+// POST /api/v1/auth/google
+router.post('/google', async (req, res) => {
+  const { idToken } = req.body
+  if (!idToken) { res.status(400).json({ error: 'idToken required' }); return }
+  const ticket = await googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID })
+  const payload = ticket.getPayload()
+  if (!payload?.email) { res.status(400).json({ error: 'Invalid Google token' }); return }
+  let user = await prisma.user.findUnique({ where: { email: payload.email } })
+  if (user) {
+    if (!user.googleId) {
+      user = await prisma.user.update({ where: { id: user.id }, data: { googleId: payload.sub } })
+    }
+  } else {
+    user = await prisma.user.create({
+      data: { name: payload.name || payload.email, email: payload.email, googleId: payload.sub },
+    })
   }
   res.json({ user: safeUser(user), token: signToken(user.id, user.role) })
 })
@@ -62,7 +85,7 @@ router.put('/me', requireAuth, async (req: AuthRequest, res) => {
 router.put('/me/password', requireAuth, async (req: AuthRequest, res) => {
   const { currentPassword, newPassword } = req.body
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } })
-  if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+  if (!user || !user.password || !(await bcrypt.compare(currentPassword, user.password))) {
     res.status(400).json({ error: 'Current password is incorrect' })
     return
   }

@@ -136,6 +136,9 @@ export const authApi = {
   logout() {
     return api.post('/auth/logout')
   },
+  googleAuth(idToken: string) {
+    return api.post<AuthResponse>('/auth/google', { idToken })
+  },
 }
 
 /* ─── Payments ───────────────────────────────────────────────────── */

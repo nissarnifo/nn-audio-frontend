@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
+import { GoogleLogin } from '@react-oauth/google'
 import { authApi } from '@/services/api'
 import { useAuthStore } from '@/store/auth.store'
 import { Spinner } from '@/components/ui'
@@ -14,6 +15,21 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  async function handleGoogleSuccess(credentialResponse: { credential?: string }) {
+    if (!credentialResponse.credential) return
+    setLoading(true)
+    try {
+      const { data } = await authApi.googleAuth(credentialResponse.credential)
+      setUser(data.user, data.token)
+      toast.success(`Welcome, ${data.user.name}!`)
+      router.push(data.user.role === 'ADMIN' ? '/admin' : '/')
+    } catch {
+      toast.error('Google sign-in failed')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -84,6 +100,25 @@ export default function LoginPage() {
               {loading ? <><Spinner size={16} /> SIGNING IN...</> : 'SIGN IN'}
             </button>
           </form>
+
+          <div className="mt-6">
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+              <span className="text-[#4A7FA5] text-xs font-mono">OR</span>
+              <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+            </div>
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error('Google sign-in failed')}
+                theme="filled_black"
+                shape="rectangular"
+                size="large"
+                text="signin_with"
+                width="320"
+              />
+            </div>
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-[#4A7FA5] text-sm">

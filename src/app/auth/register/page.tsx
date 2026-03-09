@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
+import { GoogleLogin } from '@react-oauth/google'
 import { authApi } from '@/services/api'
 import { useAuthStore } from '@/store/auth.store'
 import { Spinner } from '@/components/ui'
@@ -17,6 +18,21 @@ export default function RegisterPage() {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
+  }
+
+  async function handleGoogleSuccess(credentialResponse: { credential?: string }) {
+    if (!credentialResponse.credential) return
+    setLoading(true)
+    try {
+      const { data } = await authApi.googleAuth(credentialResponse.credential)
+      setUser(data.user, data.token)
+      toast.success('Account created! Welcome to N & N Audio Systems.')
+      router.push('/')
+    } catch {
+      toast.error('Google sign-up failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -105,6 +121,25 @@ export default function RegisterPage() {
               {loading ? <><Spinner size={16} /> CREATING ACCOUNT...</> : 'CREATE ACCOUNT'}
             </button>
           </form>
+
+          <div className="mt-6">
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+              <span className="text-[#4A7FA5] text-xs font-mono">OR</span>
+              <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+            </div>
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error('Google sign-up failed')}
+                theme="filled_black"
+                shape="rectangular"
+                size="large"
+                text="signup_with"
+                width="320"
+              />
+            </div>
+          </div>
 
           <div className="mt-6 text-center">
             <p className="text-[#4A7FA5] text-sm">

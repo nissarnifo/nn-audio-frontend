@@ -3,7 +3,7 @@ services:
     name: nn-audio-backend
     runtime: node
     buildCommand: npm install && npm run db:generate && npm run build
-    startCommand: npm run db:migrate && npm start
+    startCommand: npx prisma db push && npm start
     envVars:
       - key: NODE_ENV
         value: production

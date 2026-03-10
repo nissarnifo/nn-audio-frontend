@@ -178,6 +178,21 @@ router.post('/:id/images', requireAdmin, upload.single('image'), async (req: Aut
   res.status(201).json({ id: image.id, url: image.url, is_primary: image.isPrimary, order: image.order })
 })
 
+// PUT /api/v1/products/:productId/images/:imageId/primary (admin)
+router.put('/:productId/images/:imageId/primary', requireAdmin, async (req: AuthRequest, res) => {
+  const { productId, imageId } = req.params
+  const image = await prisma.productImage.findUnique({ where: { id: imageId } })
+  if (!image || image.productId !== productId) { res.status(404).json({ error: 'Image not found' }); return }
+
+  await prisma.$transaction([
+    prisma.productImage.updateMany({ where: { productId }, data: { isPrimary: false } }),
+    prisma.productImage.update({ where: { id: imageId }, data: { isPrimary: true } }),
+  ])
+
+  const images = await prisma.productImage.findMany({ where: { productId }, orderBy: { order: 'asc' } })
+  res.json(images.map((img) => ({ id: img.id, url: img.url, is_primary: img.isPrimary, order: img.order })))
+})
+
 // DELETE /api/v1/products/:productId/images/:imageId (admin)
 router.delete('/:productId/images/:imageId', requireAdmin, async (req: AuthRequest, res) => {
   const image = await prisma.productImage.findUnique({ where: { id: req.params.imageId } })

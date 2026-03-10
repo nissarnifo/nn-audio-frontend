@@ -1,8 +1,6 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useAdminOrders, useUpdateOrderStatus } from '@/hooks'
-import { useAuthStore } from '@/store/auth.store'
 import { StatusBadge, PageLoading, SectionHeader } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import type { OrderStatus } from '@/types'
@@ -10,15 +8,9 @@ import type { OrderStatus } from '@/types'
 const STATUSES: OrderStatus[] = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
 export default function AdminOrdersPage() {
-  const router = useRouter()
-  const { isAdmin } = useAuthStore()
   const [statusFilter, setStatusFilter] = useState('')
   const { data, isLoading } = useAdminOrders({ status: statusFilter || undefined })
   const { mutate: updateStatus } = useUpdateOrderStatus()
-
-  useEffect(() => {
-    if (!isAdmin) router.push('/auth/login')
-  }, [isAdmin, router])
 
   if (isLoading) return <PageLoading />
 

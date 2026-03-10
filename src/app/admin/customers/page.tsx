@@ -1,21 +1,13 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { useAdminCustomers } from '@/hooks'
-import { useAuthStore } from '@/store/auth.store'
 import { PageLoading, SectionHeader } from '@/components/ui'
 import { fmtDate } from '@/lib/utils'
 
 export default function AdminCustomersPage() {
-  const router = useRouter()
-  const { isAdmin } = useAuthStore()
   const [search, setSearch] = useState('')
   const { data, isLoading } = useAdminCustomers({ search: search || undefined })
-
-  useEffect(() => {
-    if (!isAdmin) router.push('/auth/login')
-  }, [isAdmin, router])
 
   if (isLoading) return <PageLoading />
 

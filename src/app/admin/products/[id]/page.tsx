@@ -1,9 +1,7 @@
 'use client'
-import { useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { useProductById, useUpdateProduct } from '@/hooks'
-import { useAuthStore } from '@/store/auth.store'
 import ProductForm from '@/components/admin/ProductForm'
 import ImageUploader from '@/components/admin/ImageUploader'
 import { PageLoading, SectionHeader } from '@/components/ui'
@@ -14,16 +12,11 @@ import type { Product } from '@/types'
 export default function AdminProductEditPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { isAdmin } = useAuthStore()
   const qc = useQueryClient()
   const isNew = id === 'new'
 
   const { data: product, isLoading } = useProductById(isNew ? '' : id)
   const { mutateAsync: updateProduct, isPending } = useUpdateProduct()
-
-  useEffect(() => {
-    if (!isAdmin) router.push('/auth/login')
-  }, [isAdmin, router])
 
   if (!isNew && isLoading) return <PageLoading />
 

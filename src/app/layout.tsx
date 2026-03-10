@@ -3,6 +3,7 @@ import './globals.css'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import Providers from './providers'
+import SessionSync from '@/components/auth/SessionSync'
 
 export const metadata: Metadata = {
   title: {
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="hud-grid flex flex-col min-h-screen">
         <Providers>
+          <SessionSync />
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />

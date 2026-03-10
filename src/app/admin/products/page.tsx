@@ -1,24 +1,16 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Edit, Plus } from 'lucide-react'
 import { useProducts } from '@/hooks'
-import { useAuthStore } from '@/store/auth.store'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { Badge, PageLoading, SectionHeader } from '@/components/ui'
 import type { ProductCategory } from '@/types'
 
 export default function AdminProductsPage() {
-  const router = useRouter()
-  const { isAdmin } = useAuthStore()
   const [category, setCategory] = useState<ProductCategory | undefined>()
   const { data, isLoading } = useProducts({ category, limit: 50 })
-
-  useEffect(() => {
-    if (!isAdmin) router.push('/auth/login')
-  }, [isAdmin, router])
 
   if (isLoading) return <PageLoading />
 

@@ -1,21 +1,12 @@
 'use client'
-import { useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { TrendingUp, ShoppingBag, Users, Package, AlertCircle } from 'lucide-react'
 import { useAdminStats } from '@/hooks'
-import { useAuthStore } from '@/store/auth.store'
-import { fmt, fmtDate } from '@/lib/utils'
+import { fmt } from '@/lib/utils'
 import { PageLoading, StatusBadge, SectionHeader } from '@/components/ui'
 
 export default function AdminDashboard() {
-  const router = useRouter()
-  const { isAdmin } = useAuthStore()
   const { data: stats, isLoading } = useAdminStats()
-
-  useEffect(() => {
-    if (!isAdmin) router.push('/auth/login')
-  }, [isAdmin, router])
 
   if (isLoading) return <PageLoading />
 

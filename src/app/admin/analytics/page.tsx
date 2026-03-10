@@ -1,12 +1,9 @@
 'use client'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts'
 import { useAdminStats } from '@/hooks'
-import { useAuthStore } from '@/store/auth.store'
 import { fmt } from '@/lib/utils'
 import { PageLoading, SectionHeader } from '@/components/ui'
 
@@ -25,13 +22,7 @@ const TooltipStyle = {
 }
 
 export default function AdminAnalyticsPage() {
-  const router = useRouter()
-  const { isAdmin } = useAuthStore()
   const { data: stats, isLoading } = useAdminStats()
-
-  useEffect(() => {
-    if (!isAdmin) router.push('/auth/login')
-  }, [isAdmin, router])
 
   if (isLoading) return <PageLoading />
 

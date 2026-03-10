@@ -54,6 +54,9 @@ export const productsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+  setPrimaryImage(productId: string, imageId: string) {
+    return api.put(`/products/${productId}/images/${imageId}/primary`)
+  },
   deleteImage(productId: string, imageId: string) {
     return api.delete(`/products/${productId}/images/${imageId}`)
   },

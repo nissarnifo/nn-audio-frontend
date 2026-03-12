@@ -38,7 +38,7 @@ export default function HomePage() {
             <p className="font-mono text-[#00D4FF] text-sm tracking-widest mb-4">
               ⚡ PRECISION AUDIO · MADE IN INDIA
             </p>
-            <h1 className="inline-flex items-center gap-0 mb-6 border border-[#00D4FF] rounded-md overflow-hidden shadow-[0_0_18px_2px_rgba(0,212,255,0.3)]">
+            <h1 className="inline-flex items-center gap-0 mb-6 border-2 border-[#00D4FF] rounded-md overflow-hidden" style={{animation:'logoBlink 1.5s ease-in-out infinite'}}>
               <span className="bg-[#00D4FF] px-3 py-2 md:px-4 md:py-3 font-heading text-2xl md:text-4xl text-[#0A0E1A] font-black tracking-widest leading-none">
                 N&amp;N
               </span>

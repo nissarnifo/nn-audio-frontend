@@ -207,6 +207,10 @@ body {
   0%, 100% { box-shadow: 0 0 5px rgba(0,212,255,0.3); }
   50%       { box-shadow: 0 0 20px rgba(0,212,255,0.8); }
 }
+@keyframes logoBlink {
+  0%, 100% { box-shadow: 0 0 8px 2px rgba(0,212,255,0.4); opacity: 1; }
+  50%       { box-shadow: 0 0 28px 6px rgba(0,212,255,0.9); opacity: 0.85; }
+}
 @keyframes shimmer {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(100%); }

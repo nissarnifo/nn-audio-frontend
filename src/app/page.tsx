@@ -38,13 +38,8 @@ export default function HomePage() {
             <p className="font-mono text-[#00D4FF] text-sm tracking-widest mb-4">
               ⚡ PRECISION AUDIO · MADE IN INDIA
             </p>
-            <h1 className="font-heading leading-none tracking-wider mb-6 whitespace-nowrap flex items-center gap-0">
-              <span className="text-4xl md:text-6xl text-[#E8F4FD]">
-                N&amp;N&nbsp;
-              </span>
-              <span className="text-4xl md:text-6xl text-[#00D4FF] animate-cyanglow">
-                AUDIO SYSTEMS
-              </span>
+            <h1 className="font-heading text-4xl md:text-6xl leading-none tracking-wider mb-6 text-[#00D4FF] animate-cyanglow whitespace-nowrap">
+              N&amp;N AUDIO SYSTEMS
             </h1>
             <p className="text-[#4A7FA5] text-lg leading-relaxed mb-8 max-w-xl">
               N &amp; N Audio Systems crafts premium amplifiers, speakers and subwoofers

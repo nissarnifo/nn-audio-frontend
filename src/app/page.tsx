@@ -39,11 +39,10 @@ export default function HomePage() {
               ⚡ PRECISION AUDIO · MADE IN INDIA
             </p>
             <h1 className="font-heading text-5xl md:text-7xl text-[#E8F4FD] leading-none tracking-wider mb-6">
-              SOUND THAT{' '}
+              N <span className="text-[#00D4FF] animate-cyanglow inline-block px-1 rounded">&amp;</span> N{' '}
               <span className="text-[#00D4FF] animate-cyanglow inline-block px-1 rounded">
-                DEFINES
-              </span>{' '}
-              YOU
+                AUDIO SYSTEMS
+              </span>
             </h1>
             <p className="text-[#4A7FA5] text-lg leading-relaxed mb-8 max-w-xl">
               N &amp; N Audio Systems crafts premium amplifiers, speakers and subwoofers

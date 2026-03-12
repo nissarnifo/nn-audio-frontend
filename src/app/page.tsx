@@ -45,11 +45,6 @@ export default function HomePage() {
               <span className="text-4xl md:text-6xl text-[#00D4FF] animate-cyanglow">
                 AUDIO SYSTEMS
               </span>
-              {/* Stark-style slash + underbar */}
-              <svg className="ml-2 inline-block" style={{verticalAlign:'middle'}} width="44" height="50" viewBox="0 0 44 50" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                <line x1="2" y1="48" x2="32" y2="2" stroke="#00D4FF" strokeWidth="2.5" strokeLinecap="square"/>
-                <line x1="2" y1="48" x2="42" y2="48" stroke="#00D4FF" strokeWidth="2.5" strokeLinecap="square"/>
-              </svg>
             </h1>
             <p className="text-[#4A7FA5] text-lg leading-relaxed mb-8 max-w-xl">
               N &amp; N Audio Systems crafts premium amplifiers, speakers and subwoofers

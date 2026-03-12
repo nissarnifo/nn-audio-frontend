@@ -38,16 +38,18 @@ export default function HomePage() {
             <p className="font-mono text-[#00D4FF] text-sm tracking-widest mb-4">
               ⚡ PRECISION AUDIO · MADE IN INDIA
             </p>
-            <h1 className="font-heading leading-none tracking-wider mb-6 flex items-center gap-3">
-              <span className="text-5xl md:text-7xl text-[#E8F4FD]">
-                N&amp;N <span className="text-[#00D4FF] animate-cyanglow">AUDIO SYSTEMS</span>
+            <h1 className="font-heading leading-none tracking-wider mb-6 whitespace-nowrap flex items-center gap-0">
+              <span className="text-4xl md:text-6xl text-[#E8F4FD]">
+                N&amp;N&nbsp;
               </span>
-              <span className="flex flex-col justify-center ml-2 opacity-80" aria-hidden>
-                <svg width="48" height="56" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <line x1="0" y1="54" x2="36" y2="2" stroke="#00D4FF" strokeWidth="3" strokeLinecap="round"/>
-                  <line x1="0" y1="54" x2="48" y2="54" stroke="#00D4FF" strokeWidth="3" strokeLinecap="round"/>
-                </svg>
+              <span className="text-4xl md:text-6xl text-[#00D4FF] animate-cyanglow">
+                AUDIO SYSTEMS
               </span>
+              {/* Stark-style slash + underbar */}
+              <svg className="ml-2 inline-block" style={{verticalAlign:'middle'}} width="44" height="50" viewBox="0 0 44 50" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                <line x1="2" y1="48" x2="32" y2="2" stroke="#00D4FF" strokeWidth="2.5" strokeLinecap="square"/>
+                <line x1="2" y1="48" x2="42" y2="48" stroke="#00D4FF" strokeWidth="2.5" strokeLinecap="square"/>
+              </svg>
             </h1>
             <p className="text-[#4A7FA5] text-lg leading-relaxed mb-8 max-w-xl">
               N &amp; N Audio Systems crafts premium amplifiers, speakers and subwoofers

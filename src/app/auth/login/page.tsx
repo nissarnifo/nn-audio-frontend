@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/auth.store'
 import { Spinner } from '@/components/ui'
 import toast from 'react-hot-toast'
 
-const socialProviders = [
+const ALL_PROVIDERS = [
   {
     id: 'google',
     label: 'Google',
@@ -49,6 +49,34 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
+  const [availableProviders, setAvailableProviders] = useState<string[] | null>(null)
+
+  // Show error from NextAuth redirect (e.g. provider not configured)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const error = params.get('error')
+    if (error) {
+      if (error === 'OAuthAccountNotLinked') {
+        toast.error('This email is already registered with a different sign-in method.')
+      } else if (error === 'Configuration') {
+        toast.error('OAuth provider is not configured. Please use email & password.')
+      } else {
+        toast.error('Sign-in failed. Please use email & password instead.')
+      }
+    }
+  }, [])
+
+  // Fetch which OAuth providers are actually configured
+  useEffect(() => {
+    fetch('/api/auth/available-providers')
+      .then((r) => r.json())
+      .then((d) => setAvailableProviders(d.providers))
+      .catch(() => setAvailableProviders([]))
+  }, [])
+
+  const socialProviders = availableProviders
+    ? ALL_PROVIDERS.filter((p) => availableProviders.includes(p.id))
+    : []
 
   async function handleOAuth(provider: string) {
     setOauthLoading(provider)
@@ -64,8 +92,15 @@ export default function LoginPage() {
       setUser(data.user, data.token)
       toast.success(`Welcome back, ${data.user.name}!`)
       router.push(data.user.role === 'ADMIN' ? '/admin' : '/')
-    } catch {
-      toast.error('Invalid email or password')
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 401) {
+        toast.error('Invalid email or password.')
+      } else if (!status) {
+        toast.error('Cannot reach server. Please try again in a moment.')
+      } else {
+        toast.error('Login failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
@@ -81,26 +116,29 @@ export default function LoginPage() {
         </div>
 
         <div className="hud-card p-8">
-          {/* Social login */}
-          <div className="space-y-3 mb-6">
-            {socialProviders.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => handleOAuth(p.id)}
-                disabled={!!oauthLoading}
-                className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] text-[#E8F4FD] hover:border-[rgba(0,212,255,0.5)] hover:bg-[rgba(0,212,255,0.08)] transition-all font-mono text-sm"
-              >
-                {oauthLoading === p.id ? <Spinner size={18} /> : p.icon}
-                Continue with {p.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
-            <span className="text-[#4A7FA5] text-xs font-mono">OR</span>
-            <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
-          </div>
+          {/* Social login — only shown when providers are configured */}
+          {socialProviders.length > 0 && (
+            <>
+              <div className="space-y-3 mb-6">
+                {socialProviders.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleOAuth(p.id)}
+                    disabled={!!oauthLoading}
+                    className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] text-[#E8F4FD] hover:border-[rgba(0,212,255,0.5)] hover:bg-[rgba(0,212,255,0.08)] transition-all font-mono text-sm"
+                  >
+                    {oauthLoading === p.id ? <Spinner size={18} /> : p.icon}
+                    Continue with {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+                <span className="text-[#4A7FA5] text-xs font-mono">OR</span>
+                <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

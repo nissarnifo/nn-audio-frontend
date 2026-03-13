@@ -62,8 +62,8 @@ export default function Footer() {
           <div>
             <h4 className="font-heading text-[#E8F4FD] tracking-widest mb-4">CONNECT</h4>
             <ul className="space-y-2 text-sm text-[#4A7FA5]">
-              <li>support@nnaudio.in</li>
-              <li>+91 98765 43210</li>
+              <li>NASEERUDDIN</li>
+              <li>+91 9700929591</li>
               <li className="pt-2">
                 <span className="font-mono text-xs text-[#00D4FF]">MON–SAT 10:00–18:00 IST</span>
               </li>

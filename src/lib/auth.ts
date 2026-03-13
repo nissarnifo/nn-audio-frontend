@@ -1,7 +1,31 @@
 import { NextAuthOptions } from 'next-auth'
 import GithubProvider from 'next-auth/providers/github'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+import DiscordProvider from 'next-auth/providers/discord'
+import { API_BASE_URL, ENDPOINTS, oauthConfig } from '@/config'
+
+const providers: NextAuthOptions['providers'] = []
+
+if (oauthConfig.google.enabled) {
+  providers.push(GoogleProvider({
+    clientId: oauthConfig.google.clientId,
+    clientSecret: oauthConfig.google.clientSecret,
+  }))
+}
+
+if (oauthConfig.github.enabled) {
+  providers.push(GithubProvider({
+    clientId: oauthConfig.github.clientId,
+    clientSecret: oauthConfig.github.clientSecret,
+  }))
+}
+
+if (oauthConfig.discord.enabled) {
+  providers.push(DiscordProvider({
+    clientId: oauthConfig.discord.clientId,
+    clientSecret: oauthConfig.discord.clientSecret,
+  }))
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -14,8 +38,11 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile) {
+        // Store for client-side retry if backend is sleeping
+        token.oauthProvider = account.provider
+        token.oauthProviderId = account.providerAccountId
         try {
-          const res = await fetch(`${API_URL}/auth/oauth`, {
+          const res = await fetch(`${API_BASE_URL}${ENDPOINTS.auth.oauth}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -25,11 +52,13 @@ export const authOptions: NextAuthOptions = {
               name: token.name,
             }),
           })
-          const data = await res.json()
-          token.backendToken = data.token
-          token.backendUser = data.user
+          if (res.ok) {
+            const data = await res.json()
+            token.backendToken = data.token
+            token.backendUser = data.user
+          }
         } catch (err) {
-          console.error('Backend OAuth sync failed', err)
+          console.error('Backend OAuth sync failed, will retry on client', err)
         }
       }
       return token
@@ -37,6 +66,10 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.backendToken = token.backendToken as string | undefined
       session.backendUser = token.backendUser as Record<string, unknown> | undefined
+      session.oauthProvider = token.oauthProvider as string | undefined
+      session.oauthProviderId = token.oauthProviderId as string | undefined
+      session.oauthEmail = token.email as string | undefined
+      session.oauthName = token.name as string | undefined
       return session
     },
   },

@@ -1,19 +1,10 @@
 import { NextResponse } from 'next/server'
+import { oauthConfig } from '@/config'
 
 export async function GET() {
   const providers: string[] = []
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    providers.push('google')
-  }
-  if (
-    process.env.GITHUB_CLIENT_ID &&
-    process.env.GITHUB_CLIENT_SECRET &&
-    process.env.GITHUB_CLIENT_SECRET !== 'PASTE_YOUR_SECRET_HERE'
-  ) {
-    providers.push('github')
-  }
-  if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
-    providers.push('discord')
-  }
+  if (oauthConfig.google.enabled) providers.push('google')
+  if (oauthConfig.github.enabled) providers.push('github')
+  if (oauthConfig.discord.enabled) providers.push('discord')
   return NextResponse.json({ providers })
 }

@@ -2,29 +2,28 @@ import { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import GithubProvider from 'next-auth/providers/github'
 import DiscordProvider from 'next-auth/providers/discord'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+import { API_BASE_URL, ENDPOINTS, oauthConfig } from '@/config'
 
 const providers: NextAuthOptions['providers'] = []
 
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+if (oauthConfig.google.enabled) {
   providers.push(GoogleProvider({
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    clientId: oauthConfig.google.clientId,
+    clientSecret: oauthConfig.google.clientSecret,
   }))
 }
 
-if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+if (oauthConfig.github.enabled) {
   providers.push(GithubProvider({
-    clientId: process.env.GITHUB_CLIENT_ID,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    clientId: oauthConfig.github.clientId,
+    clientSecret: oauthConfig.github.clientSecret,
   }))
 }
 
-if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
+if (oauthConfig.discord.enabled) {
   providers.push(DiscordProvider({
-    clientId: process.env.DISCORD_CLIENT_ID,
-    clientSecret: process.env.DISCORD_CLIENT_SECRET,
+    clientId: oauthConfig.discord.clientId,
+    clientSecret: oauthConfig.discord.clientSecret,
   }))
 }
 
@@ -38,7 +37,7 @@ export const authOptions: NextAuthOptions = {
         token.oauthProvider = account.provider
         token.oauthProviderId = account.providerAccountId
         try {
-          const res = await fetch(`${API_URL}/auth/oauth`, {
+          const res = await fetch(`${API_BASE_URL}${ENDPOINTS.auth.oauth}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

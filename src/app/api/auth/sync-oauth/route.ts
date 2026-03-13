@@ -1,8 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+import { API_BASE_URL, ENDPOINTS } from '@/config'
 
 export async function POST() {
   const session = await getServerSession(authOptions)
@@ -12,7 +11,7 @@ export async function POST() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/auth/oauth`, {
+    const res = await fetch(`${API_BASE_URL}${ENDPOINTS.auth.oauth}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

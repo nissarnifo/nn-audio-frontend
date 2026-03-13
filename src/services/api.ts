@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { API_BASE_URL, ENDPOINTS } from '@/config'
 import type {
   Product,
   ProductFilters,
@@ -13,8 +14,9 @@ import type {
 } from '@/types'
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
+  baseURL: API_BASE_URL,
   withCredentials: true,
+  timeout: 30_000,
 })
 
 // Attach JWT token from localStorage on every request
@@ -32,112 +34,112 @@ api.interceptors.request.use((config) => {
 /* ─── Products ───────────────────────────────────────────────────── */
 export const productsApi = {
   getAll(filters?: ProductFilters) {
-    return api.get<PaginatedResponse<Product>>('/products', { params: filters })
+    return api.get<PaginatedResponse<Product>>(ENDPOINTS.products.list, { params: filters })
   },
   getBySlug(slug: string) {
-    return api.get<Product>(`/products/${slug}`)
+    return api.get<Product>(ENDPOINTS.products.bySlug(slug))
   },
   getById(id: string) {
-    return api.get<Product>(`/products/id/${id}`)
+    return api.get<Product>(ENDPOINTS.products.byId(id))
   },
   create(data: Partial<Product>) {
-    return api.post<Product>('/products', data)
+    return api.post<Product>(ENDPOINTS.products.create, data)
   },
   update(id: string, data: Partial<Product>) {
-    return api.put<Product>(`/products/${id}`, data)
+    return api.put<Product>(ENDPOINTS.products.update(id), data)
   },
   delete(id: string) {
-    return api.delete(`/products/${id}`)
+    return api.delete(ENDPOINTS.products.delete(id))
   },
   uploadImage(id: string, formData: FormData) {
-    return api.post(`/products/${id}/images`, formData, {
+    return api.post(ENDPOINTS.products.images(id), formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
   setPrimaryImage(productId: string, imageId: string) {
-    return api.put(`/products/${productId}/images/${imageId}/primary`)
+    return api.put(ENDPOINTS.products.imagePrimary(productId, imageId))
   },
   deleteImage(productId: string, imageId: string) {
-    return api.delete(`/products/${productId}/images/${imageId}`)
+    return api.delete(ENDPOINTS.products.imageDelete(productId, imageId))
   },
   getReviews(slug: string) {
-    return api.get<Review[]>(`/products/${slug}/reviews`)
+    return api.get<Review[]>(ENDPOINTS.products.reviews(slug))
   },
 }
 
 /* ─── Cart ───────────────────────────────────────────────────────── */
 export const cartApi = {
   get() {
-    return api.get<Cart>('/cart')
+    return api.get<Cart>(ENDPOINTS.cart.root)
   },
   addItem(data: { variantId: string; qty: number }) {
-    return api.post('/cart/items', data)
+    return api.post(ENDPOINTS.cart.items, data)
   },
   updateItem(itemId: string, qty: number) {
-    return api.put(`/cart/items/${itemId}`, { qty })
+    return api.put(ENDPOINTS.cart.item(itemId), { qty })
   },
   removeItem(itemId: string) {
-    return api.delete(`/cart/items/${itemId}`)
+    return api.delete(ENDPOINTS.cart.item(itemId))
   },
   clear() {
-    return api.delete('/cart')
+    return api.delete(ENDPOINTS.cart.root)
   },
 }
 
 /* ─── Orders ─────────────────────────────────────────────────────── */
 export const ordersApi = {
   create(data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string> }) {
-    return api.post<Order>('/orders', data)
+    return api.post<Order>(ENDPOINTS.orders.root, data)
   },
   getAll() {
-    return api.get<Order[]>('/orders')
+    return api.get<Order[]>(ENDPOINTS.orders.root)
   },
   getById(id: string) {
-    return api.get<Order>(`/orders/${id}`)
+    return api.get<Order>(ENDPOINTS.orders.byId(id))
   },
   cancel(id: string) {
-    return api.put(`/orders/${id}/cancel`)
+    return api.put(ENDPOINTS.orders.cancel(id))
   },
 }
 
 /* ─── Addresses ──────────────────────────────────────────────────── */
 export const addressesApi = {
   getAll() {
-    return api.get<Address[]>('/addresses')
+    return api.get<Address[]>(ENDPOINTS.addresses.root)
   },
   create(data: Omit<Address, 'id' | 'is_default'>) {
-    return api.post<Address>('/addresses', data)
+    return api.post<Address>(ENDPOINTS.addresses.root, data)
   },
   update(id: string, data: Partial<Address>) {
-    return api.put<Address>(`/addresses/${id}`, data)
+    return api.put<Address>(ENDPOINTS.addresses.byId(id), data)
   },
   delete(id: string) {
-    return api.delete(`/addresses/${id}`)
+    return api.delete(ENDPOINTS.addresses.byId(id))
   },
   setDefault(id: string) {
-    return api.put(`/addresses/${id}/default`)
+    return api.put(ENDPOINTS.addresses.setDefault(id))
   },
 }
 
 /* ─── Auth ───────────────────────────────────────────────────────── */
 export const authApi = {
   login(data: { email: string; password: string }) {
-    return api.post<AuthResponse>('/auth/login', data)
+    return api.post<AuthResponse>(ENDPOINTS.auth.login, data)
   },
   register(data: { name: string; email: string; phone: string; password: string }) {
-    return api.post<AuthResponse>('/auth/register', data)
+    return api.post<AuthResponse>(ENDPOINTS.auth.register, data)
   },
   me() {
-    return api.get<User>('/auth/me')
+    return api.get<User>(ENDPOINTS.auth.me)
   },
   updateMe(data: Partial<User>) {
-    return api.put<User>('/auth/me', data)
+    return api.put<User>(ENDPOINTS.auth.me, data)
   },
   changePassword(data: { currentPassword: string; newPassword: string }) {
-    return api.put('/auth/me/password', data)
+    return api.put(ENDPOINTS.auth.mePassword, data)
   },
   logout() {
-    return api.post('/auth/logout')
+    return api.post(ENDPOINTS.auth.logout)
   },
 }
 
@@ -145,7 +147,7 @@ export const authApi = {
 export const paymentsApi = {
   createRazorpayOrder(data: { amount: number }) {
     return api.post<{ razorpay_order_id: string; amount: number; currency: string }>(
-      '/payments/razorpay/order',
+      ENDPOINTS.payments.razorpayOrder,
       data
     )
   },
@@ -154,23 +156,23 @@ export const paymentsApi = {
     razorpay_payment_id: string
     razorpay_signature: string
   }) {
-    return api.post('/payments/razorpay/verify', data)
+    return api.post(ENDPOINTS.payments.razorpayVerify, data)
   },
 }
 
 /* ─── Admin ──────────────────────────────────────────────────────── */
 export const adminApi = {
   getStats() {
-    return api.get<AdminStats>('/admin/stats')
+    return api.get<AdminStats>(ENDPOINTS.admin.stats)
   },
   getAllOrders(params?: { status?: string; page?: number }) {
-    return api.get<PaginatedResponse<Order>>('/admin/orders', { params })
+    return api.get<PaginatedResponse<Order>>(ENDPOINTS.admin.orders, { params })
   },
   updateOrderStatus(id: string, status: string) {
-    return api.put(`/admin/orders/${id}/status`, { status })
+    return api.put(ENDPOINTS.admin.orderStatus(id), { status })
   },
   getAllCustomers(params?: { page?: number; search?: string }) {
-    return api.get('/admin/customers', { params })
+    return api.get(ENDPOINTS.admin.customers, { params })
   },
 }
 

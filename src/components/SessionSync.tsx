@@ -16,7 +16,7 @@ export default function SessionSync() {
 
     // Case 1: backend sync already succeeded during OAuth — just update Zustand
     if (session.backendToken && session.backendUser) {
-      setUser(session.backendUser as User, session.backendToken)
+      setUser(session.backendUser as unknown as User, session.backendToken)
       synced.current = true
       return
     }

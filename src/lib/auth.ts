@@ -1,6 +1,6 @@
 import { NextAuthOptions } from 'next-auth'
-import GoogleProvider from 'next-auth/providers/google'
 import GithubProvider from 'next-auth/providers/github'
+
 import DiscordProvider from 'next-auth/providers/discord'
 import { API_BASE_URL, ENDPOINTS, oauthConfig } from '@/config'
 
@@ -28,7 +28,12 @@ if (oauthConfig.discord.enabled) {
 }
 
 export const authOptions: NextAuthOptions = {
-  providers,
+  providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
+  ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, account, profile }) {

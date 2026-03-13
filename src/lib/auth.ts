@@ -34,6 +34,9 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile) {
+        // Store for client-side retry if backend is sleeping
+        token.oauthProvider = account.provider
+        token.oauthProviderId = account.providerAccountId
         try {
           const res = await fetch(`${API_URL}/auth/oauth`, {
             method: 'POST',
@@ -45,11 +48,13 @@ export const authOptions: NextAuthOptions = {
               name: token.name,
             }),
           })
-          const data = await res.json()
-          token.backendToken = data.token
-          token.backendUser = data.user
+          if (res.ok) {
+            const data = await res.json()
+            token.backendToken = data.token
+            token.backendUser = data.user
+          }
         } catch (err) {
-          console.error('Backend OAuth sync failed', err)
+          console.error('Backend OAuth sync failed, will retry on client', err)
         }
       }
       return token
@@ -57,6 +62,10 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.backendToken = token.backendToken as string | undefined
       session.backendUser = token.backendUser as Record<string, unknown> | undefined
+      session.oauthProvider = token.oauthProvider as string | undefined
+      session.oauthProviderId = token.oauthProviderId as string | undefined
+      session.oauthEmail = token.email as string | undefined
+      session.oauthName = token.name as string | undefined
       return session
     },
   },

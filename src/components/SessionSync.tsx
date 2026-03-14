@@ -5,8 +5,8 @@ import { useAuthStore } from '@/store/auth.store'
 import type { User } from '@/types'
 import toast from 'react-hot-toast'
 
-const MAX_RETRIES = 5
-const RETRY_DELAYS = [5000, 10000, 15000, 20000, 30000] // ms
+const MAX_RETRIES = 10
+const RETRY_DELAYS = [6000, 8000, 10000, 12000, 15000, 15000, 15000, 20000, 20000, 30000] // ms
 
 async function syncWithRetry(
   update: () => Promise<unknown>,

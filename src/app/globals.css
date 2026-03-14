@@ -222,15 +222,3 @@ body {
 
 .animate-fadeup   { animation: fadeup 0.5s ease-out; }
 .animate-cyanglow { animation: cyanglow 2s ease-in-out infinite; }
-
-/* ─── Marquee ───────────────────────────────────────────────────── */
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee 28s linear infinite;
-  display: flex;
-  width: max-content;
-}
-.animate-marquee:hover { animation-play-state: paused; }

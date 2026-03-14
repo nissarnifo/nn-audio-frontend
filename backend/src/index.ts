@@ -2,6 +2,8 @@ import 'express-async-errors'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import bcrypt from 'bcryptjs'
+import { PrismaClient } from '@prisma/client'
 
 import authRoutes from './routes/auth'
 import productRoutes from './routes/products'
@@ -10,6 +12,26 @@ import orderRoutes from './routes/orders'
 import addressRoutes from './routes/addresses'
 import paymentRoutes from './routes/payments'
 import adminRoutes from './routes/admin'
+
+const prisma = new PrismaClient()
+
+async function ensureAdminExists() {
+  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  if (!admin) {
+    await prisma.user.upsert({
+      where: { email: 'admin@nnaudio.com' },
+      update: {},
+      create: {
+        name: 'Admin',
+        email: 'admin@nnaudio.com',
+        phone: '9999999999',
+        password: await bcrypt.hash('admin123', 10),
+        role: 'ADMIN',
+      },
+    })
+    console.log('Admin user created: admin@nnaudio.com / admin123')
+  }
+}
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -52,4 +74,6 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: err.message || 'Internal server error' })
 })
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+ensureAdminExists()
+  .then(() => app.listen(PORT, () => console.log(`Server running on port ${PORT}`)))
+  .catch((err) => { console.error('Startup error:', err); process.exit(1) })

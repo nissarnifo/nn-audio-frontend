@@ -1,10 +1,12 @@
 'use client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, Shield, Truck, Star, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useProducts } from '@/hooks'
 import ProductsGrid from '@/components/product/ProductsGrid'
-import { SectionHeader } from '@/components/ui'
+import { SectionHeader, NoPhoto } from '@/components/ui'
+import { getPrimaryImage, cloudinaryUrl, fmt } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 
 /* ─── Hero Slides ────────────────────────────────────────────────── */
@@ -14,7 +16,7 @@ const SLIDES = [
     heading: 'Pro Series Mono Amplifier',
     sub: 'Starting ₹12,999',
     badges: ['2000W RMS', 'Class A/B', 'THD < 0.005%'],
-    slug: '/products?category=amplifier',
+    href: '/products?category=amplifier',
     cta: 'SHOP AMPLIFIERS',
     icon: '⚡',
     accent: '#00D4FF',
@@ -25,7 +27,7 @@ const SLIDES = [
     heading: 'Component Speaker Sets',
     sub: 'Starting ₹4,999',
     badges: ['Silk-dome tweeter', '4Ω impedance', '20Hz – 20kHz'],
-    slug: '/products?category=speaker',
+    href: '/products?category=speaker',
     cta: 'SHOP SPEAKERS',
     icon: '🔊',
     accent: '#FFB700',
@@ -36,7 +38,7 @@ const SLIDES = [
     heading: 'Deep Bass Subwoofers',
     sub: 'Up to 20% off',
     badges: ['12" & 15" drivers', 'Dual voice coil', 'High excursion'],
-    slug: '/products?category=subwoofer',
+    href: '/products?category=subwoofer',
     cta: 'SHOP SUBWOOFERS',
     icon: '🎵',
     accent: '#00FF88',
@@ -44,52 +46,12 @@ const SLIDES = [
   },
 ]
 
-/* ─── Deal Cards ─────────────────────────────────────────────────── */
-const DEALS = [
-  {
-    title: 'Amplifiers',
-    offer: 'Up to 30% off',
-    slug: 'amplifier',
-    subs: [
-      { label: 'Mono Amps',   icon: '⚡', color: '#00D4FF' },
-      { label: '4-Channel',   icon: '🔌', color: '#7EB8D4' },
-      { label: 'Class D',     icon: '🔋', color: '#00D4FF' },
-      { label: 'Mini Amps',   icon: '📦', color: '#7EB8D4' },
-    ],
-  },
-  {
-    title: 'Speakers',
-    offer: 'Starting ₹4,999',
-    slug: 'speaker',
-    subs: [
-      { label: 'Component',   icon: '🔊', color: '#FFB700' },
-      { label: 'Coaxial',     icon: '🎙️', color: '#D4A000' },
-      { label: 'Tweeters',    icon: '📢', color: '#FFB700' },
-      { label: 'Door Panels', icon: '🚪', color: '#D4A000' },
-    ],
-  },
-  {
-    title: 'Subwoofers',
-    offer: 'Deep bass deals',
-    slug: 'subwoofer',
-    subs: [
-      { label: '12" Subs',    icon: '🎵', color: '#00FF88' },
-      { label: '15" Subs',    icon: '💥', color: '#00CC66' },
-      { label: 'Dual VC',     icon: '🎛️', color: '#00FF88' },
-      { label: 'Shallow',     icon: '📐', color: '#00CC66' },
-    ],
-  },
-  {
-    title: 'DSP Processors',
-    offer: 'Starting ₹1,999',
-    slug: 'processor',
-    subs: [
-      { label: '4-Ch DSP',    icon: '🎛️', color: '#A78BFA' },
-      { label: '8-Ch DSP',    icon: '🖥️', color: '#7C6BE0' },
-      { label: 'BT Control',  icon: '📡', color: '#A78BFA' },
-      { label: 'EQ Units',    icon: '🎚️', color: '#7C6BE0' },
-    ],
-  },
+/* ─── Deal categories config ─────────────────────────────────────── */
+const DEAL_CATS = [
+  { title: 'Amplifiers',    offer: 'Up to 30% off',    slug: 'amplifier' },
+  { title: 'Speakers',      offer: 'Starting ₹4,999',  slug: 'speaker'   },
+  { title: 'Subwoofers',    offer: 'Deep bass deals',   slug: 'subwoofer' },
+  { title: 'DSP Processors',offer: 'Starting ₹1,999',  slug: 'processor' },
 ]
 
 const TRUST_BADGES = [
@@ -104,18 +66,12 @@ function HeroCarousel() {
   const [idx, setIdx] = useState(0)
   const [dir, setDir] = useState(1)
 
-  const go = (next: number) => {
-    setDir(next > idx ? 1 : -1)
-    setIdx(next)
-  }
+  const go = (next: number) => { setDir(next > idx ? 1 : -1); setIdx(next) }
   const prev = () => go((idx - 1 + SLIDES.length) % SLIDES.length)
   const next = () => go((idx + 1) % SLIDES.length)
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setDir(1)
-      setIdx(i => (i + 1) % SLIDES.length)
-    }, 5000)
+    const t = setInterval(() => { setDir(1); setIdx(i => (i + 1) % SLIDES.length) }, 5000)
     return () => clearInterval(t)
   }, [])
 
@@ -123,7 +79,6 @@ function HeroCarousel() {
 
   return (
     <div className="relative w-full overflow-hidden hud-grid" style={{ minHeight: 340 }}>
-      {/* bg gradient */}
       <div className={`absolute inset-0 bg-gradient-to-r ${slide.bg} transition-all duration-700 pointer-events-none`} />
 
       <AnimatePresence mode="wait" custom={dir}>
@@ -136,12 +91,9 @@ function HeroCarousel() {
           transition={{ duration: 0.45, ease: 'easeInOut' }}
           className="relative max-w-7xl mx-auto px-16 py-14 flex flex-col md:flex-row items-center gap-8 md:gap-0"
         >
-          {/* Text side */}
           <div className="flex-1">
-            <span
-              className="font-mono text-[10px] tracking-[0.3em] px-2 py-1 rounded mb-4 inline-block border"
-              style={{ color: slide.accent, borderColor: slide.accent + '55', background: slide.accent + '11' }}
-            >
+            <span className="font-mono text-[10px] tracking-[0.3em] px-2 py-1 rounded mb-4 inline-block border"
+              style={{ color: slide.accent, borderColor: slide.accent + '55', background: slide.accent + '11' }}>
               {slide.tag}
             </span>
             <h2 className="font-heading text-3xl md:text-5xl text-[#E8F4FD] tracking-wide leading-tight mb-2">
@@ -158,19 +110,14 @@ function HeroCarousel() {
                 </span>
               ))}
             </div>
-            <Link
-              href={slide.slug}
-              className="btn-cyan px-8 py-3 text-sm inline-block"
-              style={{ borderColor: slide.accent, color: slide.accent }}
-            >
+            <Link href={slide.href} className="btn-cyan px-8 py-3 text-sm inline-block"
+              style={{ borderColor: slide.accent, color: slide.accent }}>
               {slide.cta}
             </Link>
           </div>
 
-          {/* Icon / Product side */}
           <div className="flex-shrink-0 flex items-center justify-center w-56 h-48 md:w-72 md:h-56 rounded-lg relative"
             style={{ border: `1px solid ${slide.accent}33`, background: slide.accent + '08' }}>
-            {/* HUD corners */}
             {[['top-0 left-0','border-t border-l'],['top-0 right-0','border-t border-r'],
               ['bottom-0 left-0','border-b border-l'],['bottom-0 right-0','border-b border-r']].map(([p,b]) => (
               <div key={p} className={`absolute ${p} w-4 h-4 ${b}`} style={{ borderColor: slide.accent }} />
@@ -180,7 +127,6 @@ function HeroCarousel() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Arrows */}
       <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.8)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
         <ChevronLeft size={18} />
       </button>
@@ -188,26 +134,21 @@ function HeroCarousel() {
         <ChevronRight size={18} />
       </button>
 
-      {/* Dots */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
         {SLIDES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => go(i)}
-            className="rounded-full transition-all duration-300"
-            style={{
-              width: i === idx ? 20 : 6, height: 6,
-              background: i === idx ? '#00D4FF' : 'rgba(0,212,255,0.25)',
-            }}
-          />
+          <button key={i} onClick={() => go(i)} className="rounded-full transition-all duration-300"
+            style={{ width: i === idx ? 20 : 6, height: 6, background: i === idx ? '#00D4FF' : 'rgba(0,212,255,0.25)' }} />
         ))}
       </div>
     </div>
   )
 }
 
-/* ─── Deal Card ──────────────────────────────────────────────────── */
-function DealCard({ deal, delay }: { deal: typeof DEALS[0]; delay: number }) {
+/* ─── Deal Card — fetches real products ──────────────────────────── */
+function DealCard({ title, offer, slug, delay }: { title: string; offer: string; slug: string; delay: number }) {
+  const { data, isLoading } = useProducts({ category: slug, limit: 4 } as Parameters<typeof useProducts>[0])
+  const products = data?.data ?? []
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -217,31 +158,48 @@ function DealCard({ deal, delay }: { deal: typeof DEALS[0]; delay: number }) {
       className="hud-card p-4 flex flex-col"
       style={{ background: 'rgba(13,27,42,0.95)' }}
     >
-      {/* Card header */}
+      {/* Header */}
       <div className="mb-3">
-        <h3 className="font-heading text-base text-[#E8F4FD] tracking-wide leading-tight">{deal.title}</h3>
-        <p className="text-[#00D4FF] text-xs font-mono tracking-wider mt-0.5">{deal.offer}</p>
+        <h3 className="font-heading text-base text-[#E8F4FD] tracking-wide leading-tight">{title}</h3>
+        <p className="text-[#00D4FF] text-xs font-mono tracking-wider mt-0.5">{offer}</p>
       </div>
 
-      {/* 2×2 sub-category grid */}
+      {/* 2×2 real product thumbnails */}
       <div className="grid grid-cols-2 gap-2 flex-1">
-        {deal.subs.map(sub => (
-          <div
-            key={sub.label}
-            className="rounded flex flex-col items-center justify-center gap-1.5 py-4 cursor-pointer transition-all hover:scale-[1.03]"
-            style={{ background: sub.color + '10', border: `1px solid ${sub.color}25` }}
-          >
-            <span className="text-2xl">{sub.icon}</span>
-            <span className="font-mono text-[10px] text-[#A8C8E0] tracking-wider text-center leading-tight">{sub.label}</span>
-          </div>
-        ))}
+        {isLoading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="aspect-square rounded animate-pulse" style={{ background: 'rgba(0,212,255,0.06)' }} />
+            ))
+          : products.slice(0, 4).map(product => {
+              const img = getPrimaryImage(product.images)
+              const variant = product.variants.find(v => v.is_active) ?? product.variants[0]
+              return (
+                <Link key={product.id} href={`/products/${product.slug}`}
+                  className="group flex flex-col gap-1 hover:opacity-90 transition-opacity">
+                  <div className="relative aspect-square rounded overflow-hidden"
+                    style={{ background: 'rgba(0,212,255,0.05)', border: '1px solid rgba(0,212,255,0.1)' }}>
+                    {img
+                      ? <Image src={cloudinaryUrl(img.url, 200)} alt={product.name} fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="120px" />
+                      : <NoPhoto className="w-full h-full" />
+                    }
+                  </div>
+                  <p className="font-mono text-[9px] text-[#A8C8E0] leading-tight line-clamp-2 group-hover:text-[#00D4FF] transition-colors">
+                    {product.name}
+                  </p>
+                  {variant && (
+                    <p className="font-mono text-[9px] text-[#FFB700]">{fmt(variant.price)}</p>
+                  )}
+                </Link>
+              )
+            })
+        }
       </div>
 
-      {/* See all link */}
-      <Link
-        href={`/products?category=${deal.slug}`}
-        className="flex items-center gap-1 text-[#00D4FF] font-mono text-[11px] tracking-wider mt-3 hover:gap-2 transition-all"
-      >
+      {/* See all */}
+      <Link href={`/products?category=${slug}`}
+        className="flex items-center gap-1 text-[#00D4FF] font-mono text-[11px] tracking-wider mt-3 hover:gap-2 transition-all">
         See all <ChevronRight size={11} />
       </Link>
     </motion.div>
@@ -254,8 +212,6 @@ export default function HomePage() {
 
   return (
     <div>
-
-      {/* Hero Carousel */}
       <HeroCarousel />
 
       {/* Trust strip */}
@@ -275,11 +231,11 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Amazon-style 4-column deal cards */}
+      {/* 4-column deal cards with real products */}
       <section className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {DEALS.map((deal, i) => (
-            <DealCard key={deal.slug} deal={deal} delay={i * 0.08} />
+          {DEAL_CATS.map((cat, i) => (
+            <DealCard key={cat.slug} title={cat.title} offer={cat.offer} slug={cat.slug} delay={i * 0.08} />
           ))}
         </div>
       </section>
@@ -289,12 +245,9 @@ export default function HomePage() {
         <SectionHeader title="BESTSELLERS" subtitle="Our most loved products by audiophiles across India" />
         <ProductsGrid products={bestsellers?.data} isLoading={isLoading} />
         <div className="mt-10 text-center">
-          <Link href="/products" className="btn-gold px-10 py-3 text-base">
-            VIEW ALL PRODUCTS
-          </Link>
+          <Link href="/products" className="btn-gold px-10 py-3 text-base">VIEW ALL PRODUCTS</Link>
         </div>
       </section>
-
     </div>
   )
 }

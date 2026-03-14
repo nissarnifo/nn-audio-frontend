@@ -1,17 +1,14 @@
-name: CI / Deploy
+name: CI
 
 on:
   push:
     branches:
-      - '**'          # every branch push → preview
+      - '**'
   pull_request:
-    types: [opened, synchronize, reopened]
     branches:
       - main
 
 env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
   NODE_VERSION: '20'
 
 # ─────────────────────────────────────────────────────────────────────
@@ -55,128 +52,3 @@ jobs:
 
       - run: npm ci
       - run: npm run build
-
-# ─────────────────────────────────────────────────────────────────────
-# JOB 3 — Deploy Preview
-#   • every push to a non-main branch
-#   • every PR update targeting main
-# ─────────────────────────────────────────────────────────────────────
-  deploy-preview:
-    name: Deploy Preview
-    runs-on: ubuntu-latest
-    needs: build-check
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'push' && github.ref != 'refs/heads/main')
-    permissions:
-      pull-requests: write
-      issues: write
-    outputs:
-      preview_url: ${{ steps.deploy.outputs.preview_url }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - run: npm install -g vercel@latest
-      - run: npm ci
-
-      - name: Pull Vercel environment (preview)
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build for Vercel (preview)
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel Preview
-        id: deploy
-        run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
-          echo "preview_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-          echo "Preview: $DEPLOY_URL"
-
-      # Comment on PR (only when triggered by a pull_request event)
-      - name: Find existing bot comment
-        if: github.event_name == 'pull_request'
-        uses: peter-evans/find-comment@v3
-        id: find-comment
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: '<!-- nn-audio-preview -->'
-
-      - name: Post / Update preview URL comment
-        if: github.event_name == 'pull_request'
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          edit-mode: replace
-          body: |
-            <!-- nn-audio-preview -->
-            ## ⚡ Vercel Preview Deployed
-
-            | | |
-            |---|---|
-            | **Preview URL** | [${{ steps.deploy.outputs.preview_url }}](${{ steps.deploy.outputs.preview_url }}) |
-            | **Commit** | `${{ github.sha }}` |
-            | **Branch** | `${{ github.head_ref }}` |
-            | **Status** | ✅ Ready |
-
-            ### Test Checklist
-            - [ ] Home page loads
-            - [ ] Products catalog and search
-            - [ ] Product detail + gallery
-            - [ ] Cart add / remove / update
-            - [ ] Checkout flow
-            - [ ] Login / Register / OAuth
-            - [ ] Account pages (orders, profile, addresses)
-            - [ ] Admin pages
-
-            _Updated: ${{ github.event.pull_request.updated_at }}_
-
-# ─────────────────────────────────────────────────────────────────────
-# JOB 4 — Deploy Production (merge to main only)
-# ─────────────────────────────────────────────────────────────────────
-  deploy-production:
-    name: Deploy Production
-    runs-on: ubuntu-latest
-    needs: build-check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment:
-      name: production
-      url: ${{ steps.deploy.outputs.production_url }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - run: npm install -g vercel@latest
-      - run: npm ci
-
-      - name: Pull Vercel environment (production)
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Build for Vercel (production)
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel Production
-        id: deploy
-        run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "production_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-          echo "Production live: $DEPLOY_URL"
-
-      - name: Deployment summary
-        run: |
-          echo "## Production Deployment ✅" >> $GITHUB_STEP_SUMMARY
-          echo "| | |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **URL** | ${{ steps.deploy.outputs.production_url }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Deployed by** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY

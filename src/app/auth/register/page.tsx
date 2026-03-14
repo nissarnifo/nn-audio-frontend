@@ -89,15 +89,23 @@ export default function RegisterPage() {
       toast.success('Account created! Welcome to N & N Audio Systems.')
       router.push('/')
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (status === 409) {
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } }; code?: string }
+      const status = axiosErr?.response?.status
+      const serverMsg = axiosErr?.response?.data?.message
+      const isTimeout = axiosErr?.code === 'ECONNABORTED'
+
+      if (isTimeout) {
+        toast.error('Server is waking up — please wait 30 seconds and try again. (Render free tier cold start)', { duration: 6000 })
+      } else if (status === 409) {
         toast.error('An account with this email already exists. Please sign in.')
       } else if (status === 400) {
-        toast.error('Please fill in all required fields.')
+        toast.error(serverMsg || 'Please check all fields and try again.')
+      } else if (status === 500) {
+        toast.error('Server error — please try again in a moment.')
       } else if (!status) {
-        toast.error('Cannot reach server. Please try again in a moment.')
+        toast.error('Cannot reach server. Please check your connection or try again shortly.')
       } else {
-        toast.error('Registration failed. Please try again.')
+        toast.error(serverMsg || 'Registration failed. Please try again.')
       }
     } finally {
       setLoading(false)

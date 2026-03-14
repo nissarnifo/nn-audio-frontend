@@ -65,6 +65,10 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!form.email.trim() || !form.password.trim()) {
+      toast.error('Please enter your email and password.')
+      return
+    }
     setLoading(true)
     try {
       const { data } = await authApi.login(form)
@@ -72,13 +76,23 @@ export default function LoginPage() {
       toast.success(`Welcome back, ${data.user.name}!`)
       router.push(data.user.role === 'ADMIN' ? '/admin' : '/')
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (status === 401) {
-        toast.error('Invalid email or password.')
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } }; code?: string }
+      const status = axiosErr?.response?.status
+      const serverMsg = axiosErr?.response?.data?.message
+      const isTimeout = axiosErr?.code === 'ECONNABORTED'
+
+      if (isTimeout) {
+        toast.error('Server is waking up — please wait 30 seconds and try again. (Render free tier cold start)', { duration: 6000 })
+      } else if (status === 401 || status === 400) {
+        toast.error(serverMsg || 'Invalid email or password.')
+      } else if (status === 404) {
+        toast.error('No account found with this email. Please register first.')
+      } else if (status === 500) {
+        toast.error('Server error — please try again in a moment.')
       } else if (!status) {
-        toast.error('Cannot reach server. Please try again in a moment.')
+        toast.error('Cannot reach server. Please check your connection or try again shortly.')
       } else {
-        toast.error('Login failed. Please try again.')
+        toast.error(serverMsg || 'Login failed. Please try again.')
       }
     } finally {
       setLoading(false)

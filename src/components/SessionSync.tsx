@@ -31,8 +31,8 @@ async function syncWithRetry(
       }
 
       const status = res.status
-      // 503 = backend sleeping (Render cold start), 502 = gateway down — retry
-      if ((status === 503 || status === 502) && attempt < MAX_RETRIES - 1) {
+      // 503 = backend sleeping, 502 = gateway down, 504 = Vercel timeout waiting for backend
+      if ((status === 503 || status === 502 || status === 504) && attempt < MAX_RETRIES - 1) {
         toast.loading(
           `Server is waking up… (attempt ${attempt + 2}/${MAX_RETRIES})`,
           { id: toastId, duration: Infinity }
@@ -42,21 +42,42 @@ async function syncWithRetry(
       }
 
       // Non-retryable error
-      toast.error('Could not sign you in. Please try logging in again.', { id: toastId })
+      showRetryPrompt(toastId)
       return
     } catch {
-      // Network error — retry if attempts remain
+      // Network error or fetch timeout — retry if attempts remain
       if (attempt < MAX_RETRIES - 1) {
         toast.loading(
-          `Cannot reach server, retrying… (${attempt + 2}/${MAX_RETRIES})`,
+          `Server is waking up… (attempt ${attempt + 2}/${MAX_RETRIES})`,
           { id: toastId, duration: Infinity }
         )
         await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]))
       } else {
-        toast.error('Could not connect to server. Please try again later.', { id: toastId })
+        showRetryPrompt(toastId)
       }
     }
   }
+}
+
+function showRetryPrompt(toastId: string) {
+  toast.dismiss(toastId)
+  toast(
+    (t) => (
+      <span className="flex flex-col gap-1.5">
+        <span>Server took too long to start.</span>
+        <button
+          className="text-[#00D4FF] underline text-left"
+          onClick={() => {
+            toast.dismiss(t.id)
+            window.location.reload()
+          }}
+        >
+          Click here to try again
+        </button>
+      </span>
+    ),
+    { duration: Infinity }
+  )
 }
 
 export default function SessionSync() {

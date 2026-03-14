@@ -55,16 +55,18 @@ enum ProductBadge {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  name       String
-  email      String   @unique
-  phone      String?
-  password   String?
-  googleId   String?  @unique @map("google_id")
-  githubId   String?  @unique @map("github_id")
-  discordId  String?  @unique @map("discord_id")
-  role       Role     @default(CUSTOMER)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  phone             String?
+  password          String?
+  googleId          String?   @unique @map("google_id")
+  githubId          String?   @unique @map("github_id")
+  discordId         String?   @unique @map("discord_id")
+  role              Role      @default(CUSTOMER)
+  resetToken        String?   @map("reset_token")
+  resetTokenExpiry  DateTime? @map("reset_token_expiry")
+  createdAt         DateTime  @default(now()) @map("created_at")
 
   addresses  Address[]
   orders     Order[]

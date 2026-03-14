@@ -72,6 +72,8 @@ export const ENDPOINTS = {
     register: '/auth/register',
     me: '/auth/me',
     mePassword: '/auth/me/password',
+    forgotPassword: '/auth/forgot-password',
+    resetPassword: '/auth/reset-password',
     logout: '/auth/logout',
     oauth: '/auth/oauth',
   },

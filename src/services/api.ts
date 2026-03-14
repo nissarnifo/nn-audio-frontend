@@ -137,6 +137,15 @@ export const authApi = {
   changePassword(data: { currentPassword: string; newPassword: string }) {
     return api.put(ENDPOINTS.auth.mePassword, data)
   },
+  forgotPassword(data: { email: string }) {
+    return api.post<{ message: string }>(ENDPOINTS.auth.forgotPassword, data)
+  },
+  resetPassword(data: { token: string; newPassword: string }) {
+    return api.post<{ message: string }>(ENDPOINTS.auth.resetPassword, data)
+  },
+  deleteAccount() {
+    return api.delete(ENDPOINTS.auth.me)
+  },
   logout() {
     return api.post(ENDPOINTS.auth.logout)
   },

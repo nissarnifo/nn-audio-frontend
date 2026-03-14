@@ -215,3 +215,28 @@ export function useChangePassword() {
     onError: () => toast.error('Failed to change password'),
   })
 }
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (data: { email: string }) => authApi.forgotPassword(data),
+    onError: () => toast.error('Something went wrong. Please try again.'),
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (data: { token: string; newPassword: string }) => authApi.resetPassword(data),
+    onSuccess: () => toast.success('Password reset! You can now log in.'),
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'Invalid or expired reset link.')
+    },
+  })
+}
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: () => authApi.deleteAccount(),
+    onError: () => toast.error('Failed to delete account'),
+  })
+}

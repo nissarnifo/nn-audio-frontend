@@ -155,8 +155,7 @@ router.post('/forgot-password', async (req, res) => {
   const token = crypto.randomBytes(32).toString('hex')
   const expiry = new Date(Date.now() + 60 * 60 * 1000)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (prisma.user as any).update({
+  await prisma.user.update({
     where: { id: user.id },
     data: { resetToken: token, resetTokenExpiry: expiry },
   })
@@ -217,8 +216,7 @@ router.post('/reset-password', async (req, res) => {
     return
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const user = await (prisma.user as any).findFirst({
+  const user = await prisma.user.findFirst({
     where: {
       resetToken: token,
       resetTokenExpiry: { gt: new Date() },
@@ -230,7 +228,7 @@ router.post('/reset-password', async (req, res) => {
     return
   }
 
-  await (prisma.user as any).update({
+  await prisma.user.update({
     where: { id: user.id },
     data: {
       password: await bcrypt.hash(newPassword, 10),

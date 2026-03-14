@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ShoppingCart, ChevronLeft } from 'lucide-react'
+import { ShoppingCart, ChevronLeft, Zap } from 'lucide-react'
 import { useProduct } from '@/hooks'
 import Gallery from '@/components/product/Gallery'
 import { Stars, StatusBadge, Badge, PageLoading, Divider } from '@/components/ui'
@@ -33,6 +33,12 @@ export default function ProductDetailPage() {
     if (!variant) return
     addItem(product!, variant, qty)
     toast.success(`${product!.name} added to cart!`)
+  }
+
+  function handleBuyNow() {
+    if (!variant) return
+    addItem(product!, variant, qty)
+    router.push('/checkout')
   }
 
   return (
@@ -107,7 +113,7 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Qty + CTA */}
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 mb-4">
             <div className="flex items-center border border-[rgba(0,212,255,0.25)] rounded overflow-hidden">
               <button
                 onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -134,6 +140,20 @@ export default function ProductDetailPage() {
             >
               <ShoppingCart size={18} />
               {inStock ? 'ADD TO CART' : 'OUT OF STOCK'}
+            </button>
+          </div>
+
+          {/* Buy Now */}
+          <div className="mb-8">
+            <button
+              onClick={handleBuyNow}
+              disabled={!inStock}
+              className={`w-full flex items-center justify-center gap-2 py-3 font-heading tracking-widest ${
+                inStock ? 'btn-cyan' : 'opacity-40 cursor-not-allowed border border-[rgba(0,212,255,0.2)] text-[#4A7FA5]'
+              }`}
+            >
+              <Zap size={18} />
+              BUY NOW
             </button>
           </div>
 

@@ -6,6 +6,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { authApi } from '@/services/api'
 import { useAuthStore } from '@/store/auth.store'
+import { useServerStore } from '@/store/server.store'
 import { Spinner } from '@/components/ui'
 import toast from 'react-hot-toast'
 
@@ -24,6 +25,7 @@ const ALL_PROVIDERS = [
 export default function LoginPage() {
   const router = useRouter()
   const setUser = useAuthStore((s) => s.setUser)
+  const serverReady = useServerStore((s) => s.serverReady)
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -171,11 +173,22 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="btn-gold w-full py-3 flex items-center justify-center gap-2 mt-2"
+              disabled={loading || !serverReady}
+              className="btn-gold w-full py-3 flex items-center justify-center gap-2 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? <><Spinner size={16} /> SIGNING IN...</> : 'SIGN IN'}
+              {loading ? (
+                <><Spinner size={16} /> SIGNING IN...</>
+              ) : !serverReady ? (
+                <><Spinner size={16} /> CONNECTING TO SERVER…</>
+              ) : (
+                'SIGN IN'
+              )}
             </button>
+            {!serverReady && (
+              <p className="text-center text-[#4A7FA5] text-xs font-mono mt-1">
+                Server is waking up — form will unlock shortly
+              </p>
+            )}
           </form>
 
           <div className="mt-6 text-center">

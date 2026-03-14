@@ -1,10 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useServerStore } from '@/store/server.store'
 
 type Status = 'checking' | 'ready' | 'waking'
 
 export default function BackendWarmup() {
   const [status, setStatus] = useState<Status>('checking')
+  const setServerReady = useServerStore((s) => s.setServerReady)
 
   useEffect(() => {
     let cancelled = false
@@ -15,7 +17,10 @@ export default function BackendWarmup() {
         try {
           const res = await fetch('/api/warmup')
           if (res.ok) {
-            if (!cancelled) setStatus('ready')
+            if (!cancelled) {
+              setStatus('ready')
+              setServerReady()
+            }
             return
           }
         } catch {
@@ -32,7 +37,7 @@ export default function BackendWarmup() {
 
     ping()
     return () => { cancelled = true }
-  }, [])
+  }, [setServerReady])
 
   if (status === 'ready') return null
 

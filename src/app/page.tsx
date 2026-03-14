@@ -9,10 +9,30 @@ import { useState } from 'react'
 
 /* ─── Data ──────────────────────────────────────────────────────── */
 const CATEGORIES = [
-  { label: 'Amplifiers',  slug: 'amplifier',  icon: '⚡', desc: 'High-power mono & 4-channel amps' },
-  { label: 'Speakers',    slug: 'speaker',    icon: '🔊', desc: 'Component & coaxial speaker sets' },
-  { label: 'Subwoofers',  slug: 'subwoofer',  icon: '🎵', desc: 'Deep bass, precision tuned' },
-  { label: 'Processors',  slug: 'processor',  icon: '🎛️', desc: 'DSP & signal processors' },
+  {
+    label: 'Amplifiers', slug: 'amplifier', icon: '⚡',
+    desc: 'High-power mono & 4-channel amps',
+    detail: 'From compact 4-channel units to massive mono-blocks, our amplifiers deliver clean, distortion-free power from 100W to 2000W RMS.',
+    specs: ['Up to 2000W RMS', 'THD < 0.005%', 'Class A/B & D'],
+  },
+  {
+    label: 'Speakers', slug: 'speaker', icon: '🔊',
+    desc: 'Component & coaxial speaker sets',
+    detail: 'Precision-engineered tweeters and mid-range drivers tuned for flat response. Hear every detail the artist intended.',
+    specs: ['20Hz – 20kHz', 'Silk-dome tweeters', '4Ω & 8Ω options'],
+  },
+  {
+    label: 'Subwoofers', slug: 'subwoofer', icon: '🎵',
+    desc: 'Deep bass, precision tuned',
+    detail: 'Feel the impact. Our subwoofers are built with high-excursion cones and vented enclosures for chest-thumping bass.',
+    specs: ['20Hz – 200Hz', 'Dual voice coil', '12" & 15" drivers'],
+  },
+  {
+    label: 'Processors', slug: 'processor', icon: '🎛️',
+    desc: 'DSP & signal processors',
+    detail: 'Take full control of your soundstage. EQ, time alignment, crossover and bass boost — all in one smart DSP unit.',
+    specs: ['31-band EQ', 'Bluetooth app control', '8-channel output'],
+  },
 ]
 
 const TRUST_BADGES = [
@@ -78,6 +98,105 @@ const TESTIMONIALS = [
     text: 'Setup was easy, support team is responsive. The DSP processor completely transformed my car\'s stock system. 10/10 would recommend.',
   },
 ]
+
+/* ─── Category accordion ────────────────────────────────────────── */
+function CategorySection() {
+  const [open, setOpen] = useState<string | null>('amplifier')
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 py-16">
+      <div className="flex flex-col md:flex-row gap-10 md:gap-16 items-start">
+
+        {/* Left — title block (sticky on desktop) */}
+        <motion.div
+          {...{ initial: { opacity: 0, x: -24 }, whileInView: { opacity: 1, x: 0 }, viewport: { once: true, amount: 0.1 }, transition: { duration: 0.6 } }}
+          className="md:sticky md:top-24 flex-shrink-0 md:w-56"
+        >
+          <p className="font-mono text-[#00D4FF] text-xs tracking-[0.25em] mb-3">BROWSE</p>
+          <h2 className="font-heading text-3xl text-[#E8F4FD] tracking-wider leading-tight mb-4">
+            SHOP BY<br />CATEGORY
+          </h2>
+          <div className="h-0.5 w-10 mb-4" style={{ background: 'linear-gradient(90deg,#00D4FF,transparent)' }} />
+          <p className="text-[#A8C8E0] text-sm leading-relaxed">
+            Engineered for every stage of your audio chain. Tap a category to explore.
+          </p>
+        </motion.div>
+
+        {/* Right — vertical accordion cards */}
+        <div className="flex-1 flex flex-col gap-3 w-full">
+          {CATEGORIES.map((cat, i) => {
+            const isOpen = open === cat.slug
+            return (
+              <motion.div
+                key={cat.slug}
+                {...{ initial: { opacity: 0, x: 30 }, whileInView: { opacity: 1, x: 0 }, viewport: { once: true, amount: 0.05 }, transition: { duration: 0.5, delay: i * 0.08 } }}
+              >
+                {/* Header row — always visible, click to toggle */}
+                <button
+                  onClick={() => setOpen(isOpen ? null : cat.slug)}
+                  className="w-full text-left hud-card px-5 py-4 flex items-center gap-4 transition-all"
+                  style={{
+                    background: isOpen ? 'rgba(0,212,255,0.07)' : 'rgba(13,27,42,0.9)',
+                    borderColor: isOpen ? 'rgba(0,212,255,0.45)' : 'rgba(0,212,255,0.18)',
+                  }}
+                >
+                  <span className="text-3xl flex-shrink-0">{cat.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-heading text-lg text-[#E8F4FD] tracking-wider">{cat.label}</p>
+                    <p className="text-xs text-[#A8C8E0] mt-0.5">{cat.desc}</p>
+                  </div>
+                  <motion.div
+                    animate={{ rotate: isOpen ? 90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-[#00D4FF] flex-shrink-0"
+                  >
+                    <ChevronRight size={18} />
+                  </motion.div>
+                </button>
+
+                {/* Expanded content */}
+                <motion.div
+                  initial={false}
+                  animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div
+                    className="px-5 py-5 flex flex-col sm:flex-row gap-5 items-start"
+                    style={{
+                      background: 'rgba(0,212,255,0.04)',
+                      borderLeft: '1px solid rgba(0,212,255,0.25)',
+                      borderRight: '1px solid rgba(0,212,255,0.25)',
+                      borderBottom: '1px solid rgba(0,212,255,0.25)',
+                      borderRadius: '0 0 8px 8px',
+                    }}
+                  >
+                    <p className="text-[#C8DFF0] text-sm leading-relaxed flex-1">{cat.detail}</p>
+                    <div className="flex-shrink-0 flex flex-col gap-2 min-w-[160px]">
+                      {cat.specs.map(spec => (
+                        <div key={spec} className="flex items-center gap-2">
+                          <span className="w-1 h-1 rounded-full bg-[#00D4FF] flex-shrink-0" />
+                          <span className="font-mono text-[11px] text-[#7EB8D4] tracking-wider">{spec}</span>
+                        </div>
+                      ))}
+                      <Link
+                        href={`/products?category=${cat.slug}`}
+                        className="btn-cyan text-xs px-4 py-2 mt-2 inline-flex items-center gap-1.5 w-fit"
+                      >
+                        SHOP {cat.label.toUpperCase()} <ChevronRight size={11} />
+                      </Link>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )
+          })}
+        </div>
+
+      </div>
+    </section>
+  )
+}
 
 /* ─── fade-up variant (visible immediately, no threshold issue) ─── */
 const fadeUp = (delay = 0) => ({
@@ -213,23 +332,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Categories ────────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 py-16">
-        <SectionHeader title="SHOP BY CATEGORY" subtitle="Engineered for every stage of your audio chain" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {CATEGORIES.map((cat, i) => (
-            <motion.div key={cat.slug} {...fadeUp(i * 0.08)}>
-              <Link href={`/products?category=${cat.slug}`} className="hud-card p-6 flex flex-col items-center text-center gap-3 block">
-                <div className="text-4xl">{cat.icon}</div>
-                <h3 className="font-heading text-base text-[#E8F4FD] tracking-wider">{cat.label}</h3>
-                <p className="text-xs text-[#A8C8E0]">{cat.desc}</p>
-                <div className="flex items-center gap-1 text-[#00D4FF] text-xs font-mono mt-auto">
-                  SHOP NOW <ChevronRight size={12} />
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+      <CategorySection />
 
       {/* ── Why N&N ───────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-16 border-y border-[rgba(0,212,255,0.15)]"

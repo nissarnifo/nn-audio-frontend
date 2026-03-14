@@ -64,9 +64,10 @@ export default function SessionSync() {
   const setUser = useAuthStore((s) => s.setUser)
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
   const synced = useRef(false)
+  const syncStarted = useRef(false)
 
   useEffect(() => {
-    if (status !== 'authenticated' || synced.current) return
+    if (status !== 'authenticated' || synced.current || syncStarted.current) return
 
     // Case 1: backend sync already succeeded during OAuth — just update Zustand
     if (session.backendToken && session.backendUser) {
@@ -77,6 +78,7 @@ export default function SessionSync() {
 
     // Case 2: backend was asleep during OAuth — retry with backoff
     if (session.oauthProvider && !isLoggedIn) {
+      syncStarted.current = true
       syncWithRetry(update, setUser, synced)
     }
   }, [status, session, isLoggedIn, setUser, update])

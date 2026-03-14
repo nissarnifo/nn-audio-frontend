@@ -90,7 +90,7 @@ export default function LoginPage() {
       } else if (status === 500) {
         toast.error('Server error — please try again in a moment.')
       } else if (!status) {
-        toast.error('Cannot reach server. Please check your connection or try again shortly.')
+        toast.error('Server is starting up — please wait ~30 seconds and try again.', { duration: 8000 })
       } else {
         toast.error(serverMsg || 'Login failed. Please try again.')
       }

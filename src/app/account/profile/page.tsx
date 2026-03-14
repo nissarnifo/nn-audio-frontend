@@ -3,20 +3,23 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth.store'
-import { useUpdateProfile, useChangePassword, useOrders } from '@/hooks'
+import { useUpdateProfile, useChangePassword, useOrders, useDeleteAccount } from '@/hooks'
 import { StatusBadge, Divider, PageLoading } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, isLoggedIn, updateUser } = useAuthStore()
+  const { user, isLoggedIn, updateUser, logout } = useAuthStore()
   const { mutateAsync: updateProfile, isPending: updatingProfile } = useUpdateProfile()
   const { mutateAsync: changePassword, isPending: changingPass } = useChangePassword()
+  const { mutateAsync: deleteAccount, isPending: deletingAccount } = useDeleteAccount()
   const { data: orders, isLoading: ordersLoading } = useOrders()
 
   const [profileForm, setProfileForm] = useState({ name: user?.name ?? '', email: user?.email ?? '', phone: user?.phone ?? '' })
   const [passForm, setPassForm] = useState({ currentPassword: '', newPassword: '', confirm: '' })
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   useEffect(() => {
     if (!isLoggedIn) router.push('/auth/login')
@@ -46,6 +49,17 @@ export default function ProfilePage() {
     }
     await changePassword({ currentPassword: passForm.currentPassword, newPassword: passForm.newPassword })
     setPassForm({ currentPassword: '', newPassword: '', confirm: '' })
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== 'DELETE') {
+      toast.error('Please type DELETE to confirm')
+      return
+    }
+    await deleteAccount()
+    logout()
+    toast.success('Account deleted')
+    router.push('/')
   }
 
   return (
@@ -102,7 +116,7 @@ export default function ProfilePage() {
       </form>
 
       {/* Recent Orders */}
-      <div className="hud-card p-6">
+      <div className="hud-card p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-heading text-xl text-[#E8F4FD] tracking-wider">YOUR ORDERS</h2>
           <Link href="/account/orders" className="font-mono text-xs text-[#00D4FF] hover:underline">VIEW ALL</Link>
@@ -124,6 +138,50 @@ export default function ProfilePage() {
           </div>
         ) : (
           <p className="text-[#4A7FA5] text-sm">No orders yet.</p>
+        )}
+      </div>
+
+      {/* Danger Zone — Delete Account */}
+      <div className="hud-card p-6 border border-red-500/20">
+        <h2 className="font-heading text-xl text-red-400 tracking-wider mb-2">DANGER ZONE</h2>
+        <p className="text-[#4A7FA5] text-sm font-mono mb-4">
+          Permanently delete your account and all associated data. This cannot be undone.
+        </p>
+        {!showDeleteConfirm ? (
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-4 py-2 rounded border border-red-500/40 text-red-400 font-mono text-sm hover:bg-red-500/10 transition-colors"
+          >
+            DELETE MY ACCOUNT
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-red-400 font-mono text-xs">Type <strong>DELETE</strong> to confirm:</p>
+            <input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              className="input-hud border-red-500/40 focus:border-red-500"
+              placeholder="DELETE"
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount || deleteConfirmText !== 'DELETE'}
+                className="px-4 py-2 rounded bg-red-600 text-white font-mono text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {deletingAccount ? 'DELETING...' : 'CONFIRM DELETE'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText('') }}
+                className="px-4 py-2 rounded border border-[rgba(0,212,255,0.2)] text-[#4A7FA5] font-mono text-sm hover:border-[rgba(0,212,255,0.4)] transition-colors"
+              >
+                CANCEL
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import { SessionProvider } from 'next-auth/react'
 import { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import SessionSync from '@/components/SessionSync'
+import BackendWarmup from '@/components/BackendWarmup'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -22,6 +23,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
         <SessionSync />
+        <BackendWarmup />
         {children}
         <Toaster
           position="top-right"

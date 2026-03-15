@@ -105,8 +105,13 @@ export const cartApi = {
 
 /* ─── Orders ─────────────────────────────────────────────────────── */
 export const ordersApi = {
-  create(data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string> }) {
-    return api.post<Order>(ENDPOINTS.orders.root, data)
+  create(
+    data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string> },
+    idempotencyKey?: string
+  ) {
+    return api.post<Order>(ENDPOINTS.orders.root, data, {
+      headers: idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : undefined,
+    })
   },
   getAll() {
     return api.get<Order[]>(ENDPOINTS.orders.root)

@@ -2,17 +2,19 @@
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { useOrder } from '@/hooks'
+import { useOrder, useCancelOrder } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
-import { StatusBadge, PageLoading, Divider } from '@/components/ui'
+import { StatusBadge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { isLoggedIn, _hasHydrated } = useAuthStore()
   const { data: order, isLoading, isFetching } = useOrder(id)
+  const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrder()
+  const [confirmCancel, setConfirmCancel] = useState(false)
 
   useEffect(() => {
     if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
@@ -96,6 +98,41 @@ export default function OrderDetailPage() {
           </span>
         </div>
       </div>
+
+      {/* P3: Cancel order — only available while PROCESSING */}
+      {order.status === 'PROCESSING' && (
+        <div className="hud-card p-5 mt-4">
+          {!confirmCancel ? (
+            <button
+              onClick={() => setConfirmCancel(true)}
+              className="w-full font-mono text-sm text-[#FF3366] border border-[#FF3366] hover:bg-[rgba(255,51,102,0.08)] transition-colors py-2.5 rounded"
+            >
+              CANCEL ORDER
+            </button>
+          ) : (
+            <div>
+              <p className="font-mono text-sm text-[#E8F4FD] mb-4 text-center">
+                Are you sure you want to cancel this order?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmCancel(false)}
+                  className="btn-cyan flex-1"
+                >
+                  KEEP ORDER
+                </button>
+                <button
+                  onClick={() => cancelOrder(order.id)}
+                  disabled={isCancelling}
+                  className="flex-1 font-mono text-sm text-[#FF3366] border border-[#FF3366] hover:bg-[rgba(255,51,102,0.08)] transition-colors py-2.5 rounded flex items-center justify-center gap-2"
+                >
+                  {isCancelling ? <><Spinner size={14} /> CANCELLING...</> : 'YES, CANCEL'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-6">
         <Link href="/account/orders" className="btn-cyan">← BACK TO ORDERS</Link>

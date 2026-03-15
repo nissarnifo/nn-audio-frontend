@@ -112,7 +112,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 pb-24">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="font-heading text-4xl text-[#E8F4FD] tracking-widest">SIGN IN</div>

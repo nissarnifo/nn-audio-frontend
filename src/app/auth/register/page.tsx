@@ -40,6 +40,15 @@ export default function RegisterPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
+  const [enabledProviders, setEnabledProviders] = useState<string[]>([])
+
+  // Fetch which OAuth providers are actually configured on the server
+  useEffect(() => {
+    fetch('/api/auth/available-providers')
+      .then((r) => r.json())
+      .then((d) => setEnabledProviders(d.providers ?? []))
+      .catch(() => setEnabledProviders([]))
+  }, [])
 
   // Show error from NextAuth redirect
   useEffect(() => {
@@ -56,7 +65,7 @@ export default function RegisterPage() {
     }
   }, [])
 
-  const socialProviders = ALL_PROVIDERS
+  const socialProviders = ALL_PROVIDERS.filter((p) => enabledProviders.includes(p.id))
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
@@ -124,24 +133,28 @@ export default function RegisterPage() {
 
         <div className="hud-card p-8">
           {/* Social sign-up */}
-          <div className="space-y-3 mb-6">
-            {socialProviders.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => handleOAuth(p.id)}
-                disabled={!!oauthLoading}
-                className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] text-[#E8F4FD] hover:border-[rgba(0,212,255,0.5)] hover:bg-[rgba(0,212,255,0.08)] transition-all font-mono text-sm"
-              >
-                {oauthLoading === p.id ? <Spinner size={18} /> : p.icon}
-                Continue with {p.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
-            <span className="text-[#4A7FA5] text-xs font-mono">OR</span>
-            <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
-          </div>
+          {socialProviders.length > 0 && (
+            <>
+              <div className="space-y-3 mb-6">
+                {socialProviders.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleOAuth(p.id)}
+                    disabled={!!oauthLoading}
+                    className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] text-[#E8F4FD] hover:border-[rgba(0,212,255,0.5)] hover:bg-[rgba(0,212,255,0.08)] transition-all font-mono text-sm"
+                  >
+                    {oauthLoading === p.id ? <Spinner size={18} /> : p.icon}
+                    Continue with {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+                <span className="text-[#4A7FA5] text-xs font-mono">OR</span>
+                <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

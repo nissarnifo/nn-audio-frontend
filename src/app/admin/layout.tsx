@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
 import { PageLoading } from '@/components/ui'
 
@@ -18,6 +19,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const pathname = usePathname()
   const { isAdmin, isLoggedIn, logout } = useAuthStore()
+  const qc = useQueryClient()
 
   // ── /admin/login is inside this layout but must NOT be guarded ──
   const isLoginPage = pathname === '/admin/login'
@@ -39,6 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   function handleLogout() {
     logout()
+    qc.clear()
     router.push('/admin/login')
   }
 

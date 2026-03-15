@@ -88,6 +88,7 @@ export function useOrders() {
     queryKey: ['orders'],
     queryFn: () => ordersApi.getAll().then((r) => r.data),
     enabled: isLoggedIn,
+    refetchOnMount: 'always',
   })
 }
 
@@ -97,6 +98,7 @@ export function useOrder(id: string) {
     queryKey: ['order', id],
     queryFn: () => ordersApi.getById(id).then((r) => r.data),
     enabled: isLoggedIn && !!id,
+    refetchOnMount: 'always',
   })
 }
 
@@ -106,7 +108,7 @@ export function useCreateOrder() {
     mutationFn: (data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string> }) =>
       ordersApi.create(data).then((r) => r.data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['orders'] })
+      qc.removeQueries({ queryKey: ['orders'] })   // wipe cache so orders page shows fresh spinner
       qc.invalidateQueries({ queryKey: ['cart'] })
     },
   })

@@ -13,13 +13,14 @@ const STATUS_STEPS = ['PROCESSING', 'SHIPPED', 'DELIVERED']
 export default function OrdersPage() {
   const router = useRouter()
   const { isLoggedIn, _hasHydrated } = useAuthStore()
-  const { data: orders, isLoading } = useOrders()
+  const { data: orders, isLoading, isFetching } = useOrders()
 
   useEffect(() => {
     if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
   }, [_hasHydrated, isLoggedIn, router])
 
-  if (!_hasHydrated || isLoading) return <PageLoading />
+  // Show spinner while hydrating, loading, or refetching when we have no data yet
+  if (!_hasHydrated || isLoading || (isFetching && !orders?.length)) return <PageLoading />
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">

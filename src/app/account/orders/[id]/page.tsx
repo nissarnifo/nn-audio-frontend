@@ -12,13 +12,13 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { isLoggedIn, _hasHydrated } = useAuthStore()
-  const { data: order, isLoading } = useOrder(id)
+  const { data: order, isLoading, isFetching } = useOrder(id)
 
   useEffect(() => {
     if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
   }, [_hasHydrated, isLoggedIn, router])
 
-  if (!_hasHydrated || isLoading) return <PageLoading />
+  if (!_hasHydrated || isLoading || (isFetching && !order)) return <PageLoading />
   if (!order) return (
     <div className="max-w-3xl mx-auto px-4 py-20 text-center">
       <p className="font-heading text-2xl text-[#FF3366]">Order not found</p>

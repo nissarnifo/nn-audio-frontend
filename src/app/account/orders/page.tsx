@@ -12,14 +12,14 @@ const STATUS_STEPS = ['PROCESSING', 'SHIPPED', 'DELIVERED']
 
 export default function OrdersPage() {
   const router = useRouter()
-  const { isLoggedIn } = useAuthStore()
+  const { isLoggedIn, _hasHydrated } = useAuthStore()
   const { data: orders, isLoading } = useOrders()
 
   useEffect(() => {
-    if (!isLoggedIn) router.push('/auth/login')
-  }, [isLoggedIn, router])
+    if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
+  }, [_hasHydrated, isLoggedIn, router])
 
-  if (isLoading) return <PageLoading />
+  if (!_hasHydrated || isLoading) return <PageLoading />
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-10">

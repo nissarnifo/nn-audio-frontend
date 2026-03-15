@@ -131,20 +131,20 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       customerName: user.name,
       customerEmail: user.email,
       customerPhone: user.phone ?? '',
-    subtotal,
-    shipping,
-    total,
-    paymentMethod,
-    paymentStatus: paymentMethod === 'RAZORPAY' ? 'PAID' : 'PENDING',
-    address: {
-      name: order.address.name,
-      phone: order.address.phone,
-      line1: order.address.line1,
-      line2: order.address.line2,
-      city: order.address.city,
-      state: order.address.state,
-      pin: order.address.pin,
-    },
+      subtotal,
+      shipping,
+      total,
+      paymentMethod,
+      paymentStatus: paymentMethod === 'RAZORPAY' ? 'PAID' : 'PENDING',
+      address: {
+        name: order.address.name,
+        phone: order.address.phone,
+        line1: order.address.line1,
+        line2: order.address.line2,
+        city: order.address.city,
+        state: order.address.state,
+        pin: order.address.pin,
+      },
       items: cart.items.map((i) => ({
         productName: i.product.name,
         variantLabel: i.variant.label,
@@ -179,12 +179,27 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
 
 // PUT /api/v1/orders/:id/cancel
 router.put('/:id/cancel', requireAuth, async (req: AuthRequest, res) => {
-  const order = await prisma.order.findFirst({ where: { id: req.params.id, userId: req.user!.id } })
+  const order = await prisma.order.findFirst({
+    where: { id: req.params.id, userId: req.user!.id },
+    include: { items: true },
+  })
   if (!order) { res.status(404).json({ error: 'Order not found' }); return }
-  if (!['PROCESSING'].includes(order.status)) {
+  if (order.status !== 'PROCESSING') {
     res.status(400).json({ error: 'Order cannot be cancelled at this stage' })
     return
   }
+
+  // Restore stock + log RETURN movements
+  await Promise.all(order.items.flatMap((i) => [
+    prisma.productVariant.update({
+      where: { id: i.variantId },
+      data: { stockQty: { increment: i.qty } },
+    }),
+    prisma.stockMovement.create({
+      data: { variantId: i.variantId, type: 'RETURN', qty: i.qty, note: `Order ${order.orderNumber} cancelled` },
+    }),
+  ]))
+
   const updated = await prisma.order.update({
     where: { id: req.params.id },
     data: { status: 'CANCELLED', paymentStatus: order.paymentStatus === 'PAID' ? 'REFUNDED' : order.paymentStatus },

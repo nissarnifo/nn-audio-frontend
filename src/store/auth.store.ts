@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 import type { User } from '@/types'
 
 interface AuthState {
+  _hasHydrated: boolean
   user: User | null
   token: string | null
   isLoggedIn: boolean
@@ -16,6 +17,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
+      _hasHydrated: false,
       user: null,
       token: null,
       isLoggedIn: false,
@@ -35,6 +37,11 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, token: null, isLoggedIn: false, isAdmin: false })
       },
     }),
-    { name: 'nn-auth' }
+    {
+      name: 'nn-auth',
+      onRehydrateStorage: () => (state) => {
+        if (state) state._hasHydrated = true
+      },
+    }
   )
 )

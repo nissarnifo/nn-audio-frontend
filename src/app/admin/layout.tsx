@@ -18,26 +18,26 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { isAdmin, isLoggedIn, logout } = useAuthStore()
+  const { isAdmin, isLoggedIn, _hasHydrated, logout } = useAuthStore()
   const qc = useQueryClient()
 
   // ── /admin/login is inside this layout but must NOT be guarded ──
   const isLoginPage = pathname === '/admin/login'
 
   useEffect(() => {
-    if (isLoginPage) return          // already on login — no redirect
+    if (!_hasHydrated || isLoginPage) return
     if (!isLoggedIn) {
       router.push('/admin/login')
     } else if (!isAdmin) {
       router.push('/')
     }
-  }, [isAdmin, isLoggedIn, isLoginPage, router])
+  }, [_hasHydrated, isAdmin, isLoggedIn, isLoginPage, router])
 
   // Render login page without sidebar chrome
   if (isLoginPage) return <>{children}</>
 
-  // Still checking auth
-  if (!isAdmin) return <PageLoading />
+  // Wait for hydration or auth check
+  if (!_hasHydrated || !isAdmin) return <PageLoading />
 
   function handleLogout() {
     logout()

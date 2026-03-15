@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, isLoggedIn, updateUser, logout } = useAuthStore()
+  const { user, isLoggedIn, _hasHydrated, updateUser, logout } = useAuthStore()
   const { mutateAsync: updateProfile, isPending: updatingProfile } = useUpdateProfile()
   const { mutateAsync: changePassword, isPending: changingPass } = useChangePassword()
   const { mutateAsync: deleteAccount, isPending: deletingAccount } = useDeleteAccount()
@@ -22,14 +22,14 @@ export default function ProfilePage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   useEffect(() => {
-    if (!isLoggedIn) router.push('/auth/login')
-  }, [isLoggedIn, router])
+    if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
+  }, [_hasHydrated, isLoggedIn, router])
 
   useEffect(() => {
     if (user) setProfileForm({ name: user.name, email: user.email, phone: user.phone })
   }, [user])
 
-  if (!user) return <PageLoading />
+  if (!_hasHydrated || !user) return <PageLoading />
 
   async function handleProfileSave(e: React.FormEvent) {
     e.preventDefault()

@@ -11,14 +11,14 @@ import { useEffect } from 'react'
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const { isLoggedIn } = useAuthStore()
+  const { isLoggedIn, _hasHydrated } = useAuthStore()
   const { data: order, isLoading } = useOrder(id)
 
   useEffect(() => {
-    if (!isLoggedIn) router.push('/auth/login')
-  }, [isLoggedIn, router])
+    if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
+  }, [_hasHydrated, isLoggedIn, router])
 
-  if (isLoading) return <PageLoading />
+  if (!_hasHydrated || isLoading) return <PageLoading />
   if (!order) return (
     <div className="max-w-3xl mx-auto px-4 py-20 text-center">
       <p className="font-heading text-2xl text-[#FF3366]">Order not found</p>

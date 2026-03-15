@@ -12,7 +12,7 @@ const MAX_ADDRESSES = 5
 
 export default function AddressesPage() {
   const router = useRouter()
-  const { isLoggedIn } = useAuthStore()
+  const { isLoggedIn, _hasHydrated } = useAuthStore()
   const { data: addresses, isLoading } = useAddresses()
   const { mutateAsync: createAddress, isPending: creating } = useCreateAddress()
   const { mutateAsync: updateAddress, isPending: updating } = useUpdateAddress()
@@ -24,10 +24,10 @@ export default function AddressesPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isLoggedIn) router.push('/auth/login')
-  }, [isLoggedIn, router])
+    if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
+  }, [_hasHydrated, isLoggedIn, router])
 
-  if (isLoading) return <PageLoading />
+  if (!_hasHydrated || isLoading) return <PageLoading />
 
   const atLimit = (addresses?.length ?? 0) >= MAX_ADDRESSES
 

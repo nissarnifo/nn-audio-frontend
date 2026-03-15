@@ -14,6 +14,7 @@ interface CartState {
   removeItem: (itemId: string) => void
   updateQty: (itemId: string, qty: number) => void
   clearCart: () => void
+  syncPrices: (updates: Array<{ variantId: string; newPrice: number }>) => void
 }
 
 function calcTotals(items: CartItem[]) {
@@ -68,6 +69,14 @@ export const useCartStore = create<CartState>()(
 
       clearCart() {
         set({ items: [], count: 0, subtotal: 0, shipping: 0, total: 0 })
+      },
+
+      syncPrices(updates) {
+        const updated = get().items.map((i) => {
+          const u = updates.find((x) => x.variantId === i.variant.id)
+          return u ? { ...i, variant: { ...i.variant, price: u.newPrice } } : i
+        })
+        set({ items: updated, ...calcTotals(updated) })
       },
     }),
     { name: 'nn-cart' }

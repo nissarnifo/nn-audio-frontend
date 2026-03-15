@@ -105,11 +105,34 @@ export function useOrder(id: string) {
 export function useCreateOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string> }) =>
-      ordersApi.create(data).then((r) => r.data),
+    mutationFn: ({
+      idempotencyKey,
+      ...data
+    }: {
+      paymentMethod: string
+      addressId: string
+      razorpay?: Record<string, string>
+      idempotencyKey?: string
+    }) => ordersApi.create(data, idempotencyKey).then((r) => r.data),
     onSuccess: () => {
-      qc.removeQueries({ queryKey: ['orders'] })   // wipe cache so orders page shows fresh spinner
+      qc.removeQueries({ queryKey: ['orders'] })
       qc.invalidateQueries({ queryKey: ['cart'] })
+    },
+  })
+}
+
+export function useCancelOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => ordersApi.cancel(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['order', id] })
+      qc.invalidateQueries({ queryKey: ['orders'] })
+      toast.success('Order cancelled successfully')
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'Failed to cancel order')
     },
   })
 }

@@ -19,26 +19,33 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const { isAdmin, isLoggedIn, logout } = useAuthStore()
 
+  // ── /admin/login is inside this layout but must NOT be guarded ──
+  const isLoginPage = pathname === '/admin/login'
+
   useEffect(() => {
+    if (isLoginPage) return          // already on login — no redirect
     if (!isLoggedIn) {
       router.push('/admin/login')
     } else if (!isAdmin) {
       router.push('/')
     }
-  }, [isAdmin, isLoggedIn, router])
+  }, [isAdmin, isLoggedIn, isLoginPage, router])
 
+  // Render login page without sidebar chrome
+  if (isLoginPage) return <>{children}</>
+
+  // Still checking auth
   if (!isAdmin) return <PageLoading />
 
   function handleLogout() {
     logout()
-    router.push('/auth/login')
+    router.push('/admin/login')
   }
 
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="w-56 flex-shrink-0 border-r border-[rgba(0,212,255,0.12)] bg-[#080C16] flex flex-col">
-        {/* Logo */}
         <div className="px-5 py-6 border-b border-[rgba(0,212,255,0.12)]">
           <Link href="/admin" className="font-heading text-sm text-[#00D4FF] tracking-widest">
             N &amp; N AUDIO
@@ -46,7 +53,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <p className="font-mono text-[9px] text-[#4A7FA5] mt-0.5 tracking-widest">ADMIN PANEL</p>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
@@ -67,24 +73,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Footer */}
         <div className="px-3 pb-5">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs text-[#4A7FA5] hover:text-[#E8F4FD] transition-colors tracking-widest"
-          >
+          <Link href="/"
+            className="flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs text-[#4A7FA5] hover:text-[#E8F4FD] transition-colors tracking-widest">
             ← STOREFRONT
           </Link>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs text-[#FF3366] hover:text-white hover:bg-[rgba(255,51,102,0.1)] rounded transition-all tracking-widest"
-          >
+          <button onClick={handleLogout}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 font-mono text-xs text-[#FF3366] hover:text-white hover:bg-[rgba(255,51,102,0.1)] rounded transition-all tracking-widest">
             <LogOut size={14} /> LOGOUT
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 overflow-auto">
         {children}
       </main>

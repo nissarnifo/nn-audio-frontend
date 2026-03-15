@@ -5,8 +5,8 @@ import { useAuthStore } from '@/store/auth.store'
 import type { User } from '@/types'
 import toast from 'react-hot-toast'
 
-const MAX_RETRIES = 10
-const RETRY_DELAYS = [6000, 8000, 10000, 12000, 15000, 15000, 15000, 20000, 20000, 30000] // ms
+const MAX_RETRIES = 12
+const RETRY_DELAYS = [4000, 6000, 8000, 10000, 12000, 15000, 15000, 15000, 20000, 20000, 25000, 30000] // ms
 
 async function syncWithRetry(
   update: () => Promise<unknown>,
@@ -14,6 +14,9 @@ async function syncWithRetry(
   synced: React.MutableRefObject<boolean>
 ) {
   const toastId = toast.loading('Connecting to server, please wait…', { duration: Infinity })
+
+  // Fire a warmup ping to wake the backend while we retry the sync
+  fetch('/api/warmup').catch(() => {})
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -31,8 +34,8 @@ async function syncWithRetry(
       }
 
       const status = res.status
-      // 503 = backend sleeping, 502 = gateway down, 504 = Vercel timeout waiting for backend
-      if ((status === 503 || status === 502 || status === 504) && attempt < MAX_RETRIES - 1) {
+      // 503 = backend sleeping, 502 = gateway down, 504 = Vercel timeout, 500 = backend still initializing
+      if ((status === 503 || status === 502 || status === 504 || status === 500) && attempt < MAX_RETRIES - 1) {
         toast.loading(
           `Server is waking up… (attempt ${attempt + 2}/${MAX_RETRIES})`,
           { id: toastId, duration: Infinity }

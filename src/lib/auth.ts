@@ -46,6 +46,7 @@ export const authOptions: NextAuthOptions = {
               email: token.email,
               name: token.name,
             }),
+            signal: AbortSignal.timeout(6000),
           })
           if (res.ok) {
             const data = await res.json()

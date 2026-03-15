@@ -1,5 +1,5 @@
 'use client'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { useProductById, useUpdateProduct } from '@/hooks'
 import ProductForm from '@/components/admin/ProductForm'
@@ -7,13 +7,18 @@ import ImageUploader from '@/components/admin/ImageUploader'
 import { PageLoading, SectionHeader } from '@/components/ui'
 import { productsApi } from '@/services/api'
 import { useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import type { Product } from '@/types'
 
 export default function AdminProductEditPage() {
   const { id } = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const qc = useQueryClient()
   const isNew = id === 'new'
+
+  // Pre-select category when coming from filtered list (e.g. ?category=speaker_box)
+  const presetCategory = searchParams.get('category') as Product['category'] | null
 
   const { data: product, isLoading } = useProductById(isNew ? '' : id)
   const { mutateAsync: updateProduct, isPending } = useUpdateProduct()
@@ -22,8 +27,15 @@ export default function AdminProductEditPage() {
 
   async function handleSave(data: Partial<Product>) {
     if (isNew) {
-      await productsApi.create(data)
-      router.push('/admin/products')
+      try {
+        await productsApi.create(data)
+        qc.invalidateQueries({ queryKey: ['products'] })
+        toast.success('Product created successfully')
+        router.push('/admin/products')
+      } catch (err: any) {
+        const msg = err?.response?.data?.error ?? 'Failed to create product'
+        toast.error(msg)
+      }
     } else {
       await updateProduct({ id, data: data as Record<string, unknown> })
     }
@@ -44,7 +56,11 @@ export default function AdminProductEditPage() {
         subtitle={isNew ? 'Add a new product to the catalog' : product?.name}
       />
 
-      <ProductForm initial={product} onSubmit={handleSave} loading={isPending} />
+      <ProductForm
+        initial={isNew && presetCategory ? { category: presetCategory } : product}
+        onSubmit={handleSave}
+        loading={isPending}
+      />
 
       {!isNew && product && (
         <div className="mt-8 hud-card p-6">

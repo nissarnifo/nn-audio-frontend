@@ -18,7 +18,9 @@ export default function AdminProductsPage() {
     <div className="max-w-7xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-8">
         <SectionHeader title="PRODUCTS" subtitle="Manage your product catalog" />
-        <Link href="/admin/products/new" className="btn-cyan flex items-center gap-1.5">
+        <Link
+          href={`/admin/products/new${category ? `?category=${category}` : ''}`}
+          className="btn-cyan flex items-center gap-1.5">
           <Plus size={15} /> NEW PRODUCT
         </Link>
       </div>

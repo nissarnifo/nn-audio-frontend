@@ -206,6 +206,50 @@ export function useUpdateOrderStatus() {
   })
 }
 
+/* ─── Inventory ──────────────────────────────────────────────────── */
+export function useInventory() {
+  return useQuery({
+    queryKey: ['inventory'],
+    queryFn: () => adminApi.getInventory().then((r) => r.data),
+    refetchOnMount: 'always',
+  })
+}
+
+export function useStockMovements(params?: { page?: number; type?: string }) {
+  return useQuery({
+    queryKey: ['stock-movements', params],
+    queryFn: () => adminApi.getMovements(params).then((r) => r.data),
+  })
+}
+
+export function useRestock() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { variantId: string; qty: number; note?: string }) =>
+      adminApi.restock(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventory'] })
+      qc.invalidateQueries({ queryKey: ['stock-movements'] })
+      toast.success('Stock updated successfully')
+    },
+    onError: () => toast.error('Failed to update stock'),
+  })
+}
+
+export function useAdjustStock() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { variantId: string; qty: number; note?: string }) =>
+      adminApi.adjustStock(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventory'] })
+      qc.invalidateQueries({ queryKey: ['stock-movements'] })
+      toast.success('Stock adjusted')
+    },
+    onError: () => toast.error('Failed to adjust stock'),
+  })
+}
+
 /* ─── Auth ───────────────────────────────────────────────────────── */
 export function useUpdateProfile() {
   return useMutation({

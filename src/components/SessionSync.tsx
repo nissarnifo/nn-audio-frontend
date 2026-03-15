@@ -34,8 +34,8 @@ async function syncWithRetry(
       }
 
       const status = res.status
-      // 503 = backend sleeping, 502 = gateway down, 504 = Vercel timeout waiting for backend
-      if ((status === 503 || status === 502 || status === 504) && attempt < MAX_RETRIES - 1) {
+      // 503 = backend sleeping, 502 = gateway down, 504 = Vercel timeout, 500 = backend still initializing
+      if ((status === 503 || status === 502 || status === 504 || status === 500) && attempt < MAX_RETRIES - 1) {
         toast.loading(
           `Server is waking up… (attempt ${attempt + 2}/${MAX_RETRIES})`,
           { id: toastId, duration: Infinity }

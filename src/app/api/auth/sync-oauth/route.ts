@@ -20,7 +20,7 @@ export async function POST() {
         email: session.oauthEmail,
         name: session.oauthName,
       }),
-      signal: AbortSignal.timeout(8000), // fail fast — never hang past Vercel's 10s limit
+      signal: AbortSignal.timeout(9000), // fail fast — never hang past Vercel's 10s limit
     })
 
     if (!res.ok) {

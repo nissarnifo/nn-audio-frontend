@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/store/cart.store'
 import { useAuthStore } from '@/store/auth.store'
 import { useAddresses, useCreateAddress, useCreateOrder } from '@/hooks'
-import { paymentsApi } from '@/services/api'
+import { paymentsApi, cartApi } from '@/services/api'
 import AddressForm from '@/components/checkout/AddressForm'
 import PaymentSelect from '@/components/checkout/PaymentSelect'
 import { fmt } from '@/lib/utils'
@@ -85,6 +85,10 @@ export default function CheckoutPage() {
         toast.error('Please select or enter an address')
         return
       }
+
+      // Sync local cart to backend before placing order
+      await cartApi.clear()
+      await Promise.all(items.map((i) => cartApi.addItem({ variantId: i.variant.id, qty: i.qty })))
 
       if (paymentMethod === 'RAZORPAY') {
         // Guard: Razorpay SDK must be loaded (injected in layout.tsx)

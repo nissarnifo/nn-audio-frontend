@@ -121,8 +121,8 @@ export default function LoginPage() {
         </div>
 
         <div className="hud-card p-8">
-          {/* Social login */}
-          {socialProviders.length > 0 && (
+          {/* Social login — temporarily disabled */}
+          {/* {socialProviders.length > 0 && (
             <>
               <div className="space-y-3 mb-6">
                 {socialProviders.map((p) => (
@@ -143,7 +143,7 @@ export default function LoginPage() {
                 <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
               </div>
             </>
-          )}
+          )} */}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

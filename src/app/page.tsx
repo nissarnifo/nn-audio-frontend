@@ -78,7 +78,7 @@ function HeroCarousel() {
   }
 
   return (
-    <div className="relative w-full overflow-hidden hud-grid" style={{ minHeight: 340 }}>
+    <div className="relative w-full overflow-hidden hud-grid" style={{ minHeight: 400 }}>
       {/* dynamic radial glow behind product image */}
       <div className="absolute inset-0 pointer-events-none transition-all duration-700"
         style={{ background: `radial-gradient(ellipse 60% 80% at 70% 50%, ${accent}12 0%, transparent 70%)` }} />
@@ -148,15 +148,15 @@ function HeroCarousel() {
           </div>
 
           {/* Right: product image */}
-          <div className="flex-shrink-0 relative w-56 h-48 md:w-80 md:h-64 rounded-lg overflow-hidden"
-            style={{ border: `1px solid ${accent}30`, background: accent + '06' }}>
+          <div className="flex-shrink-0 relative w-64 h-56 md:w-96 md:h-80 rounded-lg overflow-hidden"
+            style={{ border: `1px solid ${accent}30`, background: accent + '08' }}>
             {[['top-0 left-0','border-t border-l'],['top-0 right-0','border-t border-r'],
               ['bottom-0 left-0','border-b border-l'],['bottom-0 right-0','border-b border-r']].map(([p,b]) => (
               <div key={p} className={`absolute ${p} w-5 h-5 ${b} z-10`} style={{ borderColor: accent }} />
             ))}
             {img
-              ? <Image src={cloudinaryUrl(img.url, 600)} alt={product.name} fill
-                  className="object-cover" sizes="(max-width:768px) 224px, 320px" priority />
+              ? <Image src={cloudinaryUrl(img.url, 800)} alt={product.name} fill
+                  className="object-contain p-2" sizes="(max-width:768px) 256px, 384px" priority />
               : <NoPhoto className="w-full h-full" />
             }
             {/* price tag on image */}

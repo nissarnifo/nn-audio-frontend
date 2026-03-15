@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/store/cart.store'
 import { useAuthStore } from '@/store/auth.store'
@@ -13,6 +13,8 @@ import type { Address } from '@/types'
 import toast from 'react-hot-toast'
 
 const STEPS = ['SHIPPING', 'PAYMENT', 'CONFIRM']
+
+type PriceChange = { name: string; variantId: string; oldPrice: number; newPrice: number }
 
 function StepDot({ step, current }: { step: number; current: number }) {
   const done = current > step
@@ -39,11 +41,16 @@ function StepDot({ step, current }: { step: number; current: number }) {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, subtotal, shipping, total, clearCart } = useCartStore()
+  const { items, subtotal, shipping, total, clearCart, syncPrices } = useCartStore()
   const { isLoggedIn } = useAuthStore()
   const { data: addresses } = useAddresses()
   const { mutateAsync: createAddress } = useCreateAddress()
   const { mutateAsync: createOrder, isPending } = useCreateOrder()
+
+  // P4: idempotency key — generated once per checkout session
+  const idempotencyKey = useRef(
+    typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).slice(2)
+  )
 
   const [step, setStep] = useState(0)
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
@@ -52,6 +59,11 @@ export default function CheckoutPage() {
   const [newAddress, setNewAddress] = useState<Omit<Address, 'id' | 'is_default'> | null>(null)
   const [showNewAddrForm, setShowNewAddrForm] = useState(!isLoggedIn)
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'RAZORPAY'>('COD')
+
+  // P1 + P2: cart validation state
+  const [isValidating, setIsValidating] = useState(false)
+  const [priceChanges, setPriceChanges] = useState<PriceChange[]>([])
+  const [backendTotal, setBackendTotal] = useState<number | null>(null)
 
   if (items.length === 0 && typeof window !== 'undefined') {
     router.push('/cart')
@@ -66,17 +78,70 @@ export default function CheckoutPage() {
     setStep(1)
   }
 
+  // P1 + P2: validate cart with backend when moving to CONFIRM step
+  async function handlePaymentNext() {
+    setIsValidating(true)
+    try {
+      // Sync local cart → backend
+      await cartApi.clear()
+      await Promise.all(items.map((i) => cartApi.addItem({ variantId: i.variant.id, qty: i.qty })))
+
+      // Fetch backend-calculated cart (authoritative prices + stock)
+      const { data: backCart } = await cartApi.get()
+
+      // P2: block on out-of-stock items
+      const oos = backCart.items.filter((bi) => {
+        const local = items.find((li) => li.variant.id === bi.variant.id)
+        return local && bi.variant.stock_qty < local.qty
+      })
+      if (oos.length > 0) {
+        toast.error(
+          `Out of stock: ${oos.map((i) => i.product.name).join(', ')}. Please update your cart.`,
+          { duration: 6000 }
+        )
+        return
+      }
+
+      // P1: detect price changes
+      const changes: PriceChange[] = backCart.items
+        .filter((bi) => {
+          const local = items.find((li) => li.variant.id === bi.variant.id)
+          return local && local.variant.price !== bi.variant.price
+        })
+        .map((bi) => {
+          const local = items.find((li) => li.variant.id === bi.variant.id)!
+          return {
+            name: bi.product.name,
+            variantId: bi.variant.id,
+            oldPrice: local.variant.price,
+            newPrice: bi.variant.price,
+          }
+        })
+
+      if (changes.length > 0) {
+        // Update local cart with fresh prices so totals are correct
+        syncPrices(changes.map((c) => ({ variantId: c.variantId, newPrice: c.newPrice })))
+        setPriceChanges(changes)
+      }
+
+      setBackendTotal(backCart.total)
+      setStep(2)
+    } catch {
+      toast.error('Failed to validate cart. Please try again.')
+    } finally {
+      setIsValidating(false)
+    }
+  }
+
   async function handlePlaceOrder() {
     try {
       let addressId = selectedAddressId
 
-      // Save new address if needed
       if (showNewAddrForm && newAddress) {
         try {
           const saved = await createAddress(newAddress)
           addressId = saved.id
         } catch {
-          // hook's onError already showed the toast
           return
         }
       }
@@ -86,22 +151,27 @@ export default function CheckoutPage() {
         return
       }
 
-      // Sync local cart to backend before placing order
-      await cartApi.clear()
-      await Promise.all(items.map((i) => cartApi.addItem({ variantId: i.variant.id, qty: i.qty })))
+      const orderTotal = backendTotal ?? total
 
       if (paymentMethod === 'RAZORPAY') {
-        // Guard: Razorpay SDK must be loaded (injected in layout.tsx)
         type RazorpayWindow = Window & { Razorpay?: new (opts: Record<string, unknown>) => { open(): void } }
         if (!(window as RazorpayWindow).Razorpay) {
           toast.error('Payment service unavailable. Please refresh and try again.')
           return
         }
 
-        // Create Razorpay order
-        const { data: rpOrder } = await paymentsApi.createRazorpayOrder({ amount: total })
+        let rpOrder: { razorpay_order_id: string; amount: number; currency: string }
+        try {
+          const res = await paymentsApi.createRazorpayOrder({ amount: orderTotal })
+          rpOrder = res.data
+        } catch (err: unknown) {
+          const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+          toast.error(msg || 'Failed to initiate payment. Please try again.')
+          return
+        }
 
-        await new Promise<void>((resolve, reject) => {
+        // P5: race payment against 10-minute timeout
+        const paymentPromise = new Promise<void>((resolve, reject) => {
           const rzp = new (window as RazorpayWindow).Razorpay!({
             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
             amount: rpOrder.amount,
@@ -115,6 +185,7 @@ export default function CheckoutPage() {
                   paymentMethod: 'RAZORPAY',
                   addressId: addressId!,
                   razorpay: response,
+                  idempotencyKey: idempotencyKey.current,
                 })
                 clearCart()
                 router.push(`/checkout/success?orderId=${order.order_number}`)
@@ -128,19 +199,34 @@ export default function CheckoutPage() {
           })
           rzp.open()
         })
+
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Payment timeout')), 10 * 60 * 1000)
+        )
+
+        await Promise.race([paymentPromise, timeoutPromise])
       } else {
-        // COD
-        const order = await createOrder({ paymentMethod: 'COD', addressId })
+        const order = await createOrder({
+          paymentMethod: 'COD',
+          addressId,
+          idempotencyKey: idempotencyKey.current,
+        })
         clearCart()
         router.push(`/checkout/success?orderId=${order.order_number}`)
       }
-    } catch (err: any) {
-      if (err?.message !== 'Payment cancelled') {
-        const msg = err?.response?.data?.error || err?.message || 'Failed to place order'
-        toast.error(msg)
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message
+      if (msg === 'Payment cancelled') return
+      if (msg === 'Payment timeout') {
+        toast.error('Payment session timed out. Please try again.')
+        return
       }
+      const apiMsg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(apiMsg || msg || 'Failed to place order')
     }
   }
+
+  const displayTotal = backendTotal ?? total
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -223,7 +309,13 @@ export default function CheckoutPage() {
               <PaymentSelect selected={paymentMethod} onSelect={setPaymentMethod} />
               <div className="flex gap-3 mt-6">
                 <button onClick={() => setStep(0)} className="btn-cyan flex-1">BACK</button>
-                <button onClick={() => setStep(2)} className="btn-gold flex-1 py-3">REVIEW ORDER</button>
+                <button
+                  onClick={handlePaymentNext}
+                  disabled={isValidating}
+                  className="btn-gold flex-1 py-3 flex items-center justify-center gap-2"
+                >
+                  {isValidating ? <><Spinner size={16} /> VALIDATING...</> : 'REVIEW ORDER'}
+                </button>
               </div>
             </div>
           )}
@@ -232,6 +324,28 @@ export default function CheckoutPage() {
           {step === 2 && (
             <div className="hud-card p-6">
               <h2 className="font-heading text-xl text-[#E8F4FD] tracking-wider mb-6">CONFIRM ORDER</h2>
+
+              {/* P1: Price change warning */}
+              {priceChanges.length > 0 && (
+                <div className="border border-[#FFB700] bg-[rgba(255,183,0,0.06)] rounded p-4 mb-5">
+                  <p className="font-mono text-xs text-[#FFB700] mb-2">⚠ PRICES UPDATED</p>
+                  <div className="space-y-1">
+                    {priceChanges.map((c) => (
+                      <div key={c.variantId} className="flex justify-between text-xs font-mono">
+                        <span className="text-[#E8F4FD]">{c.name}</span>
+                        <span>
+                          <span className="line-through text-[#4A7FA5]">{fmt(c.oldPrice)}</span>
+                          {' → '}
+                          <span className="text-[#FFB700]">{fmt(c.newPrice)}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-[#4A7FA5] mt-2 font-mono">
+                    Cart prices have been updated to current rates.
+                  </p>
+                </div>
+              )}
 
               {/* Items */}
               <div className="space-y-3 mb-6">
@@ -258,7 +372,7 @@ export default function CheckoutPage() {
 
               <div className="flex justify-between mb-6">
                 <span className="font-heading text-lg text-[#E8F4FD]">TOTAL</span>
-                <span className="font-mono text-xl text-[#FFB700] font-bold">{fmt(total)}</span>
+                <span className="font-mono text-xl text-[#FFB700] font-bold">{fmt(displayTotal)}</span>
               </div>
 
               <div className="flex items-center gap-2 mb-2 text-sm">
@@ -296,7 +410,7 @@ export default function CheckoutPage() {
           <Divider className="my-3" />
           <div className="flex justify-between font-mono text-sm">
             <span className="text-[#4A7FA5]">Total</span>
-            <span className="text-[#FFB700] font-bold">{fmt(total)}</span>
+            <span className="text-[#FFB700] font-bold">{fmt(displayTotal)}</span>
           </div>
         </div>
       </div>

@@ -25,7 +25,7 @@ export default function AdminProductsPage() {
 
       {/* Category filter */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {(['', 'amplifier', 'speaker', 'subwoofer', 'processor', 'cable', 'accessory'] as const).map((cat) => (
+        {(['', 'amplifier', 'speaker', 'speaker_box', 'subwoofer', 'processor', 'cable', 'accessory'] as const).map((cat) => (
           <button
             key={cat}
             onClick={() => setCategory(cat || undefined)}
@@ -35,7 +35,7 @@ export default function AdminProductsPage() {
                 : 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[rgba(0,212,255,0.4)]'
             }`}
           >
-            {cat === '' ? 'ALL' : cat.toUpperCase()}
+            {cat === '' ? 'ALL' : cat === 'speaker_box' ? 'SPEAKER BOX' : cat.toUpperCase()}
           </button>
         ))}
       </div>

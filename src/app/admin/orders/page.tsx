@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useAdminOrders, useUpdateOrderStatus } from '@/hooks'
-import { StatusBadge, PageLoading, SectionHeader } from '@/components/ui'
+import { StatusBadge, PageLoading, SectionHeader, Pagination } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import type { OrderStatus } from '@/types'
 
@@ -9,7 +9,10 @@ const STATUSES: OrderStatus[] = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLE
 
 export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('')
-  const { data, isLoading } = useAdminOrders({ status: statusFilter || undefined })
+  const [page, setPage] = useState(1)
+  const { data, isLoading } = useAdminOrders({ status: statusFilter || undefined, page })
+
+  function handleStatusFilter(s: string) { setStatusFilter(s); setPage(1) }
   const { mutate: updateStatus } = useUpdateOrderStatus()
 
   if (isLoading) return <PageLoading />
@@ -23,7 +26,7 @@ export default function AdminOrdersPage() {
         {(['', ...STATUSES] as const).map((s) => (
           <button
             key={s}
-            onClick={() => setStatusFilter(s)}
+            onClick={() => handleStatusFilter(s)}
             className={`px-3 py-1 rounded font-mono text-xs border transition-all ${
               statusFilter === s
                 ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
@@ -76,6 +79,12 @@ export default function AdminOrdersPage() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={data?.total_pages ?? 1}
+        onPage={setPage}
+      />
     </div>
   )
 }

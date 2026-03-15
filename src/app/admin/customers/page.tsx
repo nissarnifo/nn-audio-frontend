@@ -2,16 +2,21 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { useAdminCustomers } from '@/hooks'
-import { PageLoading, SectionHeader } from '@/components/ui'
+import { PageLoading, SectionHeader, Pagination } from '@/components/ui'
 import { fmtDate } from '@/lib/utils'
 
 export default function AdminCustomersPage() {
   const [search, setSearch] = useState('')
-  const { data, isLoading } = useAdminCustomers({ search: search || undefined })
+  const [page, setPage] = useState(1)
+  const { data, isLoading } = useAdminCustomers({ search: search || undefined, page })
 
   if (isLoading) return <PageLoading />
 
-  const customers = Array.isArray(data) ? data : (data as { data?: unknown[] })?.data ?? []
+  const paged = data as { data?: unknown[]; total_pages?: number } | unknown[] | undefined
+  const customers = Array.isArray(paged) ? paged : (paged as { data?: unknown[] })?.data ?? []
+  const totalPages = Array.isArray(paged) ? 1 : ((paged as { total_pages?: number })?.total_pages ?? 1)
+
+  function handleSearch(val: string) { setSearch(val); setPage(1) }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -22,7 +27,7 @@ export default function AdminCustomersPage() {
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search by name or email..."
           className="input-hud pl-9"
         />
@@ -57,6 +62,12 @@ export default function AdminCustomersPage() {
           </div>
         )}
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPage={setPage}
+      />
     </div>
   )
 }

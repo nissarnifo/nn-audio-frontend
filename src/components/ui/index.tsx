@@ -144,3 +144,64 @@ export function PageLoading() {
     </div>
   )
 }
+
+/* ─── Pagination ─────────────────────────────────────────────────── */
+function getPageNums(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  if (current <= 4) return [1, 2, 3, 4, 5, '...', total]
+  if (current >= total - 3) return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
+  return [1, '...', current - 1, current, current + 1, '...', total]
+}
+
+export function Pagination({
+  page,
+  totalPages,
+  onPage,
+}: {
+  page: number
+  totalPages: number
+  onPage: (p: number) => void
+}) {
+  if (totalPages <= 1) return null
+  const pages = getPageNums(page, totalPages)
+  const btnBase =
+    'w-8 h-8 font-mono text-xs rounded border transition-all flex items-center justify-center'
+  return (
+    <div className="flex items-center justify-center gap-1 mt-8">
+      <button
+        onClick={() => onPage(page - 1)}
+        disabled={page === 1}
+        className={cn(btnBase, 'text-sm border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[#00D4FF] hover:text-[#00D4FF] disabled:opacity-30 disabled:cursor-not-allowed')}
+      >
+        ‹
+      </button>
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center font-mono text-xs text-[#4A7FA5]">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPage(p as number)}
+            className={cn(
+              btnBase,
+              page === p
+                ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.1)]'
+                : 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[rgba(0,212,255,0.4)] hover:text-[#E8F4FD]'
+            )}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        onClick={() => onPage(page + 1)}
+        disabled={page === totalPages}
+        className={cn(btnBase, 'text-sm border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[#00D4FF] hover:text-[#00D4FF] disabled:opacity-30 disabled:cursor-not-allowed')}
+      >
+        ›
+      </button>
+    </div>
+  )
+}

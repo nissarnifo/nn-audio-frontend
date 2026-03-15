@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi } from '@/services/api'
+import { useAuthStore } from '@/store/auth.store'
 import type { ProductFilters } from '@/types'
 import toast from 'react-hot-toast'
 
@@ -50,9 +51,11 @@ export function useUpdateProduct() {
 
 /* ─── Cart ───────────────────────────────────────────────────────── */
 export function useCart() {
+  const { isLoggedIn } = useAuthStore()
   return useQuery({
     queryKey: ['cart'],
     queryFn: () => cartApi.get().then((r) => r.data),
+    enabled: isLoggedIn,
   })
 }
 
@@ -80,17 +83,20 @@ export function useRemoveFromCart() {
 
 /* ─── Orders ─────────────────────────────────────────────────────── */
 export function useOrders() {
+  const { isLoggedIn } = useAuthStore()
   return useQuery({
     queryKey: ['orders'],
     queryFn: () => ordersApi.getAll().then((r) => r.data),
+    enabled: isLoggedIn,
   })
 }
 
 export function useOrder(id: string) {
+  const { isLoggedIn } = useAuthStore()
   return useQuery({
     queryKey: ['order', id],
     queryFn: () => ordersApi.getById(id).then((r) => r.data),
-    enabled: !!id,
+    enabled: isLoggedIn && !!id,
   })
 }
 
@@ -108,9 +114,11 @@ export function useCreateOrder() {
 
 /* ─── Addresses ──────────────────────────────────────────────────── */
 export function useAddresses() {
+  const { isLoggedIn } = useAuthStore()
   return useQuery({
     queryKey: ['addresses'],
     queryFn: () => addressesApi.getAll().then((r) => r.data),
+    enabled: isLoggedIn,
   })
 }
 

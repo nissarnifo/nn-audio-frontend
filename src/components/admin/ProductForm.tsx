@@ -87,8 +87,8 @@ export default function ProductForm({ initial, onSubmit, loading }: Props) {
             <input name="sku" value={form.sku} onChange={handleChange} required className="input-hud font-mono" />
           </div>
           <div>
-            <label className="block text-xs text-[#4A7FA5] font-mono mb-1">CATEGORY *</label>
-            <select name="category" value={form.category} onChange={handleChange} className="input-hud">
+            <label className="block text-xs text-[#4A7FA5] font-mono mb-2">CATEGORY *</label>
+            <div className="flex flex-wrap gap-2">
               {[
                 { value: 'amplifier', label: 'Amplifier' },
                 { value: 'speaker', label: 'Speaker' },
@@ -98,9 +98,20 @@ export default function ProductForm({ initial, onSubmit, loading }: Props) {
                 { value: 'cable', label: 'Cable' },
                 { value: 'accessory', label: 'Accessory' },
               ].map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, category: c.value as typeof f.category }))}
+                  className={`px-4 py-1.5 rounded font-mono text-xs border transition-all ${
+                    form.category === c.value
+                      ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
+                      : 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[rgba(0,212,255,0.4)] hover:text-[#E8F4FD]'
+                  }`}
+                >
+                  {c.label.toUpperCase()}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div>
             <label className="block text-xs text-[#4A7FA5] font-mono mb-1">BADGE</label>

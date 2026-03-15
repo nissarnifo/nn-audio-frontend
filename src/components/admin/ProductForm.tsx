@@ -89,8 +89,16 @@ export default function ProductForm({ initial, onSubmit, loading }: Props) {
           <div>
             <label className="block text-xs text-[#4A7FA5] font-mono mb-1">CATEGORY *</label>
             <select name="category" value={form.category} onChange={handleChange} className="input-hud">
-              {['amplifier', 'speaker', 'subwoofer', 'processor', 'cable', 'accessory'].map((c) => (
-                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              {[
+                { value: 'amplifier', label: 'Amplifier' },
+                { value: 'speaker', label: 'Speaker' },
+                { value: 'speaker_box', label: 'Speaker Box' },
+                { value: 'subwoofer', label: 'Subwoofer' },
+                { value: 'processor', label: 'Processor' },
+                { value: 'cable', label: 'Cable' },
+                { value: 'accessory', label: 'Accessory' },
+              ].map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
           </div>

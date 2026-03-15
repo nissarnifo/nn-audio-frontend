@@ -9,6 +9,7 @@ const CATEGORIES: { value: ProductCategory | ''; label: string }[] = [
   { value: '', label: 'All' },
   { value: 'amplifier', label: 'Amplifiers' },
   { value: 'speaker', label: 'Speakers' },
+  { value: 'speaker_box', label: 'Speaker Box' },
   { value: 'subwoofer', label: 'Subwoofers' },
   { value: 'processor', label: 'Processors' },
   { value: 'cable', label: 'Cables' },

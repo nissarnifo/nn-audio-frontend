@@ -34,6 +34,7 @@ export interface Product {
 export type ProductCategory =
   | 'amplifier'
   | 'speaker'
+  | 'speaker_box'
   | 'subwoofer'
   | 'processor'
   | 'cable'

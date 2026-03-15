@@ -72,8 +72,13 @@ export default function CheckoutPage() {
 
       // Save new address if needed
       if (showNewAddrForm && newAddress) {
-        const saved = await createAddress(newAddress)
-        addressId = saved.id
+        try {
+          const saved = await createAddress(newAddress)
+          addressId = saved.id
+        } catch {
+          // hook's onError already showed the toast
+          return
+        }
       }
 
       if (!addressId) {
@@ -125,9 +130,10 @@ export default function CheckoutPage() {
         clearCart()
         router.push(`/checkout/success?orderId=${order.order_number}`)
       }
-    } catch (err) {
-      if (err instanceof Error && err.message !== 'Payment cancelled') {
-        toast.error(err.message || 'Failed to place order')
+    } catch (err: any) {
+      if (err?.message !== 'Payment cancelled') {
+        const msg = err?.response?.data?.error || err?.message || 'Failed to place order'
+        toast.error(msg)
       }
     }
   }

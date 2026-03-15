@@ -103,7 +103,6 @@ export function useCreateOrder() {
       qc.invalidateQueries({ queryKey: ['orders'] })
       qc.invalidateQueries({ queryKey: ['cart'] })
     },
-    onError: () => toast.error('Failed to place order'),
   })
 }
 

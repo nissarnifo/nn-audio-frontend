@@ -30,6 +30,24 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Auto-logout on 401 — token expired or invalid
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err?.response?.status === 401 && typeof window !== 'undefined') {
+      try {
+        const auth = JSON.parse(localStorage.getItem('nn-auth') || '{}')
+        if (auth?.state?.token) {
+          // Clear stale auth state
+          localStorage.setItem('nn-auth', JSON.stringify({ ...auth, state: { ...auth.state, user: null, token: null, isLoggedIn: false, isAdmin: false } }))
+          window.location.href = '/auth/login'
+        }
+      } catch {}
+    }
+    return Promise.reject(err)
+  }
+)
+
 /* ─── Products ───────────────────────────────────────────────────── */
 export const productsApi = {
   getAll(filters?: ProductFilters) {

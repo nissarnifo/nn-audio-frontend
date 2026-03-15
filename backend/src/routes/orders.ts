@@ -108,13 +108,16 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     include: orderInclude,
   })
 
-  // Deduct stock
-  await Promise.all(cart.items.map((i) =>
+  // Deduct stock + log SALE movements
+  await Promise.all(cart.items.flatMap((i) => [
     prisma.productVariant.update({
       where: { id: i.variantId },
       data: { stockQty: { decrement: i.qty } },
-    })
-  ))
+    }),
+    prisma.stockMovement.create({
+      data: { variantId: i.variantId, type: 'SALE', qty: -i.qty, note: `Order ${orderNumber}` },
+    }),
+  ]))
 
   // Clear cart
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } })

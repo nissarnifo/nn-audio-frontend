@@ -2,15 +2,16 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut, Boxes } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
 import { PageLoading } from '@/components/ui'
 
 const NAV = [
   { href: '/admin', label: 'DASHBOARD', icon: <LayoutDashboard size={16} />, exact: true },
-  { href: '/admin/products', label: 'PRODUCTS', icon: <Package size={16} /> },
-  { href: '/admin/orders', label: 'ORDERS', icon: <ShoppingBag size={16} /> },
+  { href: '/admin/products',  label: 'PRODUCTS',  icon: <Package size={16} /> },
+  { href: '/admin/inventory', label: 'INVENTORY', icon: <Boxes size={16} /> },
+  { href: '/admin/orders',    label: 'ORDERS',    icon: <ShoppingBag size={16} /> },
   { href: '/admin/customers', label: 'CUSTOMERS', icon: <Users size={16} /> },
   { href: '/admin/analytics', label: 'ANALYTICS', icon: <TrendingUp size={16} /> },
 ]

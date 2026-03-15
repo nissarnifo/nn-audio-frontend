@@ -200,6 +200,46 @@ export const adminApi = {
   getAllCustomers(params?: { page?: number; search?: string }) {
     return api.get(ENDPOINTS.admin.customers, { params })
   },
+  // Inventory
+  getInventory() {
+    return api.get<{ variants: InventoryVariant[]; summary: InventorySummary }>(ENDPOINTS.admin.inventory)
+  },
+  restock(data: { variantId: string; qty: number; note?: string }) {
+    return api.post(ENDPOINTS.admin.inventoryRestock, data)
+  },
+  adjustStock(data: { variantId: string; qty: number; note?: string }) {
+    return api.post(ENDPOINTS.admin.inventoryAdjust, data)
+  },
+  getMovements(params?: { page?: number; type?: string }) {
+    return api.get<{ data: StockMovement[]; total: number; page: number; total_pages: number }>(
+      ENDPOINTS.admin.inventoryMovements, { params }
+    )
+  },
+}
+
+/* ─── Inventory types (local, not in global types file) ──────────── */
+export interface InventoryVariant {
+  id: string
+  label: string
+  price: number
+  stock_qty: number
+  is_active: boolean
+  product: { id: string; name: string; sku: string; category: string; image: string | null }
+}
+export interface InventorySummary {
+  total_skus: number
+  out_of_stock: number
+  low_stock: number
+  total_value: number
+}
+export interface StockMovement {
+  id: string
+  type: 'PURCHASE' | 'SALE' | 'ADJUSTMENT' | 'RETURN'
+  qty: number
+  note: string | null
+  created_at: string
+  variant: { id: string; label: string; price: number }
+  product: { name: string; sku: string; category: string }
 }
 
 export default api

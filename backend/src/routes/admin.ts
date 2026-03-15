@@ -150,4 +150,127 @@ router.get('/customers', requireAdmin, async (req: AuthRequest, res) => {
   })
 })
 
+// ─── Inventory ────────────────────────────────────────────────────────────────
+
+// GET /api/v1/admin/inventory  — all variants with product info + stock
+router.get('/inventory', requireAdmin, async (_req: AuthRequest, res) => {
+  const variants = await prisma.productVariant.findMany({
+    include: {
+      product: { select: { id: true, name: true, sku: true, category: true, images: { where: { isPrimary: true }, take: 1 } } },
+    },
+    orderBy: { stockQty: 'asc' },
+  })
+
+  const [totalValue, outOfStock, lowStock] = [
+    variants.reduce((s, v) => s + v.price * v.stockQty, 0),
+    variants.filter(v => v.stockQty === 0).length,
+    variants.filter(v => v.stockQty > 0 && v.stockQty <= 5).length,
+  ]
+
+  res.json({
+    variants: variants.map(v => ({
+      id: v.id,
+      label: v.label,
+      price: v.price,
+      stock_qty: v.stockQty,
+      is_active: v.isActive,
+      product: {
+        id: v.product.id,
+        name: v.product.name,
+        sku: v.product.sku,
+        category: v.product.category,
+        image: v.product.images[0]?.url ?? null,
+      },
+    })),
+    summary: {
+      total_skus: variants.length,
+      out_of_stock: outOfStock,
+      low_stock: lowStock,
+      total_value: totalValue,
+    },
+  })
+})
+
+// POST /api/v1/admin/inventory/restock  — purchase stock in
+router.post('/inventory/restock', requireAdmin, async (req: AuthRequest, res) => {
+  const { variantId, qty, note } = req.body as { variantId: string; qty: number; note?: string }
+  if (!variantId || !qty || qty < 1) {
+    res.status(400).json({ error: 'variantId and qty (≥1) are required' })
+    return
+  }
+  const [variant] = await prisma.$transaction([
+    prisma.productVariant.update({
+      where: { id: variantId },
+      data: { stockQty: { increment: qty } },
+    }),
+    prisma.stockMovement.create({
+      data: { variantId, type: 'PURCHASE', qty, note: note || null },
+    }),
+  ])
+  res.json({ id: variant.id, stock_qty: variant.stockQty })
+})
+
+// POST /api/v1/admin/inventory/adjust  — manual adjustment (can be negative)
+router.post('/inventory/adjust', requireAdmin, async (req: AuthRequest, res) => {
+  const { variantId, qty, note } = req.body as { variantId: string; qty: number; note?: string }
+  if (!variantId || qty === undefined) {
+    res.status(400).json({ error: 'variantId and qty are required' })
+    return
+  }
+  const current = await prisma.productVariant.findUnique({ where: { id: variantId } })
+  if (!current) { res.status(404).json({ error: 'Variant not found' }); return }
+  const newQty = Math.max(0, current.stockQty + qty)
+  const [variant] = await prisma.$transaction([
+    prisma.productVariant.update({
+      where: { id: variantId },
+      data: { stockQty: newQty },
+    }),
+    prisma.stockMovement.create({
+      data: { variantId, type: 'ADJUSTMENT', qty, note: note || null },
+    }),
+  ])
+  res.json({ id: variant.id, stock_qty: variant.stockQty })
+})
+
+// GET /api/v1/admin/inventory/movements  — stock movement log
+router.get('/inventory/movements', requireAdmin, async (req: AuthRequest, res) => {
+  const { page = '1', type } = req.query as Record<string, string>
+  const limit = 30
+  const skip = (parseInt(page) - 1) * limit
+  const where: any = {}
+  if (type) where.type = type
+
+  const [movements, total] = await Promise.all([
+    prisma.stockMovement.findMany({
+      where,
+      include: {
+        variant: {
+          include: {
+            product: { select: { name: true, sku: true, category: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.stockMovement.count({ where }),
+  ])
+
+  res.json({
+    data: movements.map(m => ({
+      id: m.id,
+      type: m.type,
+      qty: m.qty,
+      note: m.note,
+      created_at: m.createdAt,
+      variant: { id: m.variant.id, label: m.variant.label, price: m.variant.price },
+      product: { name: m.variant.product.name, sku: m.variant.product.sku, category: m.variant.product.category },
+    })),
+    total,
+    page: parseInt(page),
+    total_pages: Math.ceil(total / limit),
+  })
+})
+
 export default router

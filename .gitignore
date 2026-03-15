@@ -1,3 +1,8 @@
+# Database backups (local dumps — never commit)
+backend/backups/
+*.sql.gz
+*.sql
+
 # dependencies
 /node_modules
 /.pnp

@@ -1,0 +1,53 @@
+name: Database Backup
+
+# ─── Runs every day at 02:00 UTC ─────────────────────────────────────────────
+# You can also trigger it manually from GitHub → Actions → "Run workflow"
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 02:00 UTC daily  (7:30 AM IST)
+  workflow_dispatch:       # manual trigger button in GitHub UI
+
+jobs:
+  backup:
+    name: pg_dump → Upload Artifact
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Install PostgreSQL client tools ──────────────────────────────────
+      - name: Install pg_dump
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      # ── 2. Dump the production database ────────────────────────────────────
+      - name: Run pg_dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+          FILENAME="nn_audio_backup_${TIMESTAMP}.sql.gz"
+          echo "BACKUP_FILENAME=$FILENAME" >> $GITHUB_ENV
+
+          pg_dump "$DATABASE_URL" \
+            --no-owner \
+            --no-acl \
+            --format=plain \
+            | gzip > "$FILENAME"
+
+          SIZE=$(du -sh "$FILENAME" | cut -f1)
+          echo "✅ Backup created: $FILENAME ($SIZE)"
+
+      # ── 3. Upload as GitHub Actions artifact (kept for 90 days, free) ───────
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_FILENAME }}
+          path: ${{ env.BACKUP_FILENAME }}
+          retention-days: 90
+
+      # ── 4. Notify on failure ────────────────────────────────────────────────
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Database backup FAILED. Check the logs immediately."
+          echo "Tip: verify DATABASE_URL secret is set in repo → Settings → Secrets → Actions"

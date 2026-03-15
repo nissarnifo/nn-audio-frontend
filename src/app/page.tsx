@@ -2,56 +2,21 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, Shield, Truck, Star, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Zap, Shield, Truck, Star, ChevronRight, ChevronLeft, ShoppingCart } from 'lucide-react'
 import { useProducts } from '@/hooks'
 import ProductsGrid from '@/components/product/ProductsGrid'
 import { SectionHeader, NoPhoto } from '@/components/ui'
 import { getPrimaryImage, cloudinaryUrl, fmt } from '@/lib/utils'
+import { useCartStore } from '@/store/cart.store'
+import toast from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 
-/* ─── Hero Slides ────────────────────────────────────────────────── */
-const SLIDES = [
-  {
-    tag: 'NEW LAUNCH',
-    heading: 'Pro Series Mono Amplifier',
-    sub: 'Starting ₹12,999',
-    badges: ['2000W RMS', 'Class A/B', 'THD < 0.005%'],
-    href: '/products?category=amplifier',
-    cta: 'SHOP AMPLIFIERS',
-    icon: '⚡',
-    accent: '#00D4FF',
-    bg: 'from-[#00D4FF]/10 via-transparent to-transparent',
-  },
-  {
-    tag: 'BESTSELLER',
-    heading: 'Component Speaker Sets',
-    sub: 'Starting ₹4,999',
-    badges: ['Silk-dome tweeter', '4Ω impedance', '20Hz – 20kHz'],
-    href: '/products?category=speaker',
-    cta: 'SHOP SPEAKERS',
-    icon: '🔊',
-    accent: '#FFB700',
-    bg: 'from-[#FFB700]/10 via-transparent to-transparent',
-  },
-  {
-    tag: 'HOT DEAL',
-    heading: 'Deep Bass Subwoofers',
-    sub: 'Up to 20% off',
-    badges: ['12" & 15" drivers', 'Dual voice coil', 'High excursion'],
-    href: '/products?category=subwoofer',
-    cta: 'SHOP SUBWOOFERS',
-    icon: '🎵',
-    accent: '#00FF88',
-    bg: 'from-[#00FF88]/8 via-transparent to-transparent',
-  },
-]
-
-/* ─── Deal categories config ─────────────────────────────────────── */
+/* ─── Constants ──────────────────────────────────────────────────── */
 const DEAL_CATS = [
-  { title: 'Amplifiers',    offer: 'Up to 30% off',    slug: 'amplifier' },
-  { title: 'Speakers',      offer: 'Starting ₹4,999',  slug: 'speaker'   },
-  { title: 'Subwoofers',    offer: 'Deep bass deals',   slug: 'subwoofer' },
-  { title: 'DSP Processors',offer: 'Starting ₹1,999',  slug: 'processor' },
+  { title: 'Amplifiers',     offer: 'Up to 30% off',   slug: 'amplifier' },
+  { title: 'Speakers',       offer: 'Starting ₹4,999', slug: 'speaker'   },
+  { title: 'Subwoofers',     offer: 'Deep bass deals',  slug: 'subwoofer' },
+  { title: 'DSP Processors', offer: 'Starting ₹1,999', slug: 'processor' },
 ]
 
 const TRUST_BADGES = [
@@ -61,90 +26,173 @@ const TRUST_BADGES = [
   { icon: <Star size={20} />,   title: '4.8★ Rated',         desc: 'Loved by 10,000+ customers' },
 ]
 
-/* ─── Hero Carousel ──────────────────────────────────────────────── */
+const ACCENT_COLORS = ['#00D4FF', '#FFB700', '#00FF88', '#A78BFA', '#FF6B6B']
+
+/* ─── Hero Carousel — real products ─────────────────────────────── */
 function HeroCarousel() {
+  const { data, isLoading } = useProducts({ sort: 'rating', limit: 5 } as Parameters<typeof useProducts>[0])
+  const products = data?.data ?? []
+  const addItem = useCartStore(s => s.addItem)
   const [idx, setIdx] = useState(0)
   const [dir, setDir] = useState(1)
 
+  const count = products.length || 1
   const go = (next: number) => { setDir(next > idx ? 1 : -1); setIdx(next) }
-  const prev = () => go((idx - 1 + SLIDES.length) % SLIDES.length)
-  const next = () => go((idx + 1) % SLIDES.length)
+  const prev = () => go((idx - 1 + count) % count)
+  const next = () => go((idx + 1) % count)
 
   useEffect(() => {
-    const t = setInterval(() => { setDir(1); setIdx(i => (i + 1) % SLIDES.length) }, 5000)
+    if (products.length < 2) return
+    const t = setInterval(() => { setDir(1); setIdx(i => (i + 1) % products.length) }, 5000)
     return () => clearInterval(t)
-  }, [])
+  }, [products.length])
 
-  const slide = SLIDES[idx]
+  /* Skeleton while loading */
+  if (isLoading || products.length === 0) {
+    return (
+      <div className="relative w-full hud-grid" style={{ minHeight: 340 }}>
+        <div className="max-w-7xl mx-auto px-16 py-14 flex items-center gap-12">
+          <div className="flex-1 space-y-4">
+            {[24, '3/4', '1/3', '2/3'].map((w, i) => (
+              <div key={i} className={`h-${i === 0 ? 4 : i === 2 ? 8 : 6} w-${w} rounded animate-pulse`}
+                style={{ background: 'rgba(0,212,255,0.08)' }} />
+            ))}
+          </div>
+          <div className="flex-shrink-0 w-72 h-56 rounded-lg animate-pulse"
+            style={{ background: 'rgba(0,212,255,0.06)' }} />
+        </div>
+      </div>
+    )
+  }
+
+  const product = products[idx]
+  const img = getPrimaryImage(product.images)
+  const variant = product.variants.find(v => v.is_active) ?? product.variants[0]
+  const accent = ACCENT_COLORS[idx % ACCENT_COLORS.length]
+  const inStock = (variant?.stock_qty ?? 0) > 0
+
+  function handleAdd() {
+    if (!variant || !inStock) return
+    addItem(product, variant)
+    toast.success(`${product.name} added to cart`)
+  }
 
   return (
     <div className="relative w-full overflow-hidden hud-grid" style={{ minHeight: 340 }}>
-      <div className={`absolute inset-0 bg-gradient-to-r ${slide.bg} transition-all duration-700 pointer-events-none`} />
+      {/* dynamic radial glow behind product image */}
+      <div className="absolute inset-0 pointer-events-none transition-all duration-700"
+        style={{ background: `radial-gradient(ellipse 60% 80% at 70% 50%, ${accent}12 0%, transparent 70%)` }} />
 
       <AnimatePresence mode="wait" custom={dir}>
         <motion.div
-          key={idx}
+          key={product.id}
           custom={dir}
           initial={{ opacity: 0, x: dir * 80 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: dir * -80 }}
-          transition={{ duration: 0.45, ease: 'easeInOut' }}
-          className="relative max-w-7xl mx-auto px-16 py-14 flex flex-col md:flex-row items-center gap-8 md:gap-0"
+          transition={{ duration: 0.4, ease: 'easeInOut' }}
+          className="relative max-w-7xl mx-auto px-12 md:px-16 py-10 md:py-14 flex flex-col md:flex-row items-center gap-8"
         >
-          <div className="flex-1">
-            <span className="font-mono text-[10px] tracking-[0.3em] px-2 py-1 rounded mb-4 inline-block border"
-              style={{ color: slide.accent, borderColor: slide.accent + '55', background: slide.accent + '11' }}>
-              {slide.tag}
-            </span>
-            <h2 className="font-heading text-3xl md:text-5xl text-[#E8F4FD] tracking-wide leading-tight mb-2">
-              {slide.heading}
-            </h2>
-            <p className="font-heading text-2xl md:text-3xl mb-6" style={{ color: slide.accent }}>
-              {slide.sub}
-            </p>
-            <div className="flex flex-wrap gap-3 mb-8">
-              {slide.badges.map(b => (
-                <span key={b} className="flex items-center gap-1.5 font-mono text-[11px] tracking-wider text-[#A8C8E0]">
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: slide.accent }} />
-                  {b}
+          {/* Left: text */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-3">
+              {product.badge && (
+                <span className="font-mono text-[10px] tracking-[0.25em] px-2 py-0.5 rounded border"
+                  style={{ color: accent, borderColor: accent + '55', background: accent + '12' }}>
+                  {product.badge}
                 </span>
-              ))}
+              )}
+              {product.category && (
+                <span className="font-mono text-[10px] text-[#4A7FA5] tracking-widest uppercase">
+                  {product.category}
+                </span>
+              )}
             </div>
-            <Link href={slide.href} className="btn-cyan px-8 py-3 text-sm inline-block"
-              style={{ borderColor: slide.accent, color: slide.accent }}>
-              {slide.cta}
-            </Link>
+
+            <h2 className="font-heading text-2xl md:text-4xl lg:text-5xl text-[#E8F4FD] tracking-wide leading-tight mb-3">
+              {product.name}
+            </h2>
+
+            <p className="font-heading text-2xl md:text-3xl mb-4" style={{ color: accent }}>
+              {variant ? fmt(variant.price) : '—'}
+            </p>
+
+            {product.description && (
+              <p className="text-[#A8C8E0] text-sm leading-relaxed mb-6 max-w-md line-clamp-3">
+                {product.description}
+              </p>
+            )}
+
+            {product.rating > 0 && (
+              <div className="flex items-center gap-1.5 mb-6">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} size={13}
+                    className={i < Math.round(product.rating) ? 'text-[#FFB700] fill-[#FFB700]' : 'text-[#2A3F55]'} />
+                ))}
+                <span className="font-mono text-[11px] text-[#4A7FA5] ml-1">({product.review_count})</span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3">
+              <button onClick={handleAdd} disabled={!inStock}
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-heading tracking-wider rounded transition-all disabled:opacity-40"
+                style={{ border: `1px solid ${accent}`, color: accent, background: accent + '10' }}>
+                <ShoppingCart size={15} />
+                {inStock ? 'ADD TO CART' : 'OUT OF STOCK'}
+              </button>
+              <Link href={`/products/${product.slug}`}
+                className="flex items-center gap-1.5 px-6 py-2.5 text-sm font-heading tracking-wider rounded border border-[rgba(0,212,255,0.2)] text-[#A8C8E0] hover:border-[#00D4FF] hover:text-[#00D4FF] transition-all">
+                VIEW DETAILS <ChevronRight size={14} />
+              </Link>
+            </div>
           </div>
 
-          <div className="flex-shrink-0 flex items-center justify-center w-56 h-48 md:w-72 md:h-56 rounded-lg relative"
-            style={{ border: `1px solid ${slide.accent}33`, background: slide.accent + '08' }}>
+          {/* Right: product image */}
+          <div className="flex-shrink-0 relative w-56 h-48 md:w-80 md:h-64 rounded-lg overflow-hidden"
+            style={{ border: `1px solid ${accent}30`, background: accent + '06' }}>
             {[['top-0 left-0','border-t border-l'],['top-0 right-0','border-t border-r'],
               ['bottom-0 left-0','border-b border-l'],['bottom-0 right-0','border-b border-r']].map(([p,b]) => (
-              <div key={p} className={`absolute ${p} w-4 h-4 ${b}`} style={{ borderColor: slide.accent }} />
+              <div key={p} className={`absolute ${p} w-5 h-5 ${b} z-10`} style={{ borderColor: accent }} />
             ))}
-            <span className="text-8xl md:text-9xl">{slide.icon}</span>
+            {img
+              ? <Image src={cloudinaryUrl(img.url, 600)} alt={product.name} fill
+                  className="object-cover" sizes="(max-width:768px) 224px, 320px" priority />
+              : <NoPhoto className="w-full h-full" />
+            }
+            {/* price tag on image */}
+            {variant && (
+              <div className="absolute bottom-2 right-2 z-10 px-2 py-1 rounded font-mono text-xs font-bold"
+                style={{ background: 'rgba(10,14,26,0.88)', color: accent, border: `1px solid ${accent}45` }}>
+                {fmt(variant.price)}
+              </div>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>
 
-      <button onClick={prev} className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.8)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
+      {/* Arrows */}
+      <button onClick={prev}
+        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
         <ChevronLeft size={18} />
       </button>
-      <button onClick={next} className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.8)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
+      <button onClick={next}
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
         <ChevronRight size={18} />
       </button>
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-        {SLIDES.map((_, i) => (
+      {/* Dots */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+        {products.map((_, i) => (
           <button key={i} onClick={() => go(i)} className="rounded-full transition-all duration-300"
-            style={{ width: i === idx ? 20 : 6, height: 6, background: i === idx ? '#00D4FF' : 'rgba(0,212,255,0.25)' }} />
+            style={{ width: i === idx ? 20 : 6, height: 6,
+              background: i === idx ? accent : 'rgba(0,212,255,0.2)' }} />
         ))}
       </div>
     </div>
   )
 }
 
-/* ─── Deal Card — fetches real products ──────────────────────────── */
+/* ─── Deal Card ──────────────────────────────────────────────────── */
 function DealCard({ title, offer, slug, delay }: { title: string; offer: string; slug: string; delay: number }) {
   const { data, isLoading } = useProducts({ category: slug, limit: 4 } as Parameters<typeof useProducts>[0])
   const products = data?.data ?? []
@@ -158,17 +206,16 @@ function DealCard({ title, offer, slug, delay }: { title: string; offer: string;
       className="hud-card p-4 flex flex-col"
       style={{ background: 'rgba(13,27,42,0.95)' }}
     >
-      {/* Header */}
       <div className="mb-3">
         <h3 className="font-heading text-base text-[#E8F4FD] tracking-wide leading-tight">{title}</h3>
         <p className="text-[#00D4FF] text-xs font-mono tracking-wider mt-0.5">{offer}</p>
       </div>
 
-      {/* 2×2 real product thumbnails */}
       <div className="grid grid-cols-2 gap-2 flex-1">
         {isLoading
           ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="aspect-square rounded animate-pulse" style={{ background: 'rgba(0,212,255,0.06)' }} />
+              <div key={i} className="aspect-square rounded animate-pulse"
+                style={{ background: 'rgba(0,212,255,0.06)' }} />
             ))
           : products.slice(0, 4).map(product => {
               const img = getPrimaryImage(product.images)
@@ -197,7 +244,6 @@ function DealCard({ title, offer, slug, delay }: { title: string; offer: string;
         }
       </div>
 
-      {/* See all */}
       <Link href={`/products?category=${slug}`}
         className="flex items-center gap-1 text-[#00D4FF] font-mono text-[11px] tracking-wider mt-3 hover:gap-2 transition-all">
         See all <ChevronRight size={11} />
@@ -231,7 +277,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 4-column deal cards with real products */}
+      {/* 4-column deal cards */}
       <section className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {DEAL_CATS.map((cat, i) => (

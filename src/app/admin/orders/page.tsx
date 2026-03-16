@@ -1,9 +1,11 @@
 'use client'
 import { useState } from 'react'
+import { Download } from 'lucide-react'
 import { useAdminOrders, useUpdateOrderStatus } from '@/hooks'
 import { StatusBadge, PageLoading, SectionHeader, Pagination } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
-import type { OrderStatus } from '@/types'
+import { exportCsv } from '@/lib/exportCsv'
+import type { OrderStatus, Order } from '@/types'
 
 const STATUSES: OrderStatus[] = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
@@ -15,11 +17,44 @@ export default function AdminOrdersPage() {
   function handleStatusFilter(s: string) { setStatusFilter(s); setPage(1) }
   const { mutate: updateStatus } = useUpdateOrderStatus()
 
+  function handleExport() {
+    const orders: Order[] = data?.data ?? []
+    const rows = orders.map((o) => ({
+      'Order Number': o.order_number,
+      'Date': fmtDate(o.created_at),
+      'Customer': o.address.name,
+      'Phone': o.address.phone,
+      'City': o.address.city,
+      'State': o.address.state,
+      'Pincode': o.address.pin,
+      'Items': o.items.length,
+      'Subtotal': o.subtotal,
+      'Shipping': o.shipping,
+      'Discount': o.discount ?? 0,
+      'Total': o.total,
+      'Status': o.status,
+      'Payment Method': o.payment_method,
+      'Payment Status': o.payment_status,
+      'Coupon': o.coupon_code ?? '',
+    }))
+    const label = statusFilter ? statusFilter.toLowerCase() : 'all'
+    exportCsv(`orders-${label}-${new Date().toISOString().slice(0, 10)}.csv`, rows)
+  }
+
   if (isLoading) return <PageLoading />
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
-      <SectionHeader title="ALL ORDERS" subtitle="Manage and update order statuses" />
+      <div className="flex items-center justify-between mb-6">
+        <SectionHeader title="ALL ORDERS" subtitle="Manage and update order statuses" />
+        <button
+          onClick={handleExport}
+          disabled={!data?.data.length}
+          className="flex items-center gap-2 px-4 py-2 border border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#00D4FF] hover:text-[#00D4FF] font-mono text-xs rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Download size={13} /> EXPORT CSV
+        </button>
+      </div>
 
       {/* Status filter */}
       <div className="flex flex-wrap gap-2 mb-6">

@@ -30,6 +30,8 @@ function formatOrder(o: any) {
     discount: o.discount,
     coupon_code: o.couponCode ?? null,
     total: o.total,
+    tracking_number: o.trackingNumber ?? null,
+    tracking_url: o.trackingUrl ?? null,
     created_at: o.createdAt,
     updated_at: o.updatedAt,
     address: {

@@ -148,6 +148,8 @@ export interface Order {
   discount: number
   coupon_code: string | null
   total: number
+  tracking_number: string | null
+  tracking_url: string | null
   created_at: string
   updated_at: string
 }

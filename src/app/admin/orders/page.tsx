@@ -1,21 +1,115 @@
 'use client'
 import { useState } from 'react'
-import { Download } from 'lucide-react'
+import { Download, Truck, X } from 'lucide-react'
 import { useAdminOrders, useUpdateOrderStatus } from '@/hooks'
-import { StatusBadge, PageLoading, SectionHeader, Pagination } from '@/components/ui'
+import { StatusBadge, PageLoading, SectionHeader, Pagination, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { exportCsv } from '@/lib/exportCsv'
 import type { OrderStatus, Order } from '@/types'
 
 const STATUSES: OrderStatus[] = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
+/* ─── Tracking modal (shown when admin picks SHIPPED) ──────────── */
+function TrackingModal({
+  order,
+  onConfirm,
+  onClose,
+}: {
+  order: Order
+  onConfirm: (trackingNumber: string, trackingUrl: string) => void
+  onClose: () => void
+}) {
+  const [trackingNumber, setTrackingNumber] = useState(order.tracking_number ?? '')
+  const [trackingUrl, setTrackingUrl] = useState(order.tracking_url ?? '')
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.7)] backdrop-blur-sm px-4">
+      <div className="hud-card p-6 w-full max-w-md">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <Truck size={16} className="text-[#00D4FF]" />
+            <h3 className="font-heading text-base text-[#E8F4FD] tracking-wider">TRACKING INFO</h3>
+          </div>
+          <button onClick={onClose} className="text-[#4A7FA5] hover:text-[#E8F4FD] transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        <p className="font-mono text-xs text-[#4A7FA5] mb-5">
+          Order <span className="text-[#00D4FF]">{order.order_number}</span> will be marked as{' '}
+          <span className="text-[#00FF88]">SHIPPED</span>. Optionally add tracking details for the customer.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="font-mono text-xs text-[#4A7FA5] block mb-1.5 tracking-widest">
+              TRACKING NUMBER <span className="text-[rgba(74,127,165,0.5)]">(optional)</span>
+            </label>
+            <input
+              className="input-hud w-full text-sm"
+              placeholder="e.g. DTDC123456789IN"
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="font-mono text-xs text-[#4A7FA5] block mb-1.5 tracking-widest">
+              TRACKING URL <span className="text-[rgba(74,127,165,0.5)]">(optional)</span>
+            </label>
+            <input
+              className="input-hud w-full text-sm"
+              placeholder="https://www.dtdc.in/tracking/..."
+              value={trackingUrl}
+              onChange={(e) => setTrackingUrl(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => onConfirm(trackingNumber, trackingUrl)}
+            className="flex-1 btn-gold py-2.5 font-heading tracking-widest text-sm"
+          >
+            MARK SHIPPED
+          </button>
+          <button onClick={onClose} className="flex-1 btn-cyan py-2.5 font-heading tracking-widest text-sm">
+            CANCEL
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
   const { data, isLoading } = useAdminOrders({ status: statusFilter || undefined, page })
+  const { mutate: updateStatus, isPending } = useUpdateOrderStatus()
+
+  // Tracking modal state
+  const [trackingOrder, setTrackingOrder] = useState<Order | null>(null)
 
   function handleStatusFilter(s: string) { setStatusFilter(s); setPage(1) }
-  const { mutate: updateStatus } = useUpdateOrderStatus()
+
+  function handleStatusChange(order: Order, newStatus: string) {
+    if (newStatus === 'SHIPPED') {
+      setTrackingOrder(order)
+    } else {
+      updateStatus({ id: order.id, status: newStatus })
+    }
+  }
+
+  function handleTrackingConfirm(trackingNumber: string, trackingUrl: string) {
+    if (!trackingOrder) return
+    updateStatus({
+      id: trackingOrder.id,
+      status: 'SHIPPED',
+      tracking_number: trackingNumber || undefined,
+      tracking_url: trackingUrl || undefined,
+    })
+    setTrackingOrder(null)
+  }
 
   function handleExport() {
     const orders: Order[] = data?.data ?? []
@@ -36,6 +130,8 @@ export default function AdminOrdersPage() {
       'Payment Method': o.payment_method,
       'Payment Status': o.payment_status,
       'Coupon': o.coupon_code ?? '',
+      'Tracking Number': o.tracking_number ?? '',
+      'Tracking URL': o.tracking_url ?? '',
     }))
     const label = statusFilter ? statusFilter.toLowerCase() : 'all'
     exportCsv(`orders-${label}-${new Date().toISOString().slice(0, 10)}.csv`, rows)
@@ -45,6 +141,14 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
+      {trackingOrder && (
+        <TrackingModal
+          order={trackingOrder}
+          onConfirm={handleTrackingConfirm}
+          onClose={() => setTrackingOrder(null)}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <SectionHeader title="ALL ORDERS" subtitle="Manage and update order statuses" />
         <button
@@ -78,7 +182,7 @@ export default function AdminOrdersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[rgba(0,212,255,0.12)]">
-                {['ORDER ID', 'CUSTOMER', 'DATE', 'ITEMS', 'TOTAL', 'STATUS', 'UPDATE'].map((h) => (
+                {['ORDER ID', 'CUSTOMER', 'DATE', 'ITEMS', 'TOTAL', 'STATUS', 'TRACKING', 'UPDATE'].map((h) => (
                   <th key={h} className="text-left p-4 font-mono text-[10px] text-[#4A7FA5] tracking-widest">{h}</th>
                 ))}
               </tr>
@@ -93,9 +197,29 @@ export default function AdminOrdersPage() {
                   <td className="p-4 font-mono text-sm text-[#FFB700]">{fmt(order.total)}</td>
                   <td className="p-4"><StatusBadge status={order.status} /></td>
                   <td className="p-4">
+                    {order.tracking_number ? (
+                      <div>
+                        <p className="font-mono text-[10px] text-[#00FF88]">{order.tracking_number}</p>
+                        {order.tracking_url && (
+                          <a
+                            href={order.tracking_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-mono text-[10px] text-[#00D4FF] hover:underline"
+                          >
+                            Track →
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="font-mono text-[10px] text-[rgba(74,127,165,0.4)]">—</span>
+                    )}
+                  </td>
+                  <td className="p-4">
                     <select
                       value={order.status}
-                      onChange={(e) => updateStatus({ id: order.id, status: e.target.value })}
+                      onChange={(e) => handleStatusChange(order, e.target.value)}
+                      disabled={isPending}
                       className="input-hud text-xs py-1 px-2 w-32"
                     >
                       {STATUSES.map((s) => (
@@ -115,11 +239,7 @@ export default function AdminOrdersPage() {
         )}
       </div>
 
-      <Pagination
-        page={page}
-        totalPages={data?.total_pages ?? 1}
-        onPage={setPage}
-      />
+      <Pagination page={page} totalPages={data?.total_pages ?? 1} onPage={setPage} />
     </div>
   )
 }

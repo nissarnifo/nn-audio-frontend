@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Edit, Plus, Tag, X, CheckSquare, Square, Zap, EyeOff } from 'lucide-react'
+import { Edit, Plus, Tag, X, CheckSquare, Square, Zap, EyeOff, Search } from 'lucide-react'
 import { useProducts, useSetProductSale, useBulkProductAction } from '@/hooks'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { Badge, PageLoading, SectionHeader, Spinner } from '@/components/ui'
@@ -92,7 +92,9 @@ function SaleModal({ product, onClose }: { product: Product; onClose: () => void
 export default function AdminProductsPage() {
   const [category, setCategory] = useState<ProductCategory | undefined>()
   const [saleTarget, setSaleTarget] = useState<Product | null>(null)
-  const { data, isLoading } = useProducts({ category, limit: 50 })
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  const { data, isLoading } = useProducts({ category, search: search || undefined, limit: 50 })
 
   // Bulk selection
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -107,6 +109,18 @@ export default function AdminProductsPage() {
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
+  }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    setSearch(searchInput.trim())
+    setSelected(new Set())
+  }
+
+  function clearSearch() {
+    setSearchInput('')
+    setSearch('')
+    setSelected(new Set())
   }
 
   function toggleSelectAll() {
@@ -128,7 +142,7 @@ export default function AdminProductsPage() {
     <div className="max-w-7xl mx-auto px-4 py-10 pb-32">
       {saleTarget && <SaleModal product={saleTarget} onClose={() => setSaleTarget(null)} />}
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <SectionHeader title="PRODUCTS" subtitle="Manage your product catalog" />
         <Link
           href={`/admin/products/new${category ? `?category=${category}` : ''}`}
@@ -137,13 +151,33 @@ export default function AdminProductsPage() {
         </Link>
       </div>
 
+      {/* Search bar */}
+      <form onSubmit={handleSearch} className="flex gap-2 mb-5 max-w-sm">
+        <div className="relative flex-1">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] pointer-events-none" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by name or SKU..."
+            className="input-hud w-full pl-8 text-xs"
+          />
+          {searchInput && (
+            <button type="button" onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4A7FA5] hover:text-[#E8F4FD]">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <button type="submit" className="btn-cyan text-xs px-3 py-1.5 font-heading tracking-widest whitespace-nowrap">SEARCH</button>
+      </form>
+
       {/* Category filter + select-all row */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex flex-wrap gap-2">
           {(['', 'amplifier', 'speaker', 'speaker_box', 'subwoofer', 'processor', 'cable', 'accessory'] as const).map((cat) => (
             <button
               key={cat}
-              onClick={() => { setCategory(cat || undefined); setSelected(new Set()) }}
+              onClick={() => { setCategory(cat || undefined); setSelected(new Set()); setSearch(''); setSearchInput('') }}
               className={`px-3 py-1 rounded font-mono text-xs border transition-all ${
                 (cat === '' ? !category : category === cat)
                   ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'

@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Download, Truck, X, ChevronDown, ChevronUp, MessageSquare, CalendarDays } from 'lucide-react'
+import { Download, Truck, X, ChevronDown, ChevronUp, MessageSquare, CalendarDays, Search } from 'lucide-react'
 import { useAdminOrders, useUpdateOrderStatus } from '@/hooks'
 import { StatusBadge, PageLoading, SectionHeader, Pagination, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
@@ -122,12 +122,15 @@ export default function AdminOrdersPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo]     = useState('')
   const [activePreset, setActivePreset] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
 
   const { data, isLoading } = useAdminOrders({
     status: statusFilter || undefined,
     page,
-    from: dateFrom || undefined,
-    to:   dateTo   || undefined,
+    from:   dateFrom || undefined,
+    to:     dateTo   || undefined,
+    search: search   || undefined,
   })
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus()
 
@@ -137,6 +140,18 @@ export default function AdminOrdersPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   function handleStatusFilter(s: string) { setStatusFilter(s); setPage(1) }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    setSearch(searchInput.trim())
+    setPage(1)
+  }
+
+  function clearSearch() {
+    setSearchInput('')
+    setSearch('')
+    setPage(1)
+  }
 
   function applyPreset(preset: typeof PRESETS[number]) {
     const { from, to } = preset.range()
@@ -222,6 +237,33 @@ export default function AdminOrdersPage() {
           <Download size={13} /> EXPORT CSV
         </button>
       </div>
+
+      {/* Search bar */}
+      <form onSubmit={handleSearch} className="flex gap-2 mb-5 max-w-sm">
+        <div className="relative flex-1">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] pointer-events-none" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Order # or customer name..."
+            className="input-hud w-full pl-8 text-xs"
+          />
+          {searchInput && (
+            <button type="button" onClick={clearSearch} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#4A7FA5] hover:text-[#E8F4FD]">
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        <button type="submit" className="btn-cyan text-xs px-3 py-1.5 font-heading tracking-widest whitespace-nowrap">SEARCH</button>
+      </form>
+
+      {search && (
+        <p className="font-mono text-xs text-[#4A7FA5] mb-3">
+          Showing results for <span className="text-[#00D4FF]">"{search}"</span>
+          <button onClick={clearSearch} className="ml-2 text-[#FF3366] hover:text-white transition-colors">× clear</button>
+        </p>
+      )}
 
       {/* Status filter */}
       <div className="flex flex-wrap gap-2 mb-4">

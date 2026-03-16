@@ -266,7 +266,7 @@ export function useAdminAnalytics() {
   })
 }
 
-export function useAdminOrders(params?: { status?: string; page?: number; from?: string; to?: string }) {
+export function useAdminOrders(params?: { status?: string; page?: number; from?: string; to?: string; search?: string }) {
   return useQuery({
     queryKey: ['admin-orders', params],
     queryFn: () => adminApi.getAllOrders(params).then((r) => r.data),

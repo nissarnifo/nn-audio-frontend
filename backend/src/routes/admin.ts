@@ -311,4 +311,62 @@ router.get('/inventory/movements', requireAdmin, async (req: AuthRequest, res) =
   })
 })
 
+// GET /api/v1/admin/analytics  — chart data
+router.get('/analytics', requireAdmin, async (_req: AuthRequest, res) => {
+  const [dailyRevenue, categoryRevenue, newCustomers, couponUsage] = await Promise.all([
+    // Daily revenue — last 30 days
+    prisma.$queryRaw<Array<{ day: string; revenue: number; orders: number }>>`
+      SELECT TO_CHAR(DATE_TRUNC('day', "created_at"), 'DD Mon') as day,
+             COALESCE(SUM(total), 0)::float as revenue,
+             COUNT(*)::int as orders
+      FROM orders
+      WHERE status != 'CANCELLED'
+        AND "created_at" >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE_TRUNC('day', "created_at")
+      ORDER BY DATE_TRUNC('day', "created_at")
+    `,
+    // Revenue by category — all time
+    prisma.$queryRaw<Array<{ category: string; revenue: number; units: number }>>`
+      SELECT p.category,
+             COALESCE(SUM(oi.price * oi.qty), 0)::float as revenue,
+             COALESCE(SUM(oi.qty), 0)::int as units
+      FROM order_items oi
+      JOIN products p ON p.id = oi.product_id
+      JOIN orders o ON o.id = oi.order_id
+      WHERE o.status != 'CANCELLED'
+      GROUP BY p.category
+      ORDER BY revenue DESC
+    `,
+    // New customers per month — last 6 months
+    prisma.$queryRaw<Array<{ month: string; count: number }>>`
+      SELECT TO_CHAR(DATE_TRUNC('month', "created_at"), 'Mon YY') as month,
+             COUNT(*)::int as count
+      FROM users
+      WHERE role = 'CUSTOMER'
+        AND "created_at" >= NOW() - INTERVAL '6 months'
+      GROUP BY DATE_TRUNC('month', "created_at")
+      ORDER BY DATE_TRUNC('month', "created_at")
+    `,
+    // Coupon usage — top 10 by savings
+    prisma.$queryRaw<Array<{ code: string; uses: number; total_savings: number }>>`
+      SELECT coupon_code as code,
+             COUNT(*)::int as uses,
+             COALESCE(SUM(discount), 0)::float as total_savings
+      FROM orders
+      WHERE coupon_code IS NOT NULL
+        AND status != 'CANCELLED'
+      GROUP BY coupon_code
+      ORDER BY total_savings DESC
+      LIMIT 10
+    `,
+  ])
+
+  res.json({
+    daily_revenue: dailyRevenue,
+    category_revenue: categoryRevenue,
+    new_customers: newCustomers,
+    coupon_usage: couponUsage,
+  })
+})
+
 export default router

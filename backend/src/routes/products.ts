@@ -42,7 +42,7 @@ function formatProduct(p: any) {
 
 // GET /api/v1/products
 router.get('/', async (req, res) => {
-  const { category, search, sort, page = '1', limit = '12' } = req.query as Record<string, string>
+  const { category, search, sort, page = '1', limit = '12', min_price, max_price, in_stock, min_rating } = req.query as Record<string, string>
   const skip = (parseInt(page) - 1) * parseInt(limit)
 
   const where: any = { isActive: true }
@@ -51,6 +51,14 @@ router.get('/', async (req, res) => {
     { name: { contains: search, mode: 'insensitive' } },
     { description: { contains: search, mode: 'insensitive' } },
   ]
+  if (min_rating) where.rating = { gte: parseFloat(min_rating) }
+
+  // Variant-level filters (price range + in-stock)
+  const variantWhere: any = { isActive: true }
+  if (min_price) variantWhere.price = { ...variantWhere.price, gte: parseFloat(min_price) }
+  if (max_price) variantWhere.price = { ...variantWhere.price, lte: parseFloat(max_price) }
+  if (in_stock === 'true') variantWhere.stockQty = { gt: 0 }
+  if (min_price || max_price || in_stock === 'true') where.variants = { some: variantWhere }
 
   let orderBy: any = { createdAt: 'desc' }
   if (sort === 'price_asc') orderBy = { variants: { _min: { price: 'asc' } } }

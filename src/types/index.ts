@@ -149,6 +149,10 @@ export interface ProductFilters {
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest'
   page?: number
   limit?: number
+  min_price?: number
+  max_price?: number
+  in_stock?: boolean
+  min_rating?: number
 }
 
 export interface PaginatedResponse<T> {

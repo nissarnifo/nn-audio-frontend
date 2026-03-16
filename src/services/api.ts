@@ -140,7 +140,7 @@ export const couponsApi = {
 
 export const ordersApi = {
   create(
-    data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string>; couponCode?: string },
+    data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string>; couponCode?: string; notes?: string },
     idempotencyKey?: string
   ) {
     return api.post<Order>(ENDPOINTS.orders.root, data, {

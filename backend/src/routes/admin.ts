@@ -29,6 +29,7 @@ function formatOrder(o: any) {
     total: o.total,
     tracking_number: o.trackingNumber ?? null,
     tracking_url: o.trackingUrl ?? null,
+    notes: o.notes ?? null,
     created_at: o.createdAt,
     updated_at: o.updatedAt,
     user: o.user,

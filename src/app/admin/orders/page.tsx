@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Download, Truck, X } from 'lucide-react'
+import { Download, Truck, X, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
 import { useAdminOrders, useUpdateOrderStatus } from '@/hooks'
 import { StatusBadge, PageLoading, SectionHeader, Pagination, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
@@ -89,6 +89,8 @@ export default function AdminOrdersPage() {
 
   // Tracking modal state
   const [trackingOrder, setTrackingOrder] = useState<Order | null>(null)
+  // Expanded detail rows
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   function handleStatusFilter(s: string) { setStatusFilter(s); setPage(1) }
 
@@ -132,6 +134,7 @@ export default function AdminOrdersPage() {
       'Coupon': o.coupon_code ?? '',
       'Tracking Number': o.tracking_number ?? '',
       'Tracking URL': o.tracking_url ?? '',
+      'Delivery Notes': o.notes ?? '',
     }))
     const label = statusFilter ? statusFilter.toLowerCase() : 'all'
     exportCsv(`orders-${label}-${new Date().toISOString().slice(0, 10)}.csv`, rows)
@@ -189,8 +192,18 @@ export default function AdminOrdersPage() {
             </thead>
             <tbody>
               {data?.data.map((order) => (
-                <tr key={order.id} className="border-b border-[rgba(0,212,255,0.06)] hover:bg-[rgba(0,212,255,0.02)] transition-colors">
-                  <td className="p-4 font-mono text-xs text-[#00D4FF]">{order.order_number}</td>
+                <>
+                <tr key={order.id} className={`border-b border-[rgba(0,212,255,0.06)] hover:bg-[rgba(0,212,255,0.02)] transition-colors ${expandedId === order.id ? 'bg-[rgba(0,212,255,0.03)]' : ''}`}>
+                  <td className="p-4">
+                    <button
+                      onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                      className="flex items-center gap-1.5 font-mono text-xs text-[#00D4FF] hover:text-white transition-colors"
+                    >
+                      {expandedId === order.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      {order.order_number}
+                      {order.notes && <MessageSquare size={10} className="text-[#FFB700]" />}
+                    </button>
+                  </td>
                   <td className="p-4 text-sm text-[#E8F4FD]">{order.address.name}</td>
                   <td className="p-4 font-mono text-xs text-[#4A7FA5]">{fmtDate(order.created_at)}</td>
                   <td className="p-4 font-mono text-xs text-[#4A7FA5]">{order.items.length}</td>
@@ -228,6 +241,48 @@ export default function AdminOrdersPage() {
                     </select>
                   </td>
                 </tr>
+                {/* Expandable detail row */}
+                {expandedId === order.id && (
+                  <tr key={`${order.id}-detail`} className="border-b border-[rgba(0,212,255,0.1)] bg-[rgba(0,212,255,0.02)]">
+                    <td colSpan={8} className="px-6 py-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        {/* Delivery notes */}
+                        {order.notes && (
+                          <div className="md:col-span-3 flex gap-2 border border-[rgba(255,183,0,0.2)] bg-[rgba(255,183,0,0.04)] rounded px-4 py-3">
+                            <MessageSquare size={13} className="text-[#FFB700] flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-mono text-[10px] text-[#FFB700] mb-1 tracking-widest">DELIVERY NOTES</p>
+                              <p className="text-sm text-[#E8F4FD] leading-relaxed">{order.notes}</p>
+                            </div>
+                          </div>
+                        )}
+                        {/* Address */}
+                        <div>
+                          <p className="font-mono text-[10px] text-[#4A7FA5] mb-2 tracking-widest">SHIP TO</p>
+                          <p className="text-[#E8F4FD]">{order.address.name}</p>
+                          <p className="text-[#4A7FA5]">{order.address.phone}</p>
+                          <p className="text-[#4A7FA5] mt-1">
+                            {order.address.line1}{order.address.line2 ? `, ${order.address.line2}` : ''}<br />
+                            {order.address.city}, {order.address.state} – {order.address.pin}
+                          </p>
+                        </div>
+                        {/* Items */}
+                        <div className="md:col-span-2">
+                          <p className="font-mono text-[10px] text-[#4A7FA5] mb-2 tracking-widest">ITEMS</p>
+                          <div className="space-y-1">
+                            {order.items.map((item) => (
+                              <div key={item.id} className="flex justify-between">
+                                <span className="text-[#E8F4FD]">{item.product.name} <span className="text-[#4A7FA5]">({item.variant.label}) × {item.qty}</span></span>
+                                <span className="font-mono text-[#FFB700] ml-4 flex-shrink-0">{fmt(item.price * item.qty)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </>
               ))}
             </tbody>
           </table>

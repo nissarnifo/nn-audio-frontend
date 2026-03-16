@@ -145,6 +145,7 @@ export function useCreateOrder() {
       addressId: string
       razorpay?: Record<string, string>
       couponCode?: string
+      notes?: string
       idempotencyKey?: string
     }) => ordersApi.create(data, idempotencyKey).then((r) => r.data),
     onSuccess: () => {

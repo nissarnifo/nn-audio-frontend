@@ -165,6 +165,89 @@ router.get('/customers', requireAdmin, async (req: AuthRequest, res) => {
   })
 })
 
+// GET /api/v1/admin/customers/:id
+router.get('/customers/:id', requireAdmin, async (req: AuthRequest, res) => {
+  const { id } = req.params
+
+  const customer = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true, name: true, email: true, phone: true, role: true, createdAt: true,
+      orders: {
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: {
+          id: true, orderNumber: true, status: true, paymentStatus: true,
+          total: true, createdAt: true,
+          items: { select: { qty: true, price: true } },
+        },
+      },
+      returns: {
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, status: true, reason: true, adminNote: true, createdAt: true,
+          order: { select: { orderNumber: true, total: true } },
+        },
+      },
+      reviews: {
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, rating: true, comment: true, createdAt: true,
+          product: { select: { name: true, slug: true } },
+        },
+      },
+      _count: { select: { orders: true, returns: true, reviews: true } },
+    },
+  })
+
+  if (!customer) return res.status(404).json({ error: 'Customer not found' })
+
+  const totalSpend = customer.orders.reduce((sum, o) => sum + o.total, 0)
+  const avgOrderValue = customer.orders.length ? totalSpend / customer.orders.length : 0
+
+  res.json({
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    role: customer.role,
+    created_at: customer.createdAt,
+    stats: {
+      total_spend: totalSpend,
+      avg_order_value: avgOrderValue,
+      order_count: customer._count.orders,
+      return_count: customer._count.returns,
+      review_count: customer._count.reviews,
+    },
+    orders: customer.orders.map((o) => ({
+      id: o.id,
+      order_number: o.orderNumber,
+      status: o.status,
+      payment_status: o.paymentStatus,
+      total: o.total,
+      item_count: o.items.reduce((s, i) => s + i.qty, 0),
+      created_at: o.createdAt,
+    })),
+    returns: customer.returns.map((r) => ({
+      id: r.id,
+      status: r.status,
+      reason: r.reason,
+      admin_note: r.adminNote,
+      order_number: r.order.orderNumber,
+      order_total: r.order.total,
+      created_at: r.createdAt,
+    })),
+    reviews: customer.reviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      product_name: r.product.name,
+      product_slug: r.product.slug,
+      created_at: r.createdAt,
+    })),
+  })
+})
+
 // ─── Inventory ────────────────────────────────────────────────────────────────
 
 // GET /api/v1/admin/inventory  — all variants with product info + stock

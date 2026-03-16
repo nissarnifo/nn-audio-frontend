@@ -2,11 +2,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ShoppingCart, Zap } from 'lucide-react'
+import { ShoppingCart, Zap, Heart } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { Product } from '@/types'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
+import { useWishlistStore } from '@/store/wishlist.store'
 import { Stars, Badge, NoPhoto } from '@/components/ui'
 import toast from 'react-hot-toast'
 
@@ -23,6 +24,8 @@ export default function ProductCard({ product }: { product: Product }) {
   const defaultVariant = product.variants.find((v) => v.is_active) ?? product.variants[0]
   const [selectedVariant, setSelectedVariant] = useState(defaultVariant)
   const addItem = useCartStore((s) => s.addItem)
+  const { toggle: toggleWishlist, has: inWishlist } = useWishlistStore()
+  const wishlisted = inWishlist(product.id)
 
   const inStock = selectedVariant?.stock_qty > 0
 
@@ -58,6 +61,17 @@ export default function ProductCard({ product }: { product: Product }) {
             <Badge color={BADGE_COLORS[product.badge] ?? 'cyan'}>{product.badge}</Badge>
           </div>
         )}
+        {/* Wishlist button */}
+        <button
+          onClick={(e) => { e.preventDefault(); toggleWishlist(product) }}
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110"
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+        >
+          <Heart
+            size={15}
+            className={wishlisted ? 'fill-[#FF3366] text-[#FF3366]' : 'text-[#4A7FA5]'}
+          />
+        </button>
         {/* Out of stock overlay */}
         {!inStock && (
           <div className="absolute inset-0 bg-[rgba(10,14,26,0.7)] flex items-center justify-center">

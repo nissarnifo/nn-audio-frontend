@@ -1,13 +1,14 @@
 'use client'
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ShoppingCart, ChevronLeft, Zap, Star } from 'lucide-react'
+import { ShoppingCart, ChevronLeft, Zap, Star, Heart } from 'lucide-react'
 import { useProduct, useProductReviews, useCreateReview } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import Gallery from '@/components/product/Gallery'
 import { Stars, StatusBadge, Badge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
+import { useWishlistStore } from '@/store/wishlist.store'
 import type { ProductVariant } from '@/types'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -20,6 +21,7 @@ export default function ProductDetailPage() {
   const { mutateAsync: submitReview, isPending: isSubmitting } = useCreateReview(slug)
   const { isLoggedIn } = useAuthStore()
   const addItem = useCartStore((s) => s.addItem)
+  const { toggle: toggleWishlist, has: inWishlist } = useWishlistStore()
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [qty, setQty] = useState(1)
@@ -163,17 +165,28 @@ export default function ProductDetailPage() {
             </button>
           </div>
 
-          {/* Buy Now */}
-          <div className="mb-8">
+          {/* Buy Now + Wishlist */}
+          <div className="flex gap-3 mb-8">
             <button
               onClick={handleBuyNow}
               disabled={!inStock}
-              className={`w-full flex items-center justify-center gap-2 py-3 font-heading tracking-widest ${
+              className={`flex-1 flex items-center justify-center gap-2 py-3 font-heading tracking-widest ${
                 inStock ? 'btn-cyan' : 'opacity-40 cursor-not-allowed border border-[rgba(0,212,255,0.2)] text-[#4A7FA5]'
               }`}
             >
               <Zap size={18} />
               BUY NOW
+            </button>
+            <button
+              onClick={() => toggleWishlist(product!)}
+              className={`w-12 flex items-center justify-center border rounded transition-all ${
+                inWishlist(product!.id)
+                  ? 'border-[#FF3366] bg-[rgba(255,51,102,0.08)] text-[#FF3366]'
+                  : 'border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#FF3366] hover:text-[#FF3366]'
+              }`}
+              aria-label={inWishlist(product!.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+            >
+              <Heart size={18} className={inWishlist(product!.id) ? 'fill-[#FF3366]' : ''} />
             </button>
           </div>
 

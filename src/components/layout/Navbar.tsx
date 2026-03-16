@@ -1,10 +1,11 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X } from 'lucide-react'
+import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X, Heart } from 'lucide-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCartStore } from '@/store/cart.store'
+import { useWishlistStore } from '@/store/wishlist.store'
 import { useAuthStore } from '@/store/auth.store'
 import { authApi } from '@/services/api'
 import { cn } from '@/lib/utils'
@@ -18,6 +19,7 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const { count } = useCartStore()
+  const wishlistCount = useWishlistStore((s) => s.count)
   const { isLoggedIn, isAdmin, logout } = useAuthStore()
   const qc = useQueryClient()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -62,6 +64,16 @@ export default function Navbar() {
 
         {/* Right Icons */}
         <div className="flex items-center gap-3">
+          {/* Wishlist */}
+          <Link href="/account/wishlist" className="relative p-2 text-[#4A7FA5] hover:text-[#FF3366] transition-colors">
+            <Heart size={20} />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#FF3366] text-white text-[10px] font-bold flex items-center justify-center font-mono">
+                {wishlistCount > 9 ? '9+' : wishlistCount}
+              </span>
+            )}
+          </Link>
+
           {/* Cart */}
           <Link
             href="/cart"
@@ -136,6 +148,9 @@ export default function Navbar() {
               </Link>
               <Link href="/account/orders" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#4A7FA5]">
                 MY ORDERS
+              </Link>
+              <Link href="/account/wishlist" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#4A7FA5] flex items-center gap-2">
+                WISHLIST {wishlistCount > 0 && <span className="text-[#FF3366]">({wishlistCount})</span>}
               </Link>
               <button onClick={() => { handleLogout(); setMenuOpen(false) }} className="text-left font-heading text-sm tracking-widest text-[#FF3366]">
                 LOGOUT

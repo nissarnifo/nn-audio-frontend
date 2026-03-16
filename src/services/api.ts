@@ -456,4 +456,39 @@ export interface StockAlertItem {
   }
 }
 
+/* ─── Newsletter ─────────────────────────────────────────────────── */
+export interface NewsletterSubscriber {
+  id: string
+  email: string
+  source: string
+  unsubscribed: boolean
+  createdAt: string
+}
+
+export interface NewsletterSubscribersResponse {
+  subscribers: NewsletterSubscriber[]
+  total: number
+  page: number
+  limit: number
+  pages: number
+}
+
+export const newsletterApi = {
+  subscribe(email: string, source = 'footer') {
+    return api.post<{ ok: boolean; message: string }>(ENDPOINTS.newsletter.subscribe, { email, source })
+  },
+  unsubscribe(email: string) {
+    return api.post<{ ok: boolean }>(ENDPOINTS.newsletter.unsubscribe, { email })
+  },
+  getSubscribers(params?: { page?: number; limit?: number; search?: string; filter?: string }) {
+    return api.get<NewsletterSubscribersResponse>(ENDPOINTS.newsletter.subscribers, { params })
+  },
+  deleteSubscriber(id: string) {
+    return api.delete<{ ok: boolean }>(ENDPOINTS.newsletter.deleteSubscriber(id))
+  },
+  getExportUrl() {
+    return `${api.defaults.baseURL}${ENDPOINTS.newsletter.export}`
+  },
+}
+
 export default api

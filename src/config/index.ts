@@ -139,6 +139,13 @@ export const ENDPOINTS = {
     all: '/settings/all',
     update: '/settings',
   },
+  newsletter: {
+    subscribe: '/newsletter/subscribe',
+    unsubscribe: '/newsletter/unsubscribe',
+    subscribers: '/newsletter/subscribers',
+    export: '/newsletter/export',
+    deleteSubscriber: (id: string) => `/newsletter/subscribers/${id}`,
+  },
   admin: {
     stats: '/admin/stats',
     analytics: '/admin/analytics',

@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { ChevronLeft, FileText, RotateCcw } from 'lucide-react'
 import { useOrder, useCancelOrder, useSubmitReturn, useMyReturns } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
+import { useCartStore } from '@/store/cart.store'
 import { StatusBadge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 
 const RETURN_REASONS = [
   'Defective / not working',
@@ -25,6 +27,20 @@ export default function OrderDetailPage() {
   const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrder()
   const { mutate: submitReturn, isPending: isSubmittingReturn } = useSubmitReturn()
   const { data: myReturns } = useMyReturns()
+  const addItem = useCartStore((s) => s.addItem)
+
+  function handleReorder() {
+    if (!order) return
+    let added = 0
+    for (const item of order.items) {
+      if (item.variant?.is_active && item.variant.stock_qty > 0) {
+        addItem(item.product as any, item.variant as any, item.qty)
+        added++
+      }
+    }
+    if (added > 0) toast.success(`${added} item${added > 1 ? 's' : ''} added to cart`)
+    else toast.error('No in-stock items available to reorder')
+  }
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [showReturnForm, setShowReturnForm] = useState(false)
   const [returnReason, setReturnReason] = useState(RETURN_REASONS[0])
@@ -54,6 +70,12 @@ export default function OrderDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           <StatusBadge status={order.status} />
+          <button
+            onClick={handleReorder}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#00D4FF] hover:text-[#00D4FF] font-mono text-xs rounded transition-all"
+          >
+            <RotateCcw size={13} /> REORDER
+          </button>
           <Link
             href={`/account/orders/${order.id}/invoice`}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#00D4FF] hover:text-[#00D4FF] font-mono text-xs rounded transition-all"

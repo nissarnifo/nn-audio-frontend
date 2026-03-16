@@ -213,7 +213,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               </span>
             )}
             {variant?.stock_qty > 0 ? (
-              <span className="font-mono text-xs text-[#00FF88]">{variant.stock_qty} IN STOCK</span>
+              variant.stock_qty <= 5 ? (
+                <span className="flex items-center gap-1 font-mono text-xs text-[#FFB700] animate-pulse">
+                  ⚠ ONLY {variant.stock_qty} LEFT!
+                </span>
+              ) : (
+                <span className="font-mono text-xs text-[#00FF88]">{variant.stock_qty} IN STOCK</span>
+              )
             ) : (
               <span className="font-mono text-xs text-[#FF3366]">OUT OF STOCK</span>
             )}
@@ -235,6 +241,17 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   ADD TO CART
                 </button>
               </div>
+
+              {/* Critical stock urgency bar (≤3 units) */}
+              {variant && variant.stock_qty > 0 && variant.stock_qty <= 3 && (
+                <div className="mb-4 flex items-center gap-2 border border-[rgba(255,51,102,0.3)] bg-[rgba(255,51,102,0.05)] rounded px-3 py-2">
+                  <span className="text-[#FF3366] text-xs">🔥</span>
+                  <p className="font-mono text-xs text-[#FF3366]">
+                    High demand — only <strong>{variant.stock_qty}</strong> unit{variant.stock_qty > 1 ? 's' : ''} remaining. Order soon!
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3 mb-8">
                 <button
                   onClick={handleBuyNow}

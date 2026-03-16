@@ -205,6 +205,7 @@ export interface AdminStats {
   monthly_revenue: Array<{ month: string; revenue: number }>
   top_products: Array<{ name: string; revenue: number }>
   orders_by_status: Array<{ status: string; count: number }>
+  low_stock_variants: Array<{ id: string; label: string; stock_qty: number; product_id: string; product_name: string; sku: string }>
 }
 
 /* ─── API Filters ────────────────────────────────────────────────── */

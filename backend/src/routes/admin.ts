@@ -49,7 +49,7 @@ router.get('/stats', requireAdmin, async (_req: AuthRequest, res) => {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const [totalRevenue, monthRevenue, totalOrders, monthOrders, totalCustomers, pendingOrders, monthlyRaw, topProductsRaw, ordersByStatus] = await Promise.all([
+  const [totalRevenue, monthRevenue, totalOrders, monthOrders, totalCustomers, pendingOrders, monthlyRaw, topProductsRaw, ordersByStatus, lowStockRaw] = await Promise.all([
     prisma.order.aggregate({ where: { status: { not: 'CANCELLED' } }, _sum: { total: true } }),
     prisma.order.aggregate({ where: { status: { not: 'CANCELLED' }, createdAt: { gte: monthStart } }, _sum: { total: true } }),
     prisma.order.count(),
@@ -76,6 +76,12 @@ router.get('/stats', requireAdmin, async (_req: AuthRequest, res) => {
       LIMIT 5
     `,
     prisma.order.groupBy({ by: ['status'], _count: { status: true } }),
+    prisma.productVariant.findMany({
+      where: { stockQty: { lte: 5 }, isActive: true },
+      orderBy: { stockQty: 'asc' },
+      take: 8,
+      include: { product: { select: { id: true, name: true, sku: true } } },
+    }),
   ])
 
   res.json({
@@ -88,6 +94,14 @@ router.get('/stats', requireAdmin, async (_req: AuthRequest, res) => {
     monthly_revenue: monthlyRaw,
     top_products: topProductsRaw,
     orders_by_status: ordersByStatus.map((o) => ({ status: o.status, count: o._count.status })),
+    low_stock_variants: lowStockRaw.map((v) => ({
+      id: v.id,
+      label: v.label,
+      stock_qty: v.stockQty,
+      product_id: v.product.id,
+      product_name: v.product.name,
+      sku: v.product.sku,
+    })),
   })
 })
 

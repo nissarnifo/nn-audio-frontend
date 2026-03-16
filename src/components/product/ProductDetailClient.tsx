@@ -1,13 +1,14 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, ChevronLeft, Zap, Star, Heart, Bell, Timer, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { ShoppingCart, ChevronLeft, Zap, Star, Heart, Bell, Timer, MessageCircle, ChevronDown, ChevronUp, GitCompareArrows } from 'lucide-react'
 import { useProduct, useProductReviews, useCreateReview, useProducts, useProductQuestions, useSubmitQuestion, useWishlist } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import Gallery from '@/components/product/Gallery'
 import { Stars, Badge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
+import { useCompareStore } from '@/store/compare.store'
 import { useRecentlyViewedStore } from '@/store/recently-viewed.store'
 import { stockAlertsApi } from '@/services/api'
 import ProductsGrid from '@/components/product/ProductsGrid'
@@ -25,6 +26,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const { isLoggedIn } = useAuthStore()
   const addItem = useCartStore((s) => s.addItem)
   const { toggle: toggleWishlist, has: inWishlist } = useWishlist()
+  const { add: addCompare, remove: removeCompare, has: inCompare, isFull: compareFull } = useCompareStore()
   const record = useRecentlyViewedStore((s) => s.record)
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
@@ -251,6 +253,21 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   aria-label={inWishlist(product!.id) ? 'Remove from wishlist' : 'Add to wishlist'}
                 >
                   <Heart size={18} className={inWishlist(product!.id) ? 'fill-[#FF3366]' : ''} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (inCompare(product!.id)) removeCompare(product!.id)
+                    else if (!compareFull()) addCompare(product!)
+                    else toast('Max 3 products to compare', { icon: '⚡' })
+                  }}
+                  className={`w-12 flex items-center justify-center border rounded transition-all ${
+                    inCompare(product!.id)
+                      ? 'border-[#00FF88] bg-[rgba(0,255,136,0.08)] text-[#00FF88]'
+                      : 'border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#00FF88] hover:text-[#00FF88]'
+                  }`}
+                  aria-label={inCompare(product!.id) ? 'Remove from compare' : 'Add to compare'}
+                >
+                  <GitCompareArrows size={18} />
                 </button>
               </div>
             </>

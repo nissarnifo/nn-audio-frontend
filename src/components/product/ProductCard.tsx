@@ -2,12 +2,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ShoppingCart, Zap, Heart } from 'lucide-react'
+import { ShoppingCart, Zap, Heart, GitCompareArrows } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { Product } from '@/types'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
 import { useWishlist } from '@/hooks'
+import { useCompareStore } from '@/store/compare.store'
 import { Stars, Badge, NoPhoto } from '@/components/ui'
 import toast from 'react-hot-toast'
 
@@ -26,6 +27,8 @@ export default function ProductCard({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem)
   const { toggle: toggleWishlist, has } = useWishlist()
   const wishlisted = has(product.id)
+  const { add: addCompare, remove: removeCompare, has: inCompare, isFull } = useCompareStore()
+  const compared = inCompare(product.id)
 
   const inStock = selectedVariant?.stock_qty > 0
 
@@ -62,17 +65,34 @@ export default function ProductCard({ product }: { product: Product }) {
             <Badge color={BADGE_COLORS[product.badge] ?? 'cyan'}>{product.badge}</Badge>
           )}
         </div>
-        {/* Wishlist button */}
-        <button
-          onClick={(e) => { e.preventDefault(); toggleWishlist(product) }}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110"
-          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-        >
-          <Heart
-            size={15}
-            className={wishlisted ? 'fill-[#FF3366] text-[#FF3366]' : 'text-[#4A7FA5]'}
-          />
-        </button>
+        {/* Right action buttons */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5">
+          <button
+            onClick={(e) => { e.preventDefault(); toggleWishlist(product) }}
+            className="w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110"
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart
+              size={15}
+              className={wishlisted ? 'fill-[#FF3366] text-[#FF3366]' : 'text-[#4A7FA5]'}
+            />
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              if (compared) removeCompare(product.id)
+              else if (!isFull()) addCompare(product)
+              else toast('Max 3 products to compare', { icon: '⚡' })
+            }}
+            className={`w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110 ${compared ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            aria-label={compared ? 'Remove from compare' : 'Add to compare'}
+          >
+            <GitCompareArrows
+              size={14}
+              className={compared ? 'text-[#00FF88]' : 'text-[#4A7FA5]'}
+            />
+          </button>
+        </div>
         {/* Out of stock overlay */}
         {!inStock && (
           <div className="absolute inset-0 bg-[rgba(10,14,26,0.7)] flex items-center justify-center">

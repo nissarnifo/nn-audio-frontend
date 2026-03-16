@@ -545,4 +545,83 @@ router.put('/returns/:id/status', requireAdmin, async (req: AuthRequest, res) =>
   res.json({ id: ret.id, status: ret.status, admin_note: ret.adminNote })
 })
 
+// ─── Questions ────────────────────────────────────────────────────────────────
+
+// GET /api/v1/admin/questions  — all questions, unanswered first
+router.get('/questions', requireAdmin, async (req: AuthRequest, res) => {
+  const { page = '1', answered } = req.query as Record<string, string>
+  const limit = 20
+  const skip = (parseInt(page) - 1) * limit
+  const where: any = {}
+  if (answered === 'true') where.answer = { not: null }
+  else if (answered === 'false') where.answer = null
+
+  const [questions, total] = await Promise.all([
+    prisma.question.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: [{ answer: 'asc' }, { createdAt: 'desc' }],
+      include: {
+        product: { select: { id: true, name: true, slug: true } },
+        user: { select: { name: true, email: true } },
+      },
+    }),
+    prisma.question.count({ where }),
+  ])
+
+  res.json({
+    data: questions.map((q) => ({
+      id: q.id,
+      question: q.question,
+      answer: q.answer,
+      is_published: q.isPublished,
+      created_at: q.createdAt,
+      answered_at: q.answeredAt,
+      user: q.user,
+      product: q.product,
+    })),
+    total,
+    page: parseInt(page),
+    total_pages: Math.ceil(total / limit),
+  })
+})
+
+// PUT /api/v1/admin/questions/:id  — answer and publish a question
+router.put('/questions/:id', requireAdmin, async (req: AuthRequest, res) => {
+  const { answer, is_published } = req.body
+  const data: any = {}
+  if (answer !== undefined) {
+    data.answer = answer || null
+    data.answeredAt = answer ? new Date() : null
+    data.isPublished = answer ? true : false
+  }
+  if (is_published !== undefined) data.isPublished = is_published
+
+  const q = await prisma.question.update({
+    where: { id: req.params.id },
+    data,
+    include: {
+      product: { select: { id: true, name: true, slug: true } },
+      user: { select: { name: true, email: true } },
+    },
+  })
+
+  res.json({
+    id: q.id,
+    question: q.question,
+    answer: q.answer,
+    is_published: q.isPublished,
+    answered_at: q.answeredAt,
+    user: q.user,
+    product: q.product,
+  })
+})
+
+// DELETE /api/v1/admin/questions/:id  — remove spam/inappropriate question
+router.delete('/questions/:id', requireAdmin, async (req: AuthRequest, res) => {
+  await prisma.question.delete({ where: { id: req.params.id } })
+  res.json({ message: 'Question deleted' })
+})
+
 export default router

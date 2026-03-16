@@ -410,3 +410,59 @@ export function useUpdateReturnStatus() {
     onError: () => toast.error('Failed to update return status'),
   })
 }
+
+/* ─── Questions ──────────────────────────────────────────────────── */
+export function useProductQuestions(slug: string) {
+  return useQuery({
+    queryKey: ['questions', slug],
+    queryFn: () => productsApi.getQuestions(slug).then((r) => r.data),
+    enabled: !!slug,
+  })
+}
+
+export function useSubmitQuestion(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { question: string }) =>
+      productsApi.submitQuestion(slug, data).then((r) => r.data),
+    onSuccess: () => {
+      toast.success('Question submitted! It will appear once answered.')
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'Failed to submit question')
+    },
+  })
+}
+
+export function useAdminQuestions(params?: { page?: number; answered?: boolean }) {
+  return useQuery({
+    queryKey: ['admin-questions', params],
+    queryFn: () => adminApi.getQuestions(params).then((r) => r.data),
+  })
+}
+
+export function useAnswerQuestion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; answer?: string; is_published?: boolean }) =>
+      adminApi.answerQuestion(id, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-questions'] })
+      toast.success('Question answered')
+    },
+    onError: () => toast.error('Failed to answer question'),
+  })
+}
+
+export function useDeleteQuestion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteQuestion(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-questions'] })
+      toast.success('Question deleted')
+    },
+    onError: () => toast.error('Failed to delete question'),
+  })
+}

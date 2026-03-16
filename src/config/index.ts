@@ -96,6 +96,7 @@ export const ENDPOINTS = {
       `/products/${productId}/images/${imageId}`,
     reviews: (slug: string) => `/products/${slug}/reviews`,
     sale: (id: string) => `/products/${id}/sale`,
+    questions: (slug: string) => `/products/${slug}/questions`,
   },
   cart: {
     root: '/cart',
@@ -142,5 +143,7 @@ export const ENDPOINTS = {
     inventoryMovements: '/admin/inventory/movements',
     returns: '/admin/returns',
     returnStatus: (id: string) => `/admin/returns/${id}/status`,
+    questions: '/admin/questions',
+    questionById: (id: string) => `/admin/questions/${id}`,
   },
 } as const

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma, requireAuth, AuthRequest } from '../middleware/auth'
-import { sendOrderNotification } from '../utils/notify'
+import { sendOrderNotification, sendOrderConfirmationEmail } from '../utils/notify'
 import { calcDiscount } from './coupons'
 
 const router = Router()
@@ -144,10 +144,10 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   // Clear cart
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } })
 
-  // Notify admin about new order (fire-and-forget — never blocks response)
+  // Notifications (fire-and-forget — never blocks response)
   prisma.user.findUnique({ where: { id: req.user!.id } }).then((user) => {
     if (!user) return
-    return sendOrderNotification({
+    const payload = {
       orderNumber,
       customerName: user.name,
       customerEmail: user.email,
@@ -172,7 +172,11 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
         qty: i.qty,
         price: i.variant.price,
       })),
-    })
+    }
+    return Promise.all([
+      sendOrderNotification(payload),       // admin email + telegram
+      sendOrderConfirmationEmail(payload),  // customer confirmation email
+    ])
   }).catch(() => {}) // swallow errors — notification failure must not break order
 
   res.status(201).json(formatOrder(order))

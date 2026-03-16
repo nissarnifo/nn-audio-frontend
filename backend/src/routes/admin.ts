@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma, requireAdmin, AuthRequest } from '../middleware/auth'
-import { sendStockAlertEmail } from '../utils/notify'
+import { sendStockAlertEmail, sendOrderStatusEmail, sendReturnStatusEmail } from '../utils/notify'
 
 const router = Router()
 
@@ -116,8 +116,20 @@ router.put('/orders/:id/status', requireAdmin, async (req: AuthRequest, res) => 
   const order = await prisma.order.update({
     where: { id: req.params.id },
     data: { status },
-    include: orderInclude,
+    include: { ...orderInclude, user: { select: { name: true, email: true } } },
   })
+
+  // Send customer email for SHIPPED / DELIVERED (fire-and-forget)
+  if (status === 'SHIPPED' || status === 'DELIVERED') {
+    sendOrderStatusEmail({
+      customerName: order.user.name,
+      customerEmail: order.user.email,
+      orderNumber: order.orderNumber,
+      status,
+      total: order.total,
+    }).catch(() => {})
+  }
+
   res.json(formatOrder(order))
 })
 
@@ -424,6 +436,10 @@ router.put('/returns/:id/status', requireAdmin, async (req: AuthRequest, res) =>
   const ret = await prisma.return.update({
     where: { id },
     data: { status, adminNote: admin_note ?? null },
+    include: {
+      order: { select: { orderNumber: true } },
+      user: { select: { name: true, email: true } },
+    },
   })
 
   // If refunded, mark the order payment status as REFUNDED too
@@ -433,6 +449,15 @@ router.put('/returns/:id/status', requireAdmin, async (req: AuthRequest, res) =>
       data: { paymentStatus: 'REFUNDED' },
     })
   }
+
+  // Notify customer (fire-and-forget)
+  sendReturnStatusEmail({
+    customerName: ret.user.name,
+    customerEmail: ret.user.email,
+    orderNumber: ret.order.orderNumber,
+    status,
+    adminNote: ret.adminNote,
+  }).catch(() => {})
 
   res.json({ id: ret.id, status: ret.status, admin_note: ret.adminNote })
 })

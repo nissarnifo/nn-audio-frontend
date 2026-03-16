@@ -9,6 +9,7 @@ import { SectionHeader, NoPhoto } from '@/components/ui'
 import { getPrimaryImage, cloudinaryUrl, fmt } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
 import { useRecentlyViewedStore } from '@/store/recently-viewed.store'
+import NewsletterSection from '@/components/NewsletterSection'
 import toast from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 
@@ -304,6 +305,9 @@ export default function HomePage() {
           <ProductsGrid products={recentlyViewed} />
         </section>
       )}
+
+      {/* Newsletter */}
+      <NewsletterSection />
     </div>
   )
 }

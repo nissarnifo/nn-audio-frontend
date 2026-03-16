@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi, returnsApi, wishlistApi, settingsApi } from '@/services/api'
+import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi, returnsApi, wishlistApi, settingsApi, newsletterApi } from '@/services/api'
 import type { StoreSettings } from '@/services/api'
 import { useAuthStore } from '@/store/auth.store'
 import { useWishlistStore } from '@/store/wishlist.store'
@@ -605,5 +605,33 @@ export function useDeleteAdminReview() {
       toast.success('Review deleted')
     },
     onError: () => toast.error('Failed to delete review'),
+  })
+}
+
+// ─── Newsletter ──────────────────────────────────────────────────────────────
+
+export function useNewsletterSubscribe() {
+  return useMutation({
+    mutationFn: ({ email, source }: { email: string; source?: string }) =>
+      newsletterApi.subscribe(email, source).then((r) => r.data),
+  })
+}
+
+export function useNewsletterSubscribers(params?: { page?: number; limit?: number; search?: string; filter?: string }) {
+  return useQuery({
+    queryKey: ['newsletter-subscribers', params],
+    queryFn: () => newsletterApi.getSubscribers(params).then((r) => r.data),
+  })
+}
+
+export function useDeleteNewsletterSubscriber() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => newsletterApi.deleteSubscriber(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['newsletter-subscribers'] })
+      toast.success('Subscriber removed')
+    },
+    onError: () => toast.error('Failed to remove subscriber'),
   })
 }

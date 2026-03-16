@@ -95,6 +95,7 @@ export const ENDPOINTS = {
     imageDelete: (productId: string, imageId: string) =>
       `/products/${productId}/images/${imageId}`,
     reviews: (slug: string) => `/products/${slug}/reviews`,
+    sale: (id: string) => `/products/${id}/sale`,
   },
   cart: {
     root: '/cart',

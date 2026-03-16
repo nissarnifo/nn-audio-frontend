@@ -27,6 +27,10 @@ export interface Product {
   variants: ProductVariant[]
   rating: number
   review_count: number
+  sale_price: number | null
+  sale_start_at: string | null
+  sale_end_at: string | null
+  on_sale: boolean
   is_active: boolean
   created_at: string
 }
@@ -197,6 +201,7 @@ export interface ProductFilters {
   max_price?: number
   in_stock?: boolean
   min_rating?: number
+  on_sale?: boolean
 }
 
 export interface PaginatedResponse<T> {

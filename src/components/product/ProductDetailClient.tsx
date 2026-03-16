@@ -1,7 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, ChevronLeft, Zap, Star, Heart, Bell } from 'lucide-react'
+import { ShoppingCart, ChevronLeft, Zap, Star, Heart, Bell, Timer } from 'lucide-react'
 import { useProduct, useProductReviews, useCreateReview, useProducts } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import Gallery from '@/components/product/Gallery'
@@ -34,10 +34,29 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const [notifyEmail, setNotifyEmail] = useState('')
   const [notifyPending, setNotifyPending] = useState(false)
   const [notifyDone, setNotifyDone] = useState(false)
+  const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     if (product) record(product)
   }, [product?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Countdown timer for flash sale
+  useEffect(() => {
+    if (!product?.on_sale || !product.sale_end_at) { setTimeLeft(null); return }
+    const calc = () => {
+      const diff = new Date(product.sale_end_at!).getTime() - Date.now()
+      if (diff <= 0) { setTimeLeft(null); return }
+      const d = Math.floor(diff / 86400000)
+      const h = Math.floor((diff % 86400000) / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      setTimeLeft({ d, h, m, s })
+    }
+    calc()
+    timerRef.current = setInterval(calc, 1000)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [product?.on_sale, product?.sale_end_at])
 
   // Reset notify state when variant changes
   useEffect(() => {
@@ -154,10 +173,33 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             </div>
           )}
 
+          {/* Flash sale banner */}
+          {product.on_sale && (
+            <div className="flex items-center gap-2 px-3 py-2 mb-4 rounded border border-[rgba(255,51,102,0.3)] bg-[rgba(255,51,102,0.06)]">
+              <Timer size={13} className="text-[#FF3366] flex-shrink-0" />
+              <span className="font-mono text-xs text-[#FF3366] font-bold">FLASH SALE</span>
+              {timeLeft && (
+                <span className="font-mono text-xs text-[#E8F4FD] ml-auto">
+                  {timeLeft.d > 0 && `${timeLeft.d}d `}{String(timeLeft.h).padStart(2,'0')}:{String(timeLeft.m).padStart(2,'0')}:{String(timeLeft.s).padStart(2,'0')}
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="flex items-baseline gap-3 mb-6">
-            <span className="font-mono text-4xl text-[#FFB700] font-bold">
-              {fmt(variant?.price ?? 0)}
-            </span>
+            {product.on_sale && product.sale_price != null ? (
+              <>
+                <span className="font-mono text-4xl text-[#FF3366] font-bold">{fmt(product.sale_price)}</span>
+                <span className="font-mono text-xl text-[#4A7FA5] line-through">{fmt(variant?.price ?? 0)}</span>
+                <span className="font-mono text-sm text-[#00FF88]">
+                  -{Math.round((1 - product.sale_price / (variant?.price ?? 1)) * 100)}% OFF
+                </span>
+              </>
+            ) : (
+              <span className="font-mono text-4xl text-[#FFB700] font-bold">
+                {fmt(variant?.price ?? 0)}
+              </span>
+            )}
             {variant?.stock_qty > 0 ? (
               <span className="font-mono text-xs text-[#00FF88]">{variant.stock_qty} IN STOCK</span>
             ) : (

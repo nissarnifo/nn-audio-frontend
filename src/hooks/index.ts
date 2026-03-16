@@ -53,6 +53,19 @@ export function useCreateReview(slug: string) {
   })
 }
 
+export function useSetProductSale() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; sale_price: number | null; sale_start_at?: string | null; sale_end_at?: string | null }) =>
+      productsApi.setSale(id, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Sale updated')
+    },
+    onError: () => toast.error('Failed to update sale'),
+  })
+}
+
 export function useUpdateProduct() {
   const qc = useQueryClient()
   return useMutation({

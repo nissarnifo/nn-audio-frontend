@@ -120,6 +120,10 @@ export const ENDPOINTS = {
     root: '/coupons',
     byId: (id: string) => `/coupons/${id}`,
   },
+  stockAlerts: {
+    subscribe: '/stock-alerts',
+    adminList: '/stock-alerts/admin',
+  },
   admin: {
     stats: '/admin/stats',
     orders: '/admin/orders',

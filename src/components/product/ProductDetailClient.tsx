@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, ChevronLeft, Zap, Star, Heart } from 'lucide-react'
+import { ShoppingCart, ChevronLeft, Zap, Star, Heart, Bell } from 'lucide-react'
 import { useProduct, useProductReviews, useCreateReview, useProducts } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import Gallery from '@/components/product/Gallery'
@@ -10,6 +10,7 @@ import { fmt, fmtDate } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
 import { useWishlistStore } from '@/store/wishlist.store'
 import { useRecentlyViewedStore } from '@/store/recently-viewed.store'
+import { stockAlertsApi } from '@/services/api'
 import ProductsGrid from '@/components/product/ProductsGrid'
 import type { ProductVariant } from '@/types'
 import toast from 'react-hot-toast'
@@ -30,10 +31,18 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const [rating, setRating] = useState(0)
   const [hover, setHover] = useState(0)
   const [comment, setComment] = useState('')
+  const [notifyEmail, setNotifyEmail] = useState('')
+  const [notifyPending, setNotifyPending] = useState(false)
+  const [notifyDone, setNotifyDone] = useState(false)
 
   useEffect(() => {
     if (product) record(product)
   }, [product?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset notify state when variant changes
+  useEffect(() => {
+    setNotifyDone(false)
+  }, [selectedVariant?.id])
 
   const { data: relatedData } = useProducts(
     product ? { category: product.category, limit: 5 } : undefined
@@ -61,6 +70,24 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     if (!variant) return
     addItem(product!, variant, qty)
     router.push('/checkout')
+  }
+
+  async function handleNotify(e: { preventDefault(): void }) {
+    e.preventDefault()
+    if (!variant) return
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRe.test(notifyEmail)) { toast.error('Enter a valid email address'); return }
+    setNotifyPending(true)
+    try {
+      await stockAlertsApi.subscribe({ email: notifyEmail, variantId: variant.id })
+      setNotifyDone(true)
+      setNotifyEmail('')
+      toast.success("We'll notify you when it's back in stock!")
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to subscribe')
+    } finally {
+      setNotifyPending(false)
+    }
   }
 
   async function handleReviewSubmit(e: { preventDefault(): void }) {
@@ -138,47 +165,73 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             )}
           </div>
 
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex items-center border border-[rgba(0,212,255,0.25)] rounded overflow-hidden">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">−</button>
-              <span className="px-4 py-2 font-mono text-[#E8F4FD] border-x border-[rgba(0,212,255,0.25)]">{qty}</span>
-              <button onClick={() => setQty((q) => q + 1)} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">+</button>
+          {inStock ? (
+            <>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex items-center border border-[rgba(0,212,255,0.25)] rounded overflow-hidden">
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">−</button>
+                  <span className="px-4 py-2 font-mono text-[#E8F4FD] border-x border-[rgba(0,212,255,0.25)]">{qty}</span>
+                  <button onClick={() => setQty((q) => q + 1)} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">+</button>
+                </div>
+                <button
+                  onClick={handleAdd}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 font-heading tracking-widest btn-gold"
+                >
+                  <ShoppingCart size={18} />
+                  ADD TO CART
+                </button>
+              </div>
+              <div className="flex gap-3 mb-8">
+                <button
+                  onClick={handleBuyNow}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 font-heading tracking-widest btn-cyan"
+                >
+                  <Zap size={18} />
+                  BUY NOW
+                </button>
+                <button
+                  onClick={() => toggleWishlist(product!)}
+                  className={`w-12 flex items-center justify-center border rounded transition-all ${
+                    inWishlist(product!.id)
+                      ? 'border-[#FF3366] bg-[rgba(255,51,102,0.08)] text-[#FF3366]'
+                      : 'border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#FF3366] hover:text-[#FF3366]'
+                  }`}
+                  aria-label={inWishlist(product!.id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                  <Heart size={18} className={inWishlist(product!.id) ? 'fill-[#FF3366]' : ''} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="mb-8">
+              <p className="font-mono text-sm text-[#FF3366] mb-4">⚠ This variant is currently out of stock.</p>
+              {notifyDone ? (
+                <div className="flex items-center gap-2 p-4 border border-[rgba(0,255,136,0.3)] rounded bg-[rgba(0,255,136,0.05)] text-[#00FF88] font-mono text-sm">
+                  <Bell size={16} />
+                  You&apos;re on the list! We&apos;ll email you when it&apos;s back.
+                </div>
+              ) : (
+                <form onSubmit={handleNotify} className="flex gap-2">
+                  <input
+                    type="email"
+                    value={notifyEmail}
+                    onChange={(e) => setNotifyEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="flex-1 bg-[rgba(0,212,255,0.05)] border border-[rgba(0,212,255,0.25)] rounded px-3 py-2.5 font-mono text-sm text-[#E8F4FD] placeholder-[#4A7FA5] focus:outline-none focus:border-[#00D4FF]"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={notifyPending}
+                    className="flex items-center gap-2 px-4 py-2.5 font-heading tracking-widest text-sm btn-cyan whitespace-nowrap"
+                  >
+                    {notifyPending ? <Spinner size={14} /> : <Bell size={14} />}
+                    NOTIFY ME
+                  </button>
+                </form>
+              )}
             </div>
-            <button
-              onClick={handleAdd}
-              disabled={!inStock}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 font-heading tracking-widest ${
-                inStock ? 'btn-gold' : 'btn-red opacity-60 cursor-not-allowed'
-              }`}
-            >
-              <ShoppingCart size={18} />
-              {inStock ? 'ADD TO CART' : 'OUT OF STOCK'}
-            </button>
-          </div>
-
-          <div className="flex gap-3 mb-8">
-            <button
-              onClick={handleBuyNow}
-              disabled={!inStock}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 font-heading tracking-widest ${
-                inStock ? 'btn-cyan' : 'opacity-40 cursor-not-allowed border border-[rgba(0,212,255,0.2)] text-[#4A7FA5]'
-              }`}
-            >
-              <Zap size={18} />
-              BUY NOW
-            </button>
-            <button
-              onClick={() => toggleWishlist(product!)}
-              className={`w-12 flex items-center justify-center border rounded transition-all ${
-                inWishlist(product!.id)
-                  ? 'border-[#FF3366] bg-[rgba(255,51,102,0.08)] text-[#FF3366]'
-                  : 'border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#FF3366] hover:text-[#FF3366]'
-              }`}
-              aria-label={inWishlist(product!.id) ? 'Remove from wishlist' : 'Add to wishlist'}
-            >
-              <Heart size={18} className={inWishlist(product!.id) ? 'fill-[#FF3366]' : ''} />
-            </button>
-          </div>
+          )}
 
           {product.specs && Object.keys(product.specs).length > 0 && (
             <div className="hud-card p-5">

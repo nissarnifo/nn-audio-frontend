@@ -11,6 +11,8 @@ import type {
   User,
   AdminStats,
   Review,
+  Coupon,
+  CouponValidation,
 } from '@/types'
 
 const api = axios.create({
@@ -107,9 +109,27 @@ export const cartApi = {
 }
 
 /* ─── Orders ─────────────────────────────────────────────────────── */
+export const couponsApi = {
+  validate(code: string, subtotal: number) {
+    return api.get<CouponValidation>(ENDPOINTS.coupons.validate, { params: { code, subtotal } })
+  },
+  getAll() {
+    return api.get<Coupon[]>(ENDPOINTS.coupons.root)
+  },
+  create(data: { code: string; type: string; value: number; min_order?: number; max_uses?: number | null; expires_at?: string | null }) {
+    return api.post<Coupon>(ENDPOINTS.coupons.root, data)
+  },
+  update(id: string, data: Partial<Coupon>) {
+    return api.put<Coupon>(ENDPOINTS.coupons.byId(id), data)
+  },
+  remove(id: string) {
+    return api.delete(ENDPOINTS.coupons.byId(id))
+  },
+}
+
 export const ordersApi = {
   create(
-    data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string> },
+    data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string>; couponCode?: string },
     idempotencyKey?: string
   ) {
     return api.post<Order>(ENDPOINTS.orders.root, data, {

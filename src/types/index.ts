@@ -109,9 +109,35 @@ export interface Order {
   status: OrderStatus
   subtotal: number
   shipping: number
+  discount: number
+  coupon_code: string | null
   total: number
   created_at: string
   updated_at: string
+}
+
+/* ─── Coupon ──────────────────────────────────────────────────────── */
+export type CouponType = 'PERCENT' | 'FLAT'
+
+export interface Coupon {
+  id: string
+  code: string
+  type: CouponType
+  value: number
+  min_order: number
+  max_uses: number | null
+  used_count: number
+  expires_at: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export interface CouponValidation {
+  valid: boolean
+  code: string
+  type: CouponType
+  value: number
+  discount: number
 }
 
 /* ─── User / Auth ────────────────────────────────────────────────── */

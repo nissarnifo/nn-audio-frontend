@@ -129,6 +129,7 @@ export function useCreateOrder() {
       paymentMethod: string
       addressId: string
       razorpay?: Record<string, string>
+      couponCode?: string
       idempotencyKey?: string
     }) => ordersApi.create(data, idempotencyKey).then((r) => r.data),
     onSuccess: () => {

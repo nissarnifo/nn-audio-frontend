@@ -110,6 +110,11 @@ export const ENDPOINTS = {
     razorpayOrder: '/payments/razorpay/order',
     razorpayVerify: '/payments/razorpay/verify',
   },
+  coupons: {
+    validate: '/coupons/validate',
+    root: '/coupons',
+    byId: (id: string) => `/coupons/${id}`,
+  },
   admin: {
     stats: '/admin/stats',
     orders: '/admin/orders',

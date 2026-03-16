@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { prisma, requireAuth, AuthRequest } from '../middleware/auth'
 import { sendOrderNotification } from '../utils/notify'
+import { calcDiscount } from './coupons'
 
 const router = Router()
 
@@ -26,6 +27,8 @@ function formatOrder(o: any) {
     payment_status: o.paymentStatus,
     subtotal: o.subtotal,
     shipping: o.shipping,
+    discount: o.discount,
+    coupon_code: o.couponCode ?? null,
     total: o.total,
     created_at: o.createdAt,
     updated_at: o.updatedAt,
@@ -68,7 +71,7 @@ function formatOrder(o: any) {
 
 // POST /api/v1/orders
 router.post('/', requireAuth, async (req: AuthRequest, res) => {
-  const { paymentMethod, addressId, razorpay } = req.body
+  const { paymentMethod, addressId, razorpay, couponCode } = req.body
 
   const cart = await prisma.cart.findUnique({
     where: { userId: req.user!.id },
@@ -81,7 +84,23 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
 
   const subtotal = cart.items.reduce((sum, i) => sum + i.variant.price * i.qty, 0)
   const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
-  const total = subtotal + shipping
+
+  // Apply coupon
+  let discount = 0
+  let appliedCouponCode: string | null = null
+  if (couponCode) {
+    const coupon = await prisma.coupon.findUnique({ where: { code: String(couponCode).toUpperCase() } })
+    if (coupon && coupon.isActive && subtotal >= coupon.minOrder &&
+        (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
+        (coupon.maxUses === null || coupon.usedCount < coupon.maxUses)) {
+      discount = calcDiscount(coupon, subtotal)
+      appliedCouponCode = coupon.code
+      // Increment usedCount
+      await prisma.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } })
+    }
+  }
+
+  const total = Math.max(0, subtotal + shipping - discount)
 
   const orderNumber = `NNA-${Date.now()}`
 
@@ -94,6 +113,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       paymentStatus: paymentMethod === 'RAZORPAY' ? 'PAID' : 'PENDING',
       subtotal,
       shipping,
+      discount,
+      couponCode: appliedCouponCode,
       total,
       razorpayOrderId: razorpay?.razorpay_order_id ?? null,
       razorpayPaymentId: razorpay?.razorpay_payment_id ?? null,

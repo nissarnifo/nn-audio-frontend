@@ -4,12 +4,12 @@ import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/store/cart.store'
 import { useAuthStore } from '@/store/auth.store'
 import { useAddresses, useCreateAddress, useCreateOrder } from '@/hooks'
-import { paymentsApi, cartApi } from '@/services/api'
+import { paymentsApi, cartApi, couponsApi } from '@/services/api'
 import AddressForm from '@/components/checkout/AddressForm'
 import PaymentSelect from '@/components/checkout/PaymentSelect'
 import { fmt } from '@/lib/utils'
 import { Divider, Spinner } from '@/components/ui'
-import type { Address } from '@/types'
+import type { Address, CouponValidation } from '@/types'
 import toast from 'react-hot-toast'
 
 const STEPS = ['SHIPPING', 'PAYMENT', 'CONFIRM']
@@ -60,6 +60,12 @@ export default function CheckoutPage() {
   const [showNewAddrForm, setShowNewAddrForm] = useState(!isLoggedIn)
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'RAZORPAY'>('COD')
 
+  // P9: coupon state
+  const [couponInput, setCouponInput] = useState('')
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponValidation | null>(null)
+  const [couponError, setCouponError] = useState('')
+
   // P1 + P2: cart validation state
   const [isValidating, setIsValidating] = useState(false)
   const [priceChanges, setPriceChanges] = useState<PriceChange[]>([])
@@ -68,6 +74,29 @@ export default function CheckoutPage() {
   if (items.length === 0 && typeof window !== 'undefined') {
     router.push('/cart')
     return null
+  }
+
+  async function applyCoupon() {
+    if (!couponInput.trim()) return
+    setCouponLoading(true)
+    setCouponError('')
+    try {
+      const { data } = await couponsApi.validate(couponInput.trim(), subtotal)
+      setAppliedCoupon(data)
+      toast.success(`Coupon applied! −${fmt(data.discount)}`)
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      setCouponError(msg || 'Invalid coupon')
+      setAppliedCoupon(null)
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  function removeCoupon() {
+    setAppliedCoupon(null)
+    setCouponInput('')
+    setCouponError('')
   }
 
   async function handleAddressNext() {
@@ -185,6 +214,7 @@ export default function CheckoutPage() {
                   paymentMethod: 'RAZORPAY',
                   addressId: addressId!,
                   razorpay: response,
+                  couponCode: appliedCoupon?.code,
                   idempotencyKey: idempotencyKey.current,
                 })
                 clearCart()
@@ -209,6 +239,7 @@ export default function CheckoutPage() {
         const order = await createOrder({
           paymentMethod: 'COD',
           addressId,
+          couponCode: appliedCoupon?.code,
           idempotencyKey: idempotencyKey.current,
         })
         clearCart()
@@ -226,7 +257,8 @@ export default function CheckoutPage() {
     }
   }
 
-  const displayTotal = backendTotal ?? total
+  const couponDiscount = appliedCoupon?.discount ?? 0
+  const displayTotal = backendTotal != null ? backendTotal - couponDiscount : total - couponDiscount
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -307,6 +339,45 @@ export default function CheckoutPage() {
             <div className="hud-card p-6">
               <h2 className="font-heading text-xl text-[#E8F4FD] tracking-wider mb-6">PAYMENT METHOD</h2>
               <PaymentSelect selected={paymentMethod} onSelect={setPaymentMethod} />
+
+              {/* P9: Coupon input */}
+              <div className="mt-6 pt-5 border-t border-[rgba(0,212,255,0.1)]">
+                <p className="font-mono text-xs text-[#4A7FA5] mb-3 tracking-widest">COUPON CODE</p>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between border border-[#00FF88] bg-[rgba(0,255,136,0.06)] rounded px-4 py-2.5">
+                    <div>
+                      <span className="font-mono text-sm text-[#00FF88] tracking-widest">{appliedCoupon.code}</span>
+                      <span className="ml-2 font-mono text-xs text-[#4A7FA5]">
+                        {appliedCoupon.type === 'PERCENT' ? `${appliedCoupon.value}% off` : `₹${appliedCoupon.value} off`}
+                        {' · '}saves {fmt(appliedCoupon.discount)}
+                      </span>
+                    </div>
+                    <button onClick={removeCoupon} className="font-mono text-xs text-[#FF3366] hover:text-white transition-colors ml-3">
+                      REMOVE
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError('') }}
+                      onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
+                      placeholder="ENTER CODE"
+                      className="input-hud flex-1 font-mono text-sm tracking-widest uppercase"
+                    />
+                    <button
+                      onClick={applyCoupon}
+                      disabled={couponLoading || !couponInput.trim()}
+                      className="btn-cyan px-5 flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {couponLoading ? <Spinner size={14} /> : 'APPLY'}
+                    </button>
+                  </div>
+                )}
+                {couponError && <p className="font-mono text-xs text-[#FF3366] mt-2">{couponError}</p>}
+              </div>
+
               <div className="flex gap-3 mt-6">
                 <button onClick={() => setStep(0)} className="btn-cyan flex-1">BACK</button>
                 <button
@@ -367,6 +438,12 @@ export default function CheckoutPage() {
                 <span className="text-[#4A7FA5] font-mono">Shipping</span>
                 <span className={`font-mono ${shipping === 0 ? 'text-[#00FF88]' : 'text-[#E8F4FD]'}`}>{shipping === 0 ? 'FREE' : fmt(shipping)}</span>
               </div>
+              {couponDiscount > 0 && (
+                <div className="flex justify-between mb-4 text-sm">
+                  <span className="text-[#00FF88] font-mono">Coupon ({appliedCoupon?.code})</span>
+                  <span className="font-mono text-[#00FF88]">−{fmt(couponDiscount)}</span>
+                </div>
+              )}
 
               <Divider className="mb-4" />
 
@@ -408,6 +485,12 @@ export default function CheckoutPage() {
             ))}
           </div>
           <Divider className="my-3" />
+          {couponDiscount > 0 && (
+            <div className="flex justify-between font-mono text-xs mb-1">
+              <span className="text-[#00FF88]">Coupon</span>
+              <span className="text-[#00FF88]">−{fmt(couponDiscount)}</span>
+            </div>
+          )}
           <div className="flex justify-between font-mono text-sm">
             <span className="text-[#4A7FA5]">Total</span>
             <span className="text-[#FFB700] font-bold">{fmt(displayTotal)}</span>

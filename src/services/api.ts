@@ -13,6 +13,7 @@ import type {
   Review,
   Coupon,
   CouponValidation,
+  ReturnRequest,
 } from '@/types'
 
 const api = axios.create({
@@ -214,6 +215,16 @@ export const paymentsApi = {
   },
 }
 
+/* ─── Returns ────────────────────────────────────────────────────── */
+export const returnsApi = {
+  submit(data: { orderId: string; reason: string; notes?: string }) {
+    return api.post<{ id: string; status: string; created_at: string }>(ENDPOINTS.returns.root, data)
+  },
+  getMyReturns() {
+    return api.get<ReturnRequest[]>(ENDPOINTS.returns.me)
+  },
+}
+
 /* ─── Admin ──────────────────────────────────────────────────────── */
 export interface AnalyticsData {
   daily_revenue: { day: string; revenue: number; orders: number }[]
@@ -252,6 +263,14 @@ export const adminApi = {
     return api.get<{ data: StockMovement[]; total: number; page: number; total_pages: number }>(
       ENDPOINTS.admin.inventoryMovements, { params }
     )
+  },
+  getReturns(params?: { page?: number; status?: string }) {
+    return api.get<{ data: ReturnRequest[]; total: number; page: number; total_pages: number }>(
+      ENDPOINTS.admin.returns, { params }
+    )
+  },
+  updateReturnStatus(id: string, status: string, admin_note?: string) {
+    return api.put(ENDPOINTS.admin.returnStatus(id), { status, admin_note })
   },
 }
 

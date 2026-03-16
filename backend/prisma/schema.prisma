@@ -59,6 +59,13 @@ enum StockMovementType {
   RETURN
 }
 
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
 enum ProductBadge {
   BESTSELLER
   TOP_RATED
@@ -84,6 +91,7 @@ model User {
   addresses  Address[]
   orders     Order[]
   reviews    Review[]
+  returns    Return[]
   cart       Cart?
 
   @@map("users")
@@ -233,6 +241,7 @@ model Order {
   user    User        @relation(fields: [userId], references: [id])
   address Address     @relation(fields: [addressId], references: [id])
   items   OrderItem[]
+  return  Return?
 
   @@map("orders")
 }
@@ -263,6 +272,23 @@ model Coupon {
   createdAt  DateTime   @default(now()) @map("created_at")
 
   @@map("coupons")
+}
+
+model Return {
+  id        String       @id @default(cuid())
+  orderId   String       @unique @map("order_id")
+  userId    String       @map("user_id")
+  reason    String
+  notes     String?
+  status    ReturnStatus @default(REQUESTED)
+  adminNote String?      @map("admin_note")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("returns")
 }
 
 model OrderItem {

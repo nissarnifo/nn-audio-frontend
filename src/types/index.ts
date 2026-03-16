@@ -56,6 +56,24 @@ export interface Review {
   created_at: string
 }
 
+/* ─── Return ─────────────────────────────────────────────────────── */
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'REFUNDED'
+
+export interface ReturnRequest {
+  id: string
+  order_number: string
+  order_total: number
+  order_date: string
+  reason: string
+  notes: string | null
+  status: ReturnStatus
+  admin_note: string | null
+  created_at: string
+  updated_at: string
+  // admin list only
+  user?: { name: string; email: string }
+}
+
 /* ─── Cart ───────────────────────────────────────────────────────── */
 export interface CartItem {
   id: string

@@ -134,6 +134,11 @@ export const ENDPOINTS = {
     root: '/wishlist',
     item: (productId: string) => `/wishlist/${productId}`,
   },
+  settings: {
+    public: '/settings',
+    all: '/settings/all',
+    update: '/settings',
+  },
   admin: {
     stats: '/admin/stats',
     analytics: '/admin/analytics',

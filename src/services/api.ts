@@ -225,6 +225,27 @@ export const paymentsApi = {
   },
 }
 
+/* ─── Settings ──────────────────────────────────────────────────── */
+export interface StoreSettings {
+  banner_enabled: string
+  banner_text: string
+  banner_color: string
+  banner_link: string
+  [key: string]: string
+}
+
+export const settingsApi = {
+  getPublic() {
+    return api.get<StoreSettings>(ENDPOINTS.settings.public)
+  },
+  getAll() {
+    return api.get<StoreSettings>(ENDPOINTS.settings.all)
+  },
+  update(settings: Partial<StoreSettings>) {
+    return api.put<{ ok: boolean }>(ENDPOINTS.settings.update, settings)
+  },
+}
+
 /* ─── Wishlist ───────────────────────────────────────────────────── */
 export const wishlistApi = {
   get() {

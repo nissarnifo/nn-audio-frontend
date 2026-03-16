@@ -341,3 +341,11 @@ model OrderItem {
 
   @@map("order_items")
 }
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("settings")
+}

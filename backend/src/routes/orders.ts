@@ -5,8 +5,15 @@ import { calcDiscount } from './coupons'
 
 const router = Router()
 
-const SHIPPING_THRESHOLD = 5000
-const SHIPPING_FEE = 299
+async function getShippingSettings(): Promise<{ threshold: number; fee: number }> {
+  const rows = await prisma.setting.findMany({ where: { key: { in: ['shipping_threshold', 'shipping_fee'] } } })
+  const map: Record<string, string> = {}
+  for (const r of rows) map[r.key] = r.value
+  return {
+    threshold: parseFloat(map.shipping_threshold ?? '5000'),
+    fee: parseFloat(map.shipping_fee ?? '299'),
+  }
+}
 
 const orderInclude = {
   items: {
@@ -86,7 +93,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   }
 
   const subtotal = cart.items.reduce((sum, i) => sum + i.variant.price * i.qty, 0)
-  const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
+  const { threshold, fee } = await getShippingSettings()
+  const shipping = subtotal >= threshold ? 0 : fee
 
   // Apply coupon
   let discount = 0

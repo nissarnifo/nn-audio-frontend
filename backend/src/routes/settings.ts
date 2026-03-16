@@ -9,6 +9,8 @@ const PUBLIC_KEYS = [
   'banner_text',
   'banner_color',
   'banner_link',
+  'shipping_threshold',
+  'shipping_fee',
 ]
 
 // Default values when rows don't exist yet
@@ -17,6 +19,8 @@ const DEFAULTS: Record<string, string> = {
   banner_text: '',
   banner_color: 'cyan',
   banner_link: '',
+  shipping_threshold: '5000',
+  shipping_fee: '299',
 }
 
 function toMap(rows: { key: string; value: string }[]): Record<string, string> {

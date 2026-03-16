@@ -226,6 +226,15 @@ export const paymentsApi = {
 }
 
 /* ─── Settings ──────────────────────────────────────────────────── */
+export interface AdminReview {
+  id: string
+  rating: number
+  comment: string
+  created_at: string
+  product: { id: string; name: string; slug: string }
+  user: { id: string; name: string; email: string }
+}
+
 export interface StoreSettings {
   banner_enabled: string
   banner_text: string
@@ -374,6 +383,17 @@ export const adminApi = {
   },
   deleteQuestion(id: string) {
     return api.delete(ENDPOINTS.admin.questionById(id))
+  },
+  getAllReviews(params?: { page?: number; rating?: number; search?: string }) {
+    return api.get<{
+      data: AdminReview[]
+      total: number
+      page: number
+      total_pages: number
+    }>(ENDPOINTS.admin.reviews, { params })
+  },
+  deleteReview(id: string) {
+    return api.delete(ENDPOINTS.admin.reviewById(id))
   },
   getNotifications() {
     return api.get<{

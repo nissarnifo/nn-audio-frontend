@@ -647,4 +647,72 @@ router.delete('/questions/:id', requireAdmin, async (req: AuthRequest, res) => {
   res.json({ message: 'Question deleted' })
 })
 
+// ── Review Moderation ──────────────────────────────────────────────
+
+// GET /api/v1/admin/reviews?page=&rating=&search=
+router.get('/reviews', requireAdmin, async (req: AuthRequest, res) => {
+  const { page = '1', rating, search } = req.query as Record<string, string>
+  const limit = 20
+  const skip = (parseInt(page) - 1) * limit
+
+  const where: any = {}
+  if (rating) where.rating = parseInt(rating)
+  if (search) {
+    where.OR = [
+      { comment: { contains: search, mode: 'insensitive' } },
+      { product: { name: { contains: search, mode: 'insensitive' } } },
+      { user: { name: { contains: search, mode: 'insensitive' } } },
+    ]
+  }
+
+  const [reviews, total] = await Promise.all([
+    prisma.review.findMany({
+      where,
+      include: {
+        product: { select: { id: true, name: true, slug: true } },
+        user:    { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.review.count({ where }),
+  ])
+
+  res.json({
+    data: reviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      created_at: r.createdAt,
+      product: r.product,
+      user: r.user,
+    })),
+    total,
+    page: parseInt(page),
+    total_pages: Math.ceil(total / limit),
+  })
+})
+
+// DELETE /api/v1/admin/reviews/:id — delete review and recalculate product rating
+router.delete('/reviews/:id', requireAdmin, async (req: AuthRequest, res) => {
+  const review = await prisma.review.findUnique({ where: { id: req.params.id } })
+  if (!review) { res.status(404).json({ error: 'Review not found' }); return }
+
+  await prisma.review.delete({ where: { id: req.params.id } })
+
+  // Recalculate product aggregate rating
+  const agg = await prisma.review.aggregate({
+    where: { productId: review.productId },
+    _avg: { rating: true },
+    _count: true,
+  })
+  await prisma.product.update({
+    where: { id: review.productId },
+    data: { rating: agg._avg.rating ?? 0, reviewCount: agg._count },
+  })
+
+  res.json({ ok: true })
+})
+
 export default router

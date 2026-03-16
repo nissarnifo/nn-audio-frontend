@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useAdminCustomers } from '@/hooks'
 import { PageLoading, SectionHeader, Pagination } from '@/components/ui'
 import { fmtDate } from '@/lib/utils'
@@ -8,6 +9,7 @@ import { fmtDate } from '@/lib/utils'
 export default function AdminCustomersPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const router = useRouter()
   const { data, isLoading } = useAdminCustomers({ search: search || undefined, page })
 
   if (isLoading) return <PageLoading />
@@ -38,19 +40,24 @@ export default function AdminCustomersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-[rgba(0,212,255,0.12)]">
-                {['NAME', 'EMAIL', 'PHONE', 'ORDERS', 'JOINED'].map((h) => (
+                {['NAME', 'EMAIL', 'PHONE', 'ORDERS', 'JOINED', ''].map((h) => (
                   <th key={h} className="text-left p-4 font-mono text-[10px] text-[#4A7FA5] tracking-widest">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {(customers as Array<{ id: string; name: string; email: string; phone: string; order_count?: number; created_at: string }>).map((c) => (
-                <tr key={c.id} className="border-b border-[rgba(0,212,255,0.06)] hover:bg-[rgba(0,212,255,0.02)] transition-colors">
-                  <td className="p-4 text-sm text-[#E8F4FD]">{c.name}</td>
+                <tr
+                  key={c.id}
+                  onClick={() => router.push(`/admin/customers/${c.id}`)}
+                  className="border-b border-[rgba(0,212,255,0.06)] hover:bg-[rgba(0,212,255,0.03)] transition-colors cursor-pointer"
+                >
+                  <td className="p-4 text-sm text-[#E8F4FD] font-medium">{c.name}</td>
                   <td className="p-4 font-mono text-xs text-[#4A7FA5]">{c.email}</td>
-                  <td className="p-4 font-mono text-xs text-[#4A7FA5]">{c.phone}</td>
+                  <td className="p-4 font-mono text-xs text-[#4A7FA5]">{c.phone ?? '—'}</td>
                   <td className="p-4 font-mono text-sm text-[#00D4FF]">{c.order_count ?? 0}</td>
                   <td className="p-4 font-mono text-xs text-[#4A7FA5]">{fmtDate(c.created_at)}</td>
+                  <td className="p-4 text-[#4A7FA5]"><ChevronRight size={14} /></td>
                 </tr>
               ))}
             </tbody>
@@ -63,11 +70,7 @@ export default function AdminCustomersPage() {
         )}
       </div>
 
-      <Pagination
-        page={page}
-        totalPages={totalPages}
-        onPage={setPage}
-      />
+      <Pagination page={page} totalPages={totalPages} onPage={setPage} />
     </div>
   )
 }

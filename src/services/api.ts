@@ -229,6 +229,48 @@ export const returnsApi = {
 }
 
 /* ─── Admin ──────────────────────────────────────────────────────── */
+export interface CustomerDetail {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  role: string
+  created_at: string
+  stats: {
+    total_spend: number
+    avg_order_value: number
+    order_count: number
+    return_count: number
+    review_count: number
+  }
+  orders: {
+    id: string
+    order_number: string
+    status: string
+    payment_status: string
+    total: number
+    item_count: number
+    created_at: string
+  }[]
+  returns: {
+    id: string
+    status: string
+    reason: string
+    admin_note: string | null
+    order_number: string
+    order_total: number
+    created_at: string
+  }[]
+  reviews: {
+    id: string
+    rating: number
+    comment: string
+    product_name: string
+    product_slug: string
+    created_at: string
+  }[]
+}
+
 export interface AnalyticsData {
   daily_revenue: { day: string; revenue: number; orders: number }[]
   category_revenue: { category: string; revenue: number; units: number }[]
@@ -251,6 +293,9 @@ export const adminApi = {
   },
   getAllCustomers(params?: { page?: number; search?: string }) {
     return api.get(ENDPOINTS.admin.customers, { params })
+  },
+  getCustomer(id: string) {
+    return api.get<CustomerDetail>(ENDPOINTS.admin.customerById(id))
   },
   // Inventory
   getInventory() {

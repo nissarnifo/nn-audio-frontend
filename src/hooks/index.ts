@@ -255,6 +255,14 @@ export function useAdminCustomers(params?: { page?: number; search?: string }) {
   })
 }
 
+export function useAdminCustomer(id: string) {
+  return useQuery({
+    queryKey: ['admin-customer', id],
+    queryFn: () => adminApi.getCustomer(id).then((r) => r.data),
+    enabled: !!id,
+  })
+}
+
 export function useUpdateOrderStatus() {
   const qc = useQueryClient()
   return useMutation({

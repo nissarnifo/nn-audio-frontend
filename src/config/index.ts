@@ -135,6 +135,7 @@ export const ENDPOINTS = {
     orders: '/admin/orders',
     orderStatus: (id: string) => `/admin/orders/${id}/status`,
     customers: '/admin/customers',
+    customerById: (id: string) => `/admin/customers/${id}`,
     inventory: '/admin/inventory',
     inventoryRestock: '/admin/inventory/restock',
     inventoryAdjust: '/admin/inventory/adjust',

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi, returnsApi } from '@/services/api'
+import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi, returnsApi, wishlistApi } from '@/services/api'
 import { useAuthStore } from '@/store/auth.store'
+import { useWishlistStore } from '@/store/wishlist.store'
 import type { ProductFilters } from '@/types'
 import toast from 'react-hot-toast'
 
@@ -418,6 +419,73 @@ export function useUpdateReturnStatus() {
     },
     onError: () => toast.error('Failed to update return status'),
   })
+}
+
+/* ─── Wishlist ───────────────────────────────────────────────────── */
+export function useServerWishlist() {
+  const { isLoggedIn } = useAuthStore()
+  return useQuery({
+    queryKey: ['wishlist'],
+    queryFn: () => wishlistApi.get().then((r) => r.data),
+    enabled: isLoggedIn,
+  })
+}
+
+/**
+ * Unified wishlist hook — server-backed when logged in, Zustand when guest.
+ * Returns the same { toggle, has, items, count, clear } interface as the store.
+ */
+export function useWishlist() {
+  const { isLoggedIn } = useAuthStore()
+  const qc = useQueryClient()
+
+  // Guest: Zustand store
+  const store = useWishlistStore()
+
+  // Logged-in: server data
+  const { data: serverItems = [] } = useServerWishlist()
+
+  const addMutation = useMutation({
+    mutationFn: (productId: string) => wishlistApi.add(productId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    onError: () => toast.error('Failed to update wishlist'),
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (productId: string) => wishlistApi.remove(productId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    onError: () => toast.error('Failed to update wishlist'),
+  })
+
+  const clearMutation = useMutation({
+    mutationFn: () => wishlistApi.clear(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    onError: () => toast.error('Failed to clear wishlist'),
+  })
+
+  if (!isLoggedIn) {
+    return {
+      items: store.items,
+      count: store.count,
+      toggle: (product: import('@/types').Product) => store.toggle(product),
+      has: (id: string) => store.has(id),
+      clear: () => store.clear(),
+      isServer: false,
+    }
+  }
+
+  return {
+    items: serverItems,
+    count: serverItems.length,
+    toggle: (product: import('@/types').Product) => {
+      const isIn = serverItems.some((p) => p.id === product.id)
+      if (isIn) removeMutation.mutate(product.id)
+      else addMutation.mutate(product.id)
+    },
+    has: (id: string) => serverItems.some((p) => p.id === id),
+    clear: () => clearMutation.mutate(),
+    isServer: true,
+  }
 }
 
 /* ─── Questions ──────────────────────────────────────────────────── */

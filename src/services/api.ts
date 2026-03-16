@@ -225,6 +225,22 @@ export const paymentsApi = {
   },
 }
 
+/* ─── Wishlist ───────────────────────────────────────────────────── */
+export const wishlistApi = {
+  get() {
+    return api.get<Product[]>(ENDPOINTS.wishlist.root)
+  },
+  add(productId: string) {
+    return api.post<{ ok: boolean }>(ENDPOINTS.wishlist.root, { productId })
+  },
+  remove(productId: string) {
+    return api.delete(ENDPOINTS.wishlist.item(productId))
+  },
+  clear() {
+    return api.delete(ENDPOINTS.wishlist.root)
+  },
+}
+
 /* ─── Returns ────────────────────────────────────────────────────── */
 export const returnsApi = {
   submit(data: { orderId: string; reason: string; notes?: string }) {

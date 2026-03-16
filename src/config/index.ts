@@ -130,6 +130,10 @@ export const ENDPOINTS = {
     root: '/returns',
     me: '/returns/me',
   },
+  wishlist: {
+    root: '/wishlist',
+    item: (productId: string) => `/wishlist/${productId}`,
+  },
   admin: {
     stats: '/admin/stats',
     analytics: '/admin/analytics',

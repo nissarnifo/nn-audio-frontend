@@ -2,13 +2,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ShoppingCart, ChevronLeft, Zap, Star, Heart, Bell, Timer, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react'
-import { useProduct, useProductReviews, useCreateReview, useProducts, useProductQuestions, useSubmitQuestion } from '@/hooks'
+import { useProduct, useProductReviews, useCreateReview, useProducts, useProductQuestions, useSubmitQuestion, useWishlist } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import Gallery from '@/components/product/Gallery'
 import { Stars, Badge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
-import { useWishlistStore } from '@/store/wishlist.store'
 import { useRecentlyViewedStore } from '@/store/recently-viewed.store'
 import { stockAlertsApi } from '@/services/api'
 import ProductsGrid from '@/components/product/ProductsGrid'
@@ -25,7 +24,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const { mutateAsync: submitQuestion, isPending: isQuestionPending } = useSubmitQuestion(slug)
   const { isLoggedIn } = useAuthStore()
   const addItem = useCartStore((s) => s.addItem)
-  const { toggle: toggleWishlist, has: inWishlist } = useWishlistStore()
+  const { toggle: toggleWishlist, has: inWishlist } = useWishlist()
   const record = useRecentlyViewedStore((s) => s.record)
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)

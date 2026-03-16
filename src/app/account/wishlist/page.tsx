@@ -1,17 +1,37 @@
 'use client'
+import { useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react'
+import { useWishlist, useServerWishlist } from '@/hooks'
 import { useWishlistStore } from '@/store/wishlist.store'
+import { useAuthStore } from '@/store/auth.store'
 import { useCartStore } from '@/store/cart.store'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
-import { NoPhoto, Stars } from '@/components/ui'
+import { NoPhoto, Stars, PageLoading } from '@/components/ui'
+import { wishlistApi } from '@/services/api'
 import type { Product } from '@/types'
 import toast from 'react-hot-toast'
 
 export default function WishlistPage() {
-  const { items, remove, clear } = useWishlistStore()
+  const { isLoggedIn } = useAuthStore()
+  const { items, clear, toggle } = useWishlist()
+  const { isLoading } = useServerWishlist()
   const addItem = useCartStore((s) => s.addItem)
+
+  // On first login: migrate local guest items to server, then clear local
+  const localItems = useWishlistStore((s) => s.items)
+  const localClear = useWishlistStore((s) => s.clear)
+
+  useEffect(() => {
+    if (!isLoggedIn || localItems.length === 0) return
+    // Push each local item to server (fire-and-forget, best effort)
+    Promise.allSettled(localItems.map((p) => wishlistApi.add(p.id))).then(() => {
+      localClear()
+    })
+  }, [isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (isLoggedIn && isLoading) return <PageLoading />
 
   function handleAddToCart(product: Product) {
     const variant = product.variants.find((v) => v.is_active && v.stock_qty > 0)
@@ -52,6 +72,7 @@ export default function WishlistPage() {
         <>
           <p className="font-mono text-xs text-[#4A7FA5] mb-6">
             {items.length} SAVED ITEM{items.length !== 1 ? 'S' : ''}
+            {isLoggedIn && <span className="ml-2 text-[#00FF88]">· synced</span>}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {items.map((product) => {
@@ -61,7 +82,6 @@ export default function WishlistPage() {
 
               return (
                 <div key={product.id} className="hud-card overflow-hidden group">
-                  {/* Image */}
                   <Link href={`/products/${product.slug}`} className="block relative aspect-[4/3] overflow-hidden bg-[#0D1B2A]">
                     {primaryImage ? (
                       <Image
@@ -81,7 +101,6 @@ export default function WishlistPage() {
                     )}
                   </Link>
 
-                  {/* Info */}
                   <div className="p-4">
                     <p className="font-mono text-[10px] text-[#4A7FA5] mb-1 tracking-widest">{product.sku}</p>
                     <Link href={`/products/${product.slug}`}>
@@ -94,7 +113,6 @@ export default function WishlistPage() {
                       {fmt(defaultVariant?.price ?? 0)}
                     </p>
 
-                    {/* Actions */}
                     <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => handleAddToCart(product)}
@@ -107,7 +125,7 @@ export default function WishlistPage() {
                         {inStock ? 'ADD TO CART' : 'SOLD OUT'}
                       </button>
                       <button
-                        onClick={() => remove(product.id)}
+                        onClick={() => toggle(product)}
                         className="w-9 flex items-center justify-center border border-[rgba(255,51,102,0.25)] text-[#4A7FA5] hover:border-[#FF3366] hover:text-[#FF3366] rounded transition-all"
                         aria-label="Remove from wishlist"
                       >

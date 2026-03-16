@@ -10,6 +10,7 @@ interface WishlistState {
   has: (productId: string) => boolean
   remove: (productId: string) => void
   clear: () => void
+  hydrate: (items: Product[]) => void
 }
 
 export const useWishlistStore = create<WishlistState>()(
@@ -37,6 +38,10 @@ export const useWishlistStore = create<WishlistState>()(
 
       clear() {
         set({ items: [], count: 0 })
+      },
+
+      hydrate(items) {
+        set({ items, count: items.length })
       },
     }),
     { name: 'nn-wishlist' }

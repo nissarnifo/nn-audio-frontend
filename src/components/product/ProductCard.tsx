@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import type { Product } from '@/types'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
-import { useWishlistStore } from '@/store/wishlist.store'
+import { useWishlist } from '@/hooks'
 import { Stars, Badge, NoPhoto } from '@/components/ui'
 import toast from 'react-hot-toast'
 
@@ -24,8 +24,8 @@ export default function ProductCard({ product }: { product: Product }) {
   const defaultVariant = product.variants.find((v) => v.is_active) ?? product.variants[0]
   const [selectedVariant, setSelectedVariant] = useState(defaultVariant)
   const addItem = useCartStore((s) => s.addItem)
-  const { toggle: toggleWishlist, has: inWishlist } = useWishlistStore()
-  const wishlisted = inWishlist(product.id)
+  const { toggle: toggleWishlist, has } = useWishlist()
+  const wishlisted = has(product.id)
 
   const inStock = selectedVariant?.stock_qty > 0
 

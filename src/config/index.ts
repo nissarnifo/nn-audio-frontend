@@ -30,6 +30,11 @@
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
 
+// ─── App (Frontend) URL ────────────────────────────────────────────────────────
+// Used for canonical URLs, sitemap, OG tags
+export const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://nnaudio.in'
+
 // ─── Payments ──────────────────────────────────────────────────────────────────
 // Switch from test to live by updating NEXT_PUBLIC_RAZORPAY_KEY_ID in .env
 export const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''

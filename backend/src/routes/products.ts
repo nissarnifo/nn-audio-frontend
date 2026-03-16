@@ -206,6 +206,18 @@ router.delete('/:id', requireAdmin, async (req: AuthRequest, res) => {
   res.json({ message: 'Product deleted' })
 })
 
+// PATCH /api/v1/products/bulk  (admin) — bulk activate / deactivate
+router.patch('/bulk', requireAdmin, async (req: AuthRequest, res) => {
+  const { ids, action } = req.body as { ids: string[]; action: 'activate' | 'deactivate' }
+  if (!Array.isArray(ids) || ids.length === 0 || !['activate', 'deactivate'].includes(action)) {
+    res.status(400).json({ error: 'ids (array) and action (activate|deactivate) are required' })
+    return
+  }
+  const isActive = action === 'activate'
+  const result = await prisma.product.updateMany({ where: { id: { in: ids } }, data: { isActive } })
+  res.json({ updated: result.count })
+})
+
 // POST /api/v1/products/:id/images (admin)
 router.post('/:id/images', requireAdmin, upload.single('image'), async (req: AuthRequest, res) => {
   if (!req.file) { res.status(400).json({ error: 'No image provided' }); return }

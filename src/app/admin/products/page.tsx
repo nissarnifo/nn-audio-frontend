@@ -2,8 +2,8 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Edit, Plus, Tag, X } from 'lucide-react'
-import { useProducts, useSetProductSale } from '@/hooks'
+import { Edit, Plus, Tag, X, CheckSquare, Square, Zap, EyeOff } from 'lucide-react'
+import { useProducts, useSetProductSale, useBulkProductAction } from '@/hooks'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { Badge, PageLoading, SectionHeader, Spinner } from '@/components/ui'
 import type { Product, ProductCategory } from '@/types'
@@ -94,10 +94,38 @@ export default function AdminProductsPage() {
   const [saleTarget, setSaleTarget] = useState<Product | null>(null)
   const { data, isLoading } = useProducts({ category, limit: 50 })
 
+  // Bulk selection
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const { mutate: bulkAction, isPending: bulkPending } = useBulkProductAction()
+
+  const allIds = data?.data.map((p) => p.id) ?? []
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id))
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(allIds))
+    }
+  }
+
+  function handleBulkAction(action: 'activate' | 'deactivate') {
+    const ids = Array.from(selected)
+    bulkAction({ ids, action }, { onSuccess: () => setSelected(new Set()) })
+  }
+
   if (isLoading) return <PageLoading />
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-10">
+    <div className="max-w-7xl mx-auto px-4 py-10 pb-32">
       {saleTarget && <SaleModal product={saleTarget} onClose={() => setSaleTarget(null)} />}
 
       <div className="flex items-center justify-between mb-8">
@@ -109,37 +137,74 @@ export default function AdminProductsPage() {
         </Link>
       </div>
 
-      {/* Category filter */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {(['', 'amplifier', 'speaker', 'speaker_box', 'subwoofer', 'processor', 'cable', 'accessory'] as const).map((cat) => (
+      {/* Category filter + select-all row */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap gap-2">
+          {(['', 'amplifier', 'speaker', 'speaker_box', 'subwoofer', 'processor', 'cable', 'accessory'] as const).map((cat) => (
+            <button
+              key={cat}
+              onClick={() => { setCategory(cat || undefined); setSelected(new Set()) }}
+              className={`px-3 py-1 rounded font-mono text-xs border transition-all ${
+                (cat === '' ? !category : category === cat)
+                  ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
+                  : 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[rgba(0,212,255,0.4)]'
+              }`}
+            >
+              {cat === '' ? 'ALL' : cat === 'speaker_box' ? 'SPEAKER BOX' : cat.toUpperCase()}
+            </button>
+          ))}
+        </div>
+
+        {allIds.length > 0 && (
           <button
-            key={cat}
-            onClick={() => setCategory(cat || undefined)}
-            className={`px-3 py-1 rounded font-mono text-xs border transition-all ${
-              (cat === '' ? !category : category === cat)
-                ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
-                : 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[rgba(0,212,255,0.4)]'
-            }`}
+            onClick={toggleSelectAll}
+            className="flex items-center gap-1.5 font-mono text-xs text-[#4A7FA5] hover:text-[#E8F4FD] transition-colors"
           >
-            {cat === '' ? 'ALL' : cat === 'speaker_box' ? 'SPEAKER BOX' : cat.toUpperCase()}
+            {allSelected
+              ? <CheckSquare size={14} className="text-[#00D4FF]" />
+              : <Square size={14} />
+            }
+            {allSelected ? 'DESELECT ALL' : 'SELECT ALL'}
           </button>
-        ))}
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {data?.data.map((product) => {
           const img = getPrimaryImage(product.images)
+          const isSelected = selected.has(product.id)
           return (
-            <div key={product.id} className="hud-card overflow-hidden">
+            <div
+              key={product.id}
+              className={`hud-card overflow-hidden transition-all ${isSelected ? 'border-[#00D4FF] ring-1 ring-[rgba(0,212,255,0.3)]' : ''}`}
+            >
               <div className="relative aspect-video bg-[#0D1B2A]">
                 {img ? (
                   <Image src={cloudinaryUrl(img.url, 400)} alt={product.name} fill className="object-cover" sizes="300px" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-[#4A7FA5] font-mono text-xs">NO IMAGE</div>
                 )}
+
+                {/* Checkbox — top-left */}
+                <button
+                  onClick={() => toggleSelect(product.id)}
+                  className={`absolute top-2 left-2 z-10 rounded transition-colors ${
+                    isSelected
+                      ? 'text-[#00D4FF]'
+                      : 'text-[rgba(255,255,255,0.5)] hover:text-white'
+                  }`}
+                  aria-label={isSelected ? 'Deselect' : 'Select'}
+                >
+                  {isSelected
+                    ? <CheckSquare size={18} />
+                    : <Square size={18} />
+                  }
+                </button>
+
+                {/* Active dot — top-right */}
                 <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${product.is_active ? 'bg-[#00FF88]' : 'bg-[#FF3366]'}`} title={product.is_active ? 'Active' : 'Inactive'} />
                 {product.on_sale && (
-                  <div className="absolute top-2 left-2">
+                  <div className="absolute bottom-2 left-2">
                     <Badge color="red">SALE</Badge>
                   </div>
                 )}
@@ -187,6 +252,36 @@ export default function AdminProductsPage() {
       {!data?.data.length && (
         <div className="text-center py-20">
           <p className="font-heading text-xl text-[#4A7FA5]">No products found.</p>
+        </div>
+      )}
+
+      {/* Floating bulk action bar */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 rounded-full border border-[rgba(0,212,255,0.3)] bg-[#0D1B2A] shadow-2xl backdrop-blur-sm">
+          <span className="font-mono text-xs text-[#00D4FF] mr-1">
+            {selected.size} SELECTED
+          </span>
+          <button
+            onClick={() => handleBulkAction('activate')}
+            disabled={bulkPending}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded border border-[rgba(0,255,136,0.3)] text-[#00FF88] font-mono text-xs hover:bg-[rgba(0,255,136,0.08)] transition-colors disabled:opacity-50"
+          >
+            <Zap size={12} /> ACTIVATE
+          </button>
+          <button
+            onClick={() => handleBulkAction('deactivate')}
+            disabled={bulkPending}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded border border-[rgba(255,51,102,0.3)] text-[#FF3366] font-mono text-xs hover:bg-[rgba(255,51,102,0.06)] transition-colors disabled:opacity-50"
+          >
+            <EyeOff size={12} /> DEACTIVATE
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-[#4A7FA5] hover:text-[#E8F4FD] transition-colors ml-1"
+            aria-label="Clear selection"
+          >
+            <X size={15} />
+          </button>
         </div>
       )}
     </div>

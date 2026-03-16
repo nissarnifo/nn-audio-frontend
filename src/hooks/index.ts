@@ -68,6 +68,19 @@ export function useSetProductSale() {
   })
 }
 
+export function useBulkProductAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ids, action }: { ids: string[]; action: 'activate' | 'deactivate' }) =>
+      productsApi.bulkAction(ids, action).then((r) => r.data),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      toast.success(`${data.updated} product${data.updated !== 1 ? 's' : ''} updated`)
+    },
+    onError: () => toast.error('Bulk action failed'),
+  })
+}
+
 export function useUpdateProduct() {
   const qc = useQueryClient()
   return useMutation({

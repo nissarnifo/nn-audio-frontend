@@ -108,6 +108,9 @@ model Product {
   specs       Json            @default("{}")
   rating      Float           @default(0)
   reviewCount Int             @default(0) @map("review_count")
+  salePrice   Float?          @map("sale_price")
+  saleStartAt DateTime?       @map("sale_start_at")
+  saleEndAt   DateTime?       @map("sale_end_at")
   isActive    Boolean         @default(true) @map("is_active")
   createdAt   DateTime        @default(now()) @map("created_at")
 

@@ -45,8 +45,9 @@ function ProductsInner() {
   const [maxPrice, setMaxPrice] = useState('')
   const [inStock, setInStock] = useState(false)
   const [minRating, setMinRating] = useState(0)
+  const [onSale, setOnSale] = useState(false)
 
-  const hasActiveFilters = minPrice !== '' || maxPrice !== '' || inStock || minRating > 0
+  const hasActiveFilters = minPrice !== '' || maxPrice !== '' || inStock || minRating > 0 || onSale
 
   const { data, isLoading } = useProducts({
     search: search || undefined,
@@ -57,6 +58,7 @@ function ProductsInner() {
     max_price: maxPrice ? Number(maxPrice) : undefined,
     in_stock: inStock || undefined,
     min_rating: minRating || undefined,
+    on_sale: onSale || undefined,
   })
 
   function resetPage() { setPage(1) }
@@ -66,8 +68,9 @@ function ProductsInner() {
   function handleMinPrice(val: string) { setMinPrice(val); resetPage() }
   function handleMaxPrice(val: string) { setMaxPrice(val); resetPage() }
   function handleInStock() { setInStock((v) => !v); resetPage() }
+  function handleOnSale() { setOnSale((v) => !v); resetPage() }
   function handleMinRating(r: number) { setMinRating((v) => (v === r ? 0 : r)); resetPage() }
-  function clearFilters() { setMinPrice(''); setMaxPrice(''); setInStock(false); setMinRating(0); resetPage() }
+  function clearFilters() { setMinPrice(''); setMaxPrice(''); setInStock(false); setMinRating(0); setOnSale(false); resetPage() }
 
   const pillBase = 'px-3 py-1.5 rounded font-mono text-xs border transition-all'
   const pillActive = 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
@@ -150,6 +153,14 @@ function ProductsInner() {
           className={`${pillBase} ${inStock ? 'border-[#00FF88] text-[#00FF88] bg-[rgba(0,255,136,0.08)]' : pillIdle}`}
         >
           IN STOCK
+        </button>
+
+        {/* On Sale toggle */}
+        <button
+          onClick={handleOnSale}
+          className={`${pillBase} ${onSale ? 'border-[#FF3366] text-[#FF3366] bg-[rgba(255,51,102,0.08)]' : pillIdle}`}
+        >
+          ON SALE
         </button>
 
         {/* Min rating buttons */}

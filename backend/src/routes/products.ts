@@ -11,6 +11,12 @@ const productInclude = {
 }
 
 function formatProduct(p: any) {
+  const now = new Date()
+  const onSale =
+    p.salePrice != null &&
+    (p.saleStartAt == null || p.saleStartAt <= now) &&
+    (p.saleEndAt == null || p.saleEndAt > now)
+
   return {
     id: p.id,
     name: p.name,
@@ -22,6 +28,10 @@ function formatProduct(p: any) {
     specs: p.specs,
     rating: p.rating,
     review_count: p.reviewCount,
+    sale_price: p.salePrice ?? null,
+    sale_start_at: p.saleStartAt ?? null,
+    sale_end_at: p.saleEndAt ?? null,
+    on_sale: onSale,
     is_active: p.isActive,
     created_at: p.createdAt,
     images: p.images.map((img: any) => ({
@@ -42,9 +52,10 @@ function formatProduct(p: any) {
 
 // GET /api/v1/products
 router.get('/', async (req, res) => {
-  const { category, search, sort, page = '1', limit = '12', min_price, max_price, in_stock, min_rating } = req.query as Record<string, string>
+  const { category, search, sort, page = '1', limit = '12', min_price, max_price, in_stock, min_rating, on_sale } = req.query as Record<string, string>
   const skip = (parseInt(page) - 1) * parseInt(limit)
 
+  const now = new Date()
   const where: any = { isActive: true }
   if (category) where.category = category
   if (search) where.OR = [
@@ -52,6 +63,16 @@ router.get('/', async (req, res) => {
     { description: { contains: search, mode: 'insensitive' } },
   ]
   if (min_rating) where.rating = { gte: parseFloat(min_rating) }
+  if (on_sale === 'true') {
+    where.salePrice = { not: null }
+    where.OR = [
+      { saleStartAt: null },
+      { saleStartAt: { lte: now } },
+    ]
+    where.AND = [
+      { OR: [{ saleEndAt: null }, { saleEndAt: { gt: now } }] },
+    ]
+  }
 
   // Variant-level filters (price range + in-stock)
   const variantWhere: any = { isActive: true }
@@ -154,6 +175,24 @@ router.put('/:id', requireAdmin, async (req: AuthRequest, res) => {
           })),
         },
       }),
+    },
+    include: productInclude,
+  })
+
+  res.json(formatProduct(product))
+})
+
+// PATCH /api/v1/products/:id/sale (admin) — set or clear a flash sale
+router.patch('/:id/sale', requireAdmin, async (req: AuthRequest, res) => {
+  const { sale_price, sale_start_at, sale_end_at } = req.body
+
+  // Passing sale_price: null clears the sale
+  const product = await prisma.product.update({
+    where: { id: req.params.id },
+    data: {
+      salePrice: sale_price ?? null,
+      saleStartAt: sale_start_at ? new Date(sale_start_at) : null,
+      saleEndAt: sale_end_at ? new Date(sale_end_at) : null,
     },
     include: productInclude,
   })

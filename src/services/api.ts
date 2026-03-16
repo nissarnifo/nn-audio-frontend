@@ -88,6 +88,9 @@ export const productsApi = {
   createReview(slug: string, data: { rating: number; comment: string }) {
     return api.post<Review>(ENDPOINTS.products.reviews(slug), data)
   },
+  setSale(id: string, data: { sale_price: number | null; sale_start_at?: string | null; sale_end_at?: string | null }) {
+    return api.patch<Product>(ENDPOINTS.products.sale(id), data)
+  },
 }
 
 /* ─── Cart ───────────────────────────────────────────────────────── */

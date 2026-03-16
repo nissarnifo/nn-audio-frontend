@@ -111,6 +111,47 @@ router.put('/:id', requireAdmin, async (req: AuthRequest, res) => {
   res.json(formatCoupon(coupon))
 })
 
+// GET /api/v1/coupons/:id/usage  (admin)
+router.get('/:id/usage', requireAdmin, async (req: AuthRequest, res) => {
+  const { id } = req.params
+
+  const coupon = await prisma.coupon.findUnique({ where: { id } })
+  if (!coupon) { res.status(404).json({ error: 'Coupon not found' }); return }
+
+  const orders = await prisma.order.findMany({
+    where: { couponCode: coupon.code },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      createdAt: true,
+      subtotal: true,
+      discount: true,
+      total: true,
+      status: true,
+      user: { select: { name: true, email: true } },
+    },
+  })
+
+  const totalDiscount = orders.reduce((sum, o) => sum + o.discount, 0)
+
+  res.json({
+    code: coupon.code,
+    used_count: coupon.usedCount,
+    max_uses: coupon.maxUses,
+    total_discount: totalDiscount,
+    orders: orders.map((o) => ({
+      id: o.id,
+      date: o.createdAt,
+      customer: o.user.name,
+      email: o.user.email,
+      subtotal: o.subtotal,
+      discount: o.discount,
+      total: o.total,
+      status: o.status,
+    })),
+  })
+})
+
 // DELETE /api/v1/coupons/:id
 router.delete('/:id', requireAdmin, async (req: AuthRequest, res) => {
   await prisma.coupon.delete({ where: { id: req.params.id } })

@@ -215,9 +215,19 @@ export const paymentsApi = {
 }
 
 /* ─── Admin ──────────────────────────────────────────────────────── */
+export interface AnalyticsData {
+  daily_revenue: { day: string; revenue: number; orders: number }[]
+  category_revenue: { category: string; revenue: number; units: number }[]
+  new_customers: { month: string; count: number }[]
+  coupon_usage: { code: string; uses: number; total_savings: number }[]
+}
+
 export const adminApi = {
   getStats() {
     return api.get<AdminStats>(ENDPOINTS.admin.stats)
+  },
+  getAnalytics() {
+    return api.get<AnalyticsData>(ENDPOINTS.admin.analytics)
   },
   getAllOrders(params?: { status?: string; page?: number }) {
     return api.get<PaginatedResponse<Order>>(ENDPOINTS.admin.orders, { params })

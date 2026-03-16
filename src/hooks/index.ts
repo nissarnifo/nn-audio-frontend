@@ -220,6 +220,14 @@ export function useAdminStats() {
   })
 }
 
+export function useAdminAnalytics() {
+  return useQuery({
+    queryKey: ['admin-analytics'],
+    queryFn: () => adminApi.getAnalytics().then((r) => r.data),
+    staleTime: 5 * 60 * 1000, // 5 min — chart data doesn't need real-time updates
+  })
+}
+
 export function useAdminOrders(params?: { status?: string; page?: number }) {
   return useQuery({
     queryKey: ['admin-orders', params],

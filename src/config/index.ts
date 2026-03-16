@@ -126,6 +126,7 @@ export const ENDPOINTS = {
   },
   admin: {
     stats: '/admin/stats',
+    analytics: '/admin/analytics',
     orders: '/admin/orders',
     orderStatus: (id: string) => `/admin/orders/${id}/status`,
     customers: '/admin/customers',

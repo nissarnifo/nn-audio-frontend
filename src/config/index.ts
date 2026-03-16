@@ -155,5 +155,7 @@ export const ENDPOINTS = {
     questions: '/admin/questions',
     questionById: (id: string) => `/admin/questions/${id}`,
     notifications: '/admin/notifications',
+    reviews: '/admin/reviews',
+    reviewById: (id: string) => `/admin/reviews/${id}`,
   },
 } as const

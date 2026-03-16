@@ -573,3 +573,23 @@ export function useUpdateSettings() {
     onError: () => toast.error('Failed to save settings'),
   })
 }
+
+/* ─── Admin Reviews ──────────────────────────────────────────────── */
+export function useAdminReviews(params?: { page?: number; rating?: number; search?: string }) {
+  return useQuery({
+    queryKey: ['admin-reviews', params],
+    queryFn: () => adminApi.getAllReviews(params).then((r) => r.data),
+  })
+}
+
+export function useDeleteAdminReview() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteReview(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-reviews'] })
+      toast.success('Review deleted')
+    },
+    onError: () => toast.error('Failed to delete review'),
+  })
+}

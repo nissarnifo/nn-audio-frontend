@@ -2,7 +2,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut, Boxes, Tag, RotateCcw, MessageCircle, Settings } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut, Boxes, Tag, RotateCcw, MessageCircle, Settings, Star } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
 import { PageLoading } from '@/components/ui'
@@ -18,6 +18,7 @@ const NAV = [
   { href: '/admin/coupons',   label: 'COUPONS',   icon: <Tag size={16} /> },
   { href: '/admin/returns',   label: 'RETURNS',   icon: <RotateCcw size={16} /> },
   { href: '/admin/questions', label: 'Q&A',       icon: <MessageCircle size={16} /> },
+  { href: '/admin/reviews',   label: 'REVIEWS',   icon: <Star size={16} /> },
   { href: '/admin/settings',  label: 'SETTINGS',  icon: <Settings size={16} /> },
 ]
 

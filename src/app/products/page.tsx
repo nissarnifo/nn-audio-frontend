@@ -1,5 +1,6 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { useProducts } from '@/hooks'
 import ProductsGrid from '@/components/product/ProductsGrid'
@@ -26,8 +27,16 @@ const SORTS = [
 
 const RATINGS = [4, 3, 2, 1]
 
-export default function ProductsPage() {
-  const [search, setSearch] = useState('')
+function ProductsInner() {
+  const searchParams = useSearchParams()
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
+
+  // Sync when URL param changes (e.g. user navigates from search bar)
+  useEffect(() => {
+    const q = searchParams.get('search') ?? ''
+    setSearch(q)
+    setPage(1)
+  }, [searchParams.get('search')]) // eslint-disable-line react-hooks/exhaustive-deps
   const [category, setCategory] = useState<ProductCategory | ''>('')
   const [sort, setSort] = useState('rating')
   const [page, setPage] = useState(1)
@@ -183,5 +192,13 @@ export default function ProductsPage() {
         onPage={setPage}
       />
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense>
+      <ProductsInner />
+    </Suspense>
   )
 }

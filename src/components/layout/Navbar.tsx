@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X, Heart } from 'lucide-react'
+import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X, Heart, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCartStore } from '@/store/cart.store'
@@ -9,6 +9,7 @@ import { useWishlistStore } from '@/store/wishlist.store'
 import { useAuthStore } from '@/store/auth.store'
 import { authApi } from '@/services/api'
 import { cn } from '@/lib/utils'
+import SearchBar from './SearchBar'
 
 const NAV_LINKS = [
   { href: '/', label: 'HOME' },
@@ -23,6 +24,7 @@ export default function Navbar() {
   const { isLoggedIn, isAdmin, logout } = useAuthStore()
   const qc = useQueryClient()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   async function handleLogout() {
     try { await authApi.logout() } catch {}
@@ -64,6 +66,15 @@ export default function Navbar() {
 
         {/* Right Icons */}
         <div className="flex items-center gap-3">
+          {/* Search toggle */}
+          <button
+            onClick={() => { setSearchOpen((v) => !v); setMenuOpen(false) }}
+            className={`p-2 transition-colors ${searchOpen ? 'text-[#00D4FF]' : 'text-[#4A7FA5] hover:text-[#00D4FF]'}`}
+            aria-label="Search"
+          >
+            <Search size={20} />
+          </button>
+
           {/* Wishlist */}
           <Link href="/account/wishlist" className="relative p-2 text-[#4A7FA5] hover:text-[#FF3366] transition-colors">
             <Heart size={20} />
@@ -75,10 +86,7 @@ export default function Navbar() {
           </Link>
 
           {/* Cart */}
-          <Link
-            href="/cart"
-            className="relative p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors"
-          >
+          <Link href="/cart" className="relative p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors">
             <ShoppingCart size={20} />
             {count > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#00D4FF] text-[#0A0E1A] text-[10px] font-bold flex items-center justify-center font-mono">
@@ -112,13 +120,22 @@ export default function Navbar() {
 
           {/* Mobile menu toggle */}
           <button
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => { setMenuOpen(!menuOpen); setSearchOpen(false) }}
             className="p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors md:hidden"
           >
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </div>
+
+      {/* Search bar panel */}
+      {searchOpen && (
+        <div className="border-t border-[rgba(0,212,255,0.12)] bg-[rgba(10,14,26,0.98)] px-4 py-3">
+          <div className="max-w-2xl mx-auto">
+            <SearchBar onClose={() => setSearchOpen(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Mobile Menu */}
       {menuOpen && (

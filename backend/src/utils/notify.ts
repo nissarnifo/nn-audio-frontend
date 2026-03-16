@@ -130,6 +130,63 @@ ${itemLines}
 ✅ *Total: ₹${p.total.toLocaleString('en-IN')}*`
 }
 
+export async function sendStockAlertEmail(payload: {
+  toEmail: string
+  productName: string
+  variantLabel: string
+  productSlug: string
+  frontendUrl: string
+}) {
+  const emailUser = process.env.EMAIL_USER
+  const emailPass = process.env.EMAIL_PASS
+  const emailFrom = process.env.EMAIL_FROM || emailUser
+  if (!emailUser || !emailPass) return
+
+  const productUrl = `${payload.frontendUrl}/products/${payload.productSlug}`
+  const html = `
+  <div style="font-family:sans-serif;background:#0a0a0a;color:#e0e0e0;max-width:600px;margin:auto;border-radius:8px;overflow:hidden">
+    <div style="background:#111;padding:24px;border-bottom:2px solid #00D4FF">
+      <h2 style="margin:0;color:#00D4FF">🔔 Back in Stock!</h2>
+      <p style="margin:4px 0 0;color:#888">N &amp; N Audio Systems</p>
+    </div>
+    <div style="padding:24px">
+      <p>Great news! The item you were waiting for is now available:</p>
+      <div style="background:#111;border:1px solid #00D4FF22;border-radius:6px;padding:16px;margin:16px 0">
+        <p style="margin:0;font-size:16px;font-weight:bold;color:#E8F4FD">${payload.productName}</p>
+        <p style="margin:4px 0 0;color:#4A7FA5;font-size:13px">${payload.variantLabel}</p>
+      </div>
+      <a href="${productUrl}"
+        style="display:inline-block;background:#FFB700;color:#000;text-decoration:none;padding:12px 28px;border-radius:4px;font-weight:bold;font-size:14px;letter-spacing:1px">
+        VIEW PRODUCT →
+      </a>
+      <p style="margin-top:20px;font-size:12px;color:#555">
+        Hurry — stock is limited! This alert was sent because you signed up at N &amp; N Audio Systems.
+      </p>
+    </div>
+    <div style="background:#111;padding:12px 24px;color:#555;font-size:12px">
+      N &amp; N Audio Systems · Precision Audio, Made in India
+    </div>
+  </div>`
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: Number(process.env.EMAIL_PORT) || 587,
+      secure: false,
+      auth: { user: emailUser, pass: emailPass },
+    })
+    await transporter.sendMail({
+      from: `"N & N Audio" <${emailFrom}>`,
+      to: payload.toEmail,
+      subject: `🔔 Back in Stock: ${payload.productName} (${payload.variantLabel})`,
+      html,
+    })
+    console.log(`[notify] Stock alert sent to ${payload.toEmail} for ${payload.productName}`)
+  } catch (err) {
+    console.error('[notify] Stock alert email failed:', err)
+  }
+}
+
 function escTg(s: string): string {
   return s.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, (c) => '\\' + c)
 }

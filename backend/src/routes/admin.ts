@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { prisma, requireAdmin, AuthRequest } from '../middleware/auth'
+import { sendStockAlertEmail } from '../utils/notify'
 
 const router = Router()
 
@@ -200,6 +201,14 @@ router.post('/inventory/restock', requireAdmin, async (req: AuthRequest, res) =>
     res.status(400).json({ error: 'variantId and qty (≥1) are required' })
     return
   }
+
+  // Capture whether variant was out of stock BEFORE restocking
+  const before = await prisma.productVariant.findUnique({
+    where: { id: variantId },
+    include: { product: { select: { name: true, slug: true } } },
+  })
+  const wasOutOfStock = before && before.stockQty === 0
+
   const [variant] = await prisma.$transaction([
     prisma.productVariant.update({
       where: { id: variantId },
@@ -209,6 +218,33 @@ router.post('/inventory/restock', requireAdmin, async (req: AuthRequest, res) =>
       data: { variantId, type: 'PURCHASE', qty, note: note || null },
     }),
   ])
+
+  // Fire back-in-stock emails if variant just came back in stock
+  if (wasOutOfStock && before) {
+    const pendingAlerts = await prisma.stockAlert.findMany({
+      where: { variantId, notifiedAt: null },
+    })
+    const frontendUrl = process.env.FRONTEND_URL || 'https://nnaudio.in'
+    await Promise.allSettled(
+      pendingAlerts.map(async (alert) => {
+        await sendStockAlertEmail({
+          toEmail: alert.email,
+          productName: before.product.name,
+          variantLabel: before.label,
+          productSlug: before.product.slug,
+          frontendUrl,
+        })
+        await prisma.stockAlert.update({
+          where: { id: alert.id },
+          data: { notifiedAt: new Date() },
+        })
+      })
+    )
+    if (pendingAlerts.length > 0) {
+      console.log(`[restock] Sent ${pendingAlerts.length} back-in-stock alerts for variant ${variantId}`)
+    }
+  }
+
   res.json({ id: variant.id, stock_qty: variant.stockQty })
 })
 

@@ -137,6 +137,7 @@ model ProductVariant {
   cartItems      CartItem[]
   orderItems     OrderItem[]
   stockMovements StockMovement[]
+  stockAlerts    StockAlert[]
 
   @@map("product_variants")
 }
@@ -234,6 +235,19 @@ model Order {
   items   OrderItem[]
 
   @@map("orders")
+}
+
+model StockAlert {
+  id         String    @id @default(cuid())
+  email      String
+  variantId  String    @map("variant_id")
+  notifiedAt DateTime? @map("notified_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([email, variantId])
+  @@map("stock_alerts")
 }
 
 model Coupon {

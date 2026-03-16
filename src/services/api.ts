@@ -270,4 +270,26 @@ export interface StockMovement {
   product: { name: string; sku: string; category: string }
 }
 
+/* ─── Stock Alerts ───────────────────────────────────────────────── */
+export const stockAlertsApi = {
+  subscribe(data: { email: string; variantId: string }) {
+    return api.post<{ ok: boolean; message: string }>(ENDPOINTS.stockAlerts.subscribe, data)
+  },
+  adminList() {
+    return api.get<StockAlertItem[]>(ENDPOINTS.stockAlerts.adminList)
+  },
+}
+
+export interface StockAlertItem {
+  id: string
+  email: string
+  created_at: string
+  variant: {
+    id: string
+    label: string
+    stock_qty: number
+    product: { id: string; name: string; slug: string; sku: string }
+  }
+}
+
 export default api

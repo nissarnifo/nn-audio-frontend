@@ -273,6 +273,7 @@ model Order {
   discount      Float         @default(0)
   trackingNumber String?      @map("tracking_number")
   trackingUrl   String?       @map("tracking_url")
+  notes         String?
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 

@@ -150,6 +150,7 @@ export interface Order {
   total: number
   tracking_number: string | null
   tracking_url: string | null
+  notes: string | null
   created_at: string
   updated_at: string
 }

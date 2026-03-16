@@ -60,6 +60,9 @@ export default function CheckoutPage() {
   const [showNewAddrForm, setShowNewAddrForm] = useState(!isLoggedIn)
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'RAZORPAY'>('COD')
 
+  // Delivery notes
+  const [notes, setNotes] = useState('')
+
   // P9: coupon state
   const [couponInput, setCouponInput] = useState('')
   const [couponLoading, setCouponLoading] = useState(false)
@@ -215,6 +218,7 @@ export default function CheckoutPage() {
                   addressId: addressId!,
                   razorpay: response,
                   couponCode: appliedCoupon?.code,
+                  notes: notes.trim() || undefined,
                   idempotencyKey: idempotencyKey.current,
                 })
                 clearCart()
@@ -240,6 +244,7 @@ export default function CheckoutPage() {
           paymentMethod: 'COD',
           addressId,
           couponCode: appliedCoupon?.code,
+          notes: notes.trim() || undefined,
           idempotencyKey: idempotencyKey.current,
         })
         clearCart()
@@ -455,6 +460,24 @@ export default function CheckoutPage() {
               <div className="flex items-center gap-2 mb-2 text-sm">
                 <span className="text-[#4A7FA5] font-mono">Payment:</span>
                 <span className="text-[#00D4FF] font-mono">{paymentMethod}</span>
+              </div>
+
+              {/* Delivery notes */}
+              <div className="mt-5 pt-4 border-t border-[rgba(0,212,255,0.1)]">
+                <label className="block font-mono text-xs text-[#4A7FA5] mb-2 tracking-widest">
+                  DELIVERY NOTES <span className="text-[rgba(74,127,165,0.5)]">(optional)</span>
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="e.g. Leave at gate · Call before delivery · Fragile — handle with care"
+                  className="input-hud w-full text-sm resize-none"
+                />
+                {notes.length > 0 && (
+                  <p className="font-mono text-[10px] text-[#4A7FA5] mt-1 text-right">{notes.length}/500</p>
+                )}
               </div>
 
               <div className="flex gap-3 mt-6">

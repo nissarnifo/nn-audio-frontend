@@ -32,6 +32,7 @@ function formatOrder(o: any) {
     total: o.total,
     tracking_number: o.trackingNumber ?? null,
     tracking_url: o.trackingUrl ?? null,
+    notes: o.notes ?? null,
     created_at: o.createdAt,
     updated_at: o.updatedAt,
     address: {
@@ -73,7 +74,7 @@ function formatOrder(o: any) {
 
 // POST /api/v1/orders
 router.post('/', requireAuth, async (req: AuthRequest, res) => {
-  const { paymentMethod, addressId, razorpay, couponCode } = req.body
+  const { paymentMethod, addressId, razorpay, couponCode, notes } = req.body
 
   const cart = await prisma.cart.findUnique({
     where: { userId: req.user!.id },
@@ -118,6 +119,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       discount,
       couponCode: appliedCouponCode,
       total,
+      notes: notes ? String(notes).trim().slice(0, 500) || null : null,
       razorpayOrderId: razorpay?.razorpay_order_id ?? null,
       razorpayPaymentId: razorpay?.razorpay_payment_id ?? null,
       items: {

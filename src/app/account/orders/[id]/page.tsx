@@ -149,6 +149,14 @@ export default function OrderDetailPage() {
         </div>
       )}
 
+      {/* Delivery notes */}
+      {order.notes && (
+        <div className="hud-card p-6 mb-4 border border-[rgba(255,183,0,0.2)] bg-[rgba(255,183,0,0.02)]">
+          <h2 className="font-heading text-base text-[#FFB700] tracking-wider mb-2">DELIVERY NOTES</h2>
+          <p className="text-sm text-[#E8F4FD] leading-relaxed">{order.notes}</p>
+        </div>
+      )}
+
       {/* Address */}
       <div className="hud-card p-6 mb-4">
         <h2 className="font-heading text-base text-[#E8F4FD] tracking-wider mb-3">DELIVERY ADDRESS</h2>

@@ -145,5 +145,6 @@ export const ENDPOINTS = {
     returnStatus: (id: string) => `/admin/returns/${id}/status`,
     questions: '/admin/questions',
     questionById: (id: string) => `/admin/questions/${id}`,
+    notifications: '/admin/notifications',
   },
 } as const

@@ -545,6 +545,29 @@ router.put('/returns/:id/status', requireAdmin, async (req: AuthRequest, res) =>
   res.json({ id: ret.id, status: ret.status, admin_note: ret.adminNote })
 })
 
+// GET /api/v1/admin/notifications  — badge counts for admin bell
+router.get('/notifications', requireAdmin, async (_req: AuthRequest, res) => {
+  const now = new Date()
+  const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  const [newOrders, pendingReturns, unansweredQuestions, lowStockVariants] = await Promise.all([
+    prisma.order.count({ where: { status: 'PROCESSING', createdAt: { gte: since24h } } }),
+    prisma.return.count({ where: { status: 'REQUESTED' } }),
+    prisma.question.count({ where: { answer: null } }),
+    prisma.productVariant.count({ where: { stockQty: { lte: 5, gt: 0 }, isActive: true } }),
+  ])
+
+  const total = newOrders + pendingReturns + unansweredQuestions + lowStockVariants
+
+  res.json({
+    total,
+    new_orders: newOrders,
+    pending_returns: pendingReturns,
+    unanswered_questions: unansweredQuestions,
+    low_stock_variants: lowStockVariants,
+  })
+})
+
 // ─── Questions ────────────────────────────────────────────────────────────────
 
 // GET /api/v1/admin/questions  — all questions, unanswered first

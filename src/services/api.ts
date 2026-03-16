@@ -338,6 +338,15 @@ export const adminApi = {
   deleteQuestion(id: string) {
     return api.delete(ENDPOINTS.admin.questionById(id))
   },
+  getNotifications() {
+    return api.get<{
+      total: number
+      new_orders: number
+      pending_returns: number
+      unanswered_questions: number
+      low_stock_variants: number
+    }>(ENDPOINTS.admin.notifications)
+  },
 }
 
 /* ─── Inventory types (local, not in global types file) ──────────── */

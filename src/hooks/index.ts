@@ -36,6 +36,23 @@ export function useProductReviews(slug: string) {
   })
 }
 
+export function useCreateReview(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { rating: number; comment: string }) =>
+      productsApi.createReview(slug, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reviews', slug] })
+      qc.invalidateQueries({ queryKey: ['product', slug] })
+      toast.success('Review submitted!')
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'Failed to submit review')
+    },
+  })
+}
+
 export function useUpdateProduct() {
   const qc = useQueryClient()
   return useMutation({

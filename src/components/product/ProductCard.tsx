@@ -2,7 +2,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ShoppingCart, Zap, Heart, GitCompareArrows } from 'lucide-react'
+import { ShoppingCart, Zap, Heart, GitCompareArrows, Eye } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { Product } from '@/types'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
@@ -20,7 +20,7 @@ const BADGE_COLORS: Record<string, 'cyan' | 'gold' | 'green' | 'red'> = {
   FLAGSHIP: 'gold',
 }
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({ product, onQuickView }: { product: Product; onQuickView?: (p: Product) => void }) {
   const primaryImage = getPrimaryImage(product.images)
   const defaultVariant = product.variants.find((v) => v.is_active) ?? product.variants[0]
   const [selectedVariant, setSelectedVariant] = useState(defaultVariant)
@@ -92,6 +92,15 @@ export default function ProductCard({ product }: { product: Product }) {
               className={compared ? 'text-[#00FF88]' : 'text-[#4A7FA5]'}
             />
           </button>
+          {onQuickView && (
+            <button
+              onClick={(e) => { e.preventDefault(); onQuickView(product) }}
+              className="w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110 opacity-0 group-hover:opacity-100 hover:text-[#00D4FF] text-[#4A7FA5]"
+              aria-label="Quick view"
+            >
+              <Eye size={14} />
+            </button>
+          )}
         </div>
         {/* Out of stock overlay */}
         {!inStock && (

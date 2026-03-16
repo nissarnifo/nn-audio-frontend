@@ -1,12 +1,21 @@
 'use client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, FileText } from 'lucide-react'
-import { useOrder, useCancelOrder } from '@/hooks'
+import { ChevronLeft, FileText, RotateCcw } from 'lucide-react'
+import { useOrder, useCancelOrder, useSubmitReturn, useMyReturns } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import { StatusBadge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useEffect, useState } from 'react'
+
+const RETURN_REASONS = [
+  'Defective / not working',
+  'Wrong item received',
+  'Item not as described',
+  'Changed my mind',
+  'Damaged during shipping',
+  'Other',
+]
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -14,7 +23,12 @@ export default function OrderDetailPage() {
   const { isLoggedIn, _hasHydrated } = useAuthStore()
   const { data: order, isLoading, isFetching } = useOrder(id)
   const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrder()
+  const { mutate: submitReturn, isPending: isSubmittingReturn } = useSubmitReturn()
+  const { data: myReturns } = useMyReturns()
   const [confirmCancel, setConfirmCancel] = useState(false)
+  const [showReturnForm, setShowReturnForm] = useState(false)
+  const [returnReason, setReturnReason] = useState(RETURN_REASONS[0])
+  const [returnNotes, setReturnNotes] = useState('')
 
   useEffect(() => {
     if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
@@ -147,6 +161,80 @@ export default function OrderDetailPage() {
           )}
         </div>
       )}
+
+      {/* P17: Request Return — available 30 days after DELIVERED */}
+      {order.status === 'DELIVERED' && (() => {
+        const existingReturn = myReturns?.find((r) => r.order_number === order.order_number)
+        if (existingReturn) {
+          const colors: Record<string, string> = {
+            REQUESTED: '#FFB700', APPROVED: '#00FF88', REJECTED: '#FF3366', REFUNDED: '#00D4FF',
+          }
+          return (
+            <div className="hud-card p-5 mt-4 border border-[rgba(255,183,0,0.2)]">
+              <p className="font-mono text-sm text-[#4A7FA5] mb-1">RETURN REQUEST</p>
+              <p className="font-mono text-xs" style={{ color: colors[existingReturn.status] ?? '#E8F4FD' }}>
+                ● {existingReturn.status}
+              </p>
+              {existingReturn.admin_note && (
+                <p className="font-mono text-xs text-[#E8F4FD] mt-2">Admin: {existingReturn.admin_note}</p>
+              )}
+            </div>
+          )
+        }
+
+        const daysSince = (Date.now() - new Date(order.updated_at).getTime()) / (1000 * 60 * 60 * 24)
+        if (daysSince > 30) return null
+
+        return (
+          <div className="hud-card p-5 mt-4">
+            {!showReturnForm ? (
+              <button
+                onClick={() => setShowReturnForm(true)}
+                className="w-full flex items-center justify-center gap-2 font-mono text-sm text-[#FFB700] border border-[rgba(255,183,0,0.4)] hover:bg-[rgba(255,183,0,0.06)] transition-colors py-2.5 rounded"
+              >
+                <RotateCcw size={14} /> REQUEST RETURN
+              </button>
+            ) : (
+              <div>
+                <p className="font-heading text-sm text-[#E8F4FD] tracking-wider mb-4">RETURN REQUEST</p>
+                <div className="mb-3">
+                  <label className="font-mono text-xs text-[#4A7FA5] mb-1 block">REASON</label>
+                  <select
+                    value={returnReason}
+                    onChange={(e) => setReturnReason(e.target.value)}
+                    className="w-full bg-[#0D1B2A] border border-[rgba(0,212,255,0.2)] text-[#E8F4FD] font-mono text-sm rounded px-3 py-2.5 focus:outline-none focus:border-[#00D4FF]"
+                  >
+                    {RETURN_REASONS.map((r) => <option key={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="font-mono text-xs text-[#4A7FA5] mb-1 block">ADDITIONAL NOTES (optional)</label>
+                  <textarea
+                    value={returnNotes}
+                    onChange={(e) => setReturnNotes(e.target.value)}
+                    rows={3}
+                    className="w-full bg-[#0D1B2A] border border-[rgba(0,212,255,0.2)] text-[#E8F4FD] font-mono text-sm rounded px-3 py-2.5 focus:outline-none focus:border-[#00D4FF] resize-none"
+                    placeholder="Describe the issue..."
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowReturnForm(false)} className="btn-cyan flex-1">CANCEL</button>
+                  <button
+                    onClick={() => submitReturn(
+                      { orderId: order.id, reason: returnReason, notes: returnNotes || undefined },
+                      { onSuccess: () => setShowReturnForm(false) }
+                    )}
+                    disabled={isSubmittingReturn}
+                    className="flex-1 flex items-center justify-center gap-2 font-mono text-sm text-[#FFB700] border border-[rgba(255,183,0,0.5)] hover:bg-[rgba(255,183,0,0.08)] transition-colors py-2.5 rounded"
+                  >
+                    {isSubmittingReturn ? <><Spinner size={14} /> SUBMITTING...</> : 'SUBMIT RETURN'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       <div className="mt-6">
         <Link href="/account/orders" className="btn-cyan">← BACK TO ORDERS</Link>

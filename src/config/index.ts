@@ -124,6 +124,10 @@ export const ENDPOINTS = {
     subscribe: '/stock-alerts',
     adminList: '/stock-alerts/admin',
   },
+  returns: {
+    root: '/returns',
+    me: '/returns/me',
+  },
   admin: {
     stats: '/admin/stats',
     analytics: '/admin/analytics',
@@ -134,5 +138,7 @@ export const ENDPOINTS = {
     inventoryRestock: '/admin/inventory/restock',
     inventoryAdjust: '/admin/inventory/adjust',
     inventoryMovements: '/admin/inventory/movements',
+    returns: '/admin/returns',
+    returnStatus: (id: string) => `/admin/returns/${id}/status`,
   },
 } as const

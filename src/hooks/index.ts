@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi } from '@/services/api'
+import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi, returnsApi } from '@/services/api'
 import { useAuthStore } from '@/store/auth.store'
 import type { ProductFilters } from '@/types'
 import toast from 'react-hot-toast'
@@ -340,5 +340,52 @@ export function useDeleteAccount() {
   return useMutation({
     mutationFn: () => authApi.deleteAccount(),
     onError: () => toast.error('Failed to delete account'),
+  })
+}
+
+/* ─── Returns ────────────────────────────────────────────────────── */
+export function useMyReturns() {
+  const { isLoggedIn } = useAuthStore()
+  return useQuery({
+    queryKey: ['my-returns'],
+    queryFn: () => returnsApi.getMyReturns().then((r) => r.data),
+    enabled: isLoggedIn,
+  })
+}
+
+export function useSubmitReturn() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { orderId: string; reason: string; notes?: string }) =>
+      returnsApi.submit(data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-returns'] })
+      qc.invalidateQueries({ queryKey: ['orders'] })
+      toast.success('Return request submitted')
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'Failed to submit return request')
+    },
+  })
+}
+
+export function useAdminReturns(params?: { page?: number; status?: string }) {
+  return useQuery({
+    queryKey: ['admin-returns', params],
+    queryFn: () => adminApi.getReturns(params).then((r) => r.data),
+  })
+}
+
+export function useUpdateReturnStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, status, admin_note }: { id: string; status: string; admin_note?: string }) =>
+      adminApi.updateReturnStatus(id, status, admin_note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-returns'] })
+      toast.success('Return status updated')
+    },
+    onError: () => toast.error('Failed to update return status'),
   })
 }

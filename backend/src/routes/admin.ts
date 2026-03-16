@@ -369,4 +369,72 @@ router.get('/analytics', requireAdmin, async (_req: AuthRequest, res) => {
   })
 })
 
+// GET /api/v1/admin/returns  — list all return requests
+router.get('/returns', requireAdmin, async (req: AuthRequest, res) => {
+  const { page = '1', status } = req.query as Record<string, string>
+  const limit = 20
+  const skip = (parseInt(page) - 1) * limit
+  const where: any = {}
+  if (status) where.status = status
+
+  const [returns, total] = await Promise.all([
+    prisma.return.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        order: { select: { orderNumber: true, total: true, createdAt: true } },
+        user: { select: { name: true, email: true } },
+      },
+    }),
+    prisma.return.count({ where }),
+  ])
+
+  res.json({
+    data: returns.map((r) => ({
+      id: r.id,
+      order_number: r.order.orderNumber,
+      order_total: r.order.total,
+      order_date: r.order.createdAt,
+      user: r.user,
+      reason: r.reason,
+      notes: r.notes,
+      status: r.status,
+      admin_note: r.adminNote,
+      created_at: r.createdAt,
+      updated_at: r.updatedAt,
+    })),
+    total,
+    page: parseInt(page),
+    total_pages: Math.ceil(total / limit),
+  })
+})
+
+// PUT /api/v1/admin/returns/:id/status  — approve / reject / refund
+router.put('/returns/:id/status', requireAdmin, async (req: AuthRequest, res) => {
+  const { id } = req.params
+  const { status, admin_note } = req.body
+
+  const allowed = ['APPROVED', 'REJECTED', 'REFUNDED']
+  if (!allowed.includes(status)) {
+    return res.status(400).json({ error: `status must be one of ${allowed.join(', ')}` })
+  }
+
+  const ret = await prisma.return.update({
+    where: { id },
+    data: { status, adminNote: admin_note ?? null },
+  })
+
+  // If refunded, mark the order payment status as REFUNDED too
+  if (status === 'REFUNDED') {
+    await prisma.order.update({
+      where: { id: ret.orderId },
+      data: { paymentStatus: 'REFUNDED' },
+    })
+  }
+
+  res.json({ id: ret.id, status: ret.status, admin_note: ret.adminNote })
+})
+
 export default router

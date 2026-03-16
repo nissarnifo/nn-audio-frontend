@@ -166,6 +166,9 @@ export default function Navbar() {
               <Link href="/account/orders" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#4A7FA5]">
                 MY ORDERS
               </Link>
+              <Link href="/account/returns" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#4A7FA5]">
+                MY RETURNS
+              </Link>
               <Link href="/account/wishlist" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#4A7FA5] flex items-center gap-2">
                 WISHLIST {wishlistCount > 0 && <span className="text-[#FF3366]">({wishlistCount})</span>}
               </Link>

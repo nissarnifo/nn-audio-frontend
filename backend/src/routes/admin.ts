@@ -23,6 +23,8 @@ function formatOrder(o: any) {
     payment_status: o.paymentStatus,
     subtotal: o.subtotal,
     shipping: o.shipping,
+    discount: o.discount,
+    coupon_code: o.couponCode ?? null,
     total: o.total,
     created_at: o.createdAt,
     updated_at: o.updatedAt,

@@ -12,6 +12,7 @@ import orderRoutes from './routes/orders'
 import addressRoutes from './routes/addresses'
 import paymentRoutes from './routes/payments'
 import adminRoutes from './routes/admin'
+import couponRoutes from './routes/coupons'
 
 const prisma = new PrismaClient()
 
@@ -67,6 +68,7 @@ app.use('/api/v1/orders', orderRoutes)
 app.use('/api/v1/addresses', addressRoutes)
 app.use('/api/v1/payments', paymentRoutes)
 app.use('/api/v1/admin', adminRoutes)
+app.use('/api/v1/coupons', couponRoutes)
 
 // Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

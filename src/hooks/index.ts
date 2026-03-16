@@ -277,8 +277,8 @@ export function useAdminCustomer(id: string) {
 export function useUpdateOrderStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      adminApi.updateOrderStatus(id, status),
+    mutationFn: ({ id, status, tracking_number, tracking_url }: { id: string; status: string; tracking_number?: string; tracking_url?: string }) =>
+      adminApi.updateOrderStatus(id, status, tracking_number, tracking_url),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-orders'] })
       toast.success('Order status updated')

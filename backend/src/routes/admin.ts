@@ -27,6 +27,8 @@ function formatOrder(o: any) {
     discount: o.discount,
     coupon_code: o.couponCode ?? null,
     total: o.total,
+    tracking_number: o.trackingNumber ?? null,
+    tracking_url: o.trackingUrl ?? null,
     created_at: o.createdAt,
     updated_at: o.updatedAt,
     user: o.user,
@@ -112,10 +114,14 @@ router.get('/orders', requireAdmin, async (req: AuthRequest, res) => {
 
 // PUT /api/v1/admin/orders/:id/status
 router.put('/orders/:id/status', requireAdmin, async (req: AuthRequest, res) => {
-  const { status } = req.body
+  const { status, tracking_number, tracking_url } = req.body
   const order = await prisma.order.update({
     where: { id: req.params.id },
-    data: { status },
+    data: {
+      status,
+      ...(tracking_number !== undefined && { trackingNumber: tracking_number || null }),
+      ...(tracking_url    !== undefined && { trackingUrl:    tracking_url    || null }),
+    },
     include: { ...orderInclude, user: { select: { name: true, email: true } } },
   })
 

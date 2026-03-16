@@ -123,6 +123,32 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
+      {/* Tracking info — shown when order is shipped and tracking data exists */}
+      {order.status === 'SHIPPED' && (order.tracking_number || order.tracking_url) && (
+        <div className="hud-card p-6 mb-4 border border-[rgba(0,255,136,0.2)] bg-[rgba(0,255,136,0.03)]">
+          <h2 className="font-heading text-base text-[#00FF88] tracking-wider mb-3 flex items-center gap-2">
+            <RotateCcw size={15} className="rotate-0" />
+            SHIPMENT TRACKING
+          </h2>
+          {order.tracking_number && (
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-mono text-xs text-[#4A7FA5]">Tracking Number</span>
+              <span className="font-mono text-sm text-[#E8F4FD]">{order.tracking_number}</span>
+            </div>
+          )}
+          {order.tracking_url && (
+            <a
+              href={order.tracking_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex items-center justify-center gap-2 w-full py-2.5 btn-gold font-heading text-sm tracking-widest"
+            >
+              TRACK MY PACKAGE →
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Address */}
       <div className="hud-card p-6 mb-4">
         <h2 className="font-heading text-base text-[#E8F4FD] tracking-wider mb-3">DELIVERY ADDRESS</h2>

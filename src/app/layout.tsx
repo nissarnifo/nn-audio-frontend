@@ -4,6 +4,7 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import Providers from './providers'
 import CompareBar from '@/components/CompareBar'
+import AnnouncementBanner from '@/components/AnnouncementBanner'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nnaudio.in'
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="hud-grid flex flex-col min-h-screen">
         <Providers>
+          <AnnouncementBanner />
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />

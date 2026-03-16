@@ -16,6 +16,7 @@ import couponRoutes from './routes/coupons'
 import stockAlertRoutes from './routes/stock-alerts'
 import returnRoutes from './routes/returns'
 import wishlistRoutes from './routes/wishlist'
+import settingsRoutes from './routes/settings'
 
 const prisma = new PrismaClient()
 
@@ -75,6 +76,7 @@ app.use('/api/v1/coupons', couponRoutes)
 app.use('/api/v1/stock-alerts', stockAlertRoutes)
 app.use('/api/v1/returns', returnRoutes)
 app.use('/api/v1/wishlist', wishlistRoutes)
+app.use('/api/v1/settings', settingsRoutes)
 
 // Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

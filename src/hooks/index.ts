@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi, returnsApi, wishlistApi } from '@/services/api'
+import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi, returnsApi, wishlistApi, settingsApi } from '@/services/api'
+import type { StoreSettings } from '@/services/api'
 import { useAuthStore } from '@/store/auth.store'
 import { useWishlistStore } from '@/store/wishlist.store'
 import type { ProductFilters } from '@/types'
@@ -541,5 +542,34 @@ export function useDeleteQuestion() {
       toast.success('Question deleted')
     },
     onError: () => toast.error('Failed to delete question'),
+  })
+}
+
+/* ─── Settings ──────────────────────────────────────────────────── */
+export function usePublicSettings() {
+  return useQuery({
+    queryKey: ['settings-public'],
+    queryFn: () => settingsApi.getPublic().then((r) => r.data),
+    staleTime: 60_000, // refetch at most once per minute
+  })
+}
+
+export function useAllSettings() {
+  return useQuery({
+    queryKey: ['settings-all'],
+    queryFn: () => settingsApi.getAll().then((r) => r.data),
+  })
+}
+
+export function useUpdateSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (settings: Partial<StoreSettings>) => settingsApi.update(settings),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings-public'] })
+      qc.invalidateQueries({ queryKey: ['settings-all'] })
+      toast.success('Settings saved')
+    },
+    onError: () => toast.error('Failed to save settings'),
   })
 }

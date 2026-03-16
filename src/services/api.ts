@@ -82,6 +82,9 @@ export const productsApi = {
   getReviews(slug: string) {
     return api.get<Review[]>(ENDPOINTS.products.reviews(slug))
   },
+  createReview(slug: string, data: { rating: number; comment: string }) {
+    return api.post<Review>(ENDPOINTS.products.reviews(slug), data)
+  },
 }
 
 /* ─── Cart ───────────────────────────────────────────────────────── */

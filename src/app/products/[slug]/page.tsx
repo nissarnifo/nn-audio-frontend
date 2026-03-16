@@ -1,22 +1,33 @@
 'use client'
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ShoppingCart, ChevronLeft, Zap } from 'lucide-react'
-import { useProduct } from '@/hooks'
+import { ShoppingCart, ChevronLeft, Zap, Star } from 'lucide-react'
+import { useProduct, useProductReviews, useCreateReview } from '@/hooks'
+import { useAuthStore } from '@/store/auth.store'
 import Gallery from '@/components/product/Gallery'
-import { Stars, StatusBadge, Badge, PageLoading, Divider } from '@/components/ui'
+import { Stars, StatusBadge, Badge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
 import type { ProductVariant } from '@/types'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
   const { data: product, isLoading } = useProduct(slug)
+  const { data: reviews = [] } = useProductReviews(slug)
+  const { mutateAsync: submitReview, isPending: isSubmitting } = useCreateReview(slug)
+  const { isLoggedIn } = useAuthStore()
   const addItem = useCartStore((s) => s.addItem)
+
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [qty, setQty] = useState(1)
+
+  // Review form state
+  const [rating, setRating] = useState(0)
+  const [hover, setHover] = useState(0)
+  const [comment, setComment] = useState('')
 
   if (isLoading) return <PageLoading />
   if (!product) return (
@@ -39,6 +50,15 @@ export default function ProductDetailPage() {
     if (!variant) return
     addItem(product!, variant, qty)
     router.push('/checkout')
+  }
+
+  async function handleReviewSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (rating === 0) { toast.error('Please select a star rating'); return }
+    if (!comment.trim()) { toast.error('Please write a comment'); return }
+    await submitReview({ rating, comment: comment.trim() })
+    setRating(0)
+    setComment('')
   }
 
   return (
@@ -171,6 +191,102 @@ export default function ProductDetailPage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Reviews Section ───────────────────────────────────────── */}
+      <div className="mt-16">
+        <h2 className="font-heading text-2xl text-[#E8F4FD] tracking-wider mb-2">
+          REVIEWS
+          {reviews.length > 0 && (
+            <span className="font-mono text-sm text-[#4A7FA5] ml-3">({reviews.length})</span>
+          )}
+        </h2>
+        <div className="h-0.5 w-10 bg-[#00D4FF] mb-8" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Write a review */}
+          <div className="hud-card p-6 h-fit">
+            <p className="font-heading text-base text-[#E8F4FD] tracking-wider mb-5">WRITE A REVIEW</p>
+
+            {isLoggedIn ? (
+              <form onSubmit={handleReviewSubmit} className="space-y-4">
+                {/* Star picker */}
+                <div>
+                  <p className="font-mono text-xs text-[#4A7FA5] mb-2">YOUR RATING</p>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setRating(i)}
+                        onMouseEnter={() => setHover(i)}
+                        onMouseLeave={() => setHover(0)}
+                        className="transition-transform hover:scale-110"
+                      >
+                        <Star
+                          size={28}
+                          className={
+                            i <= (hover || rating)
+                              ? 'fill-[#FFB700] text-[#FFB700]'
+                              : 'text-[#4A7FA5]'
+                          }
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Comment */}
+                <div>
+                  <p className="font-mono text-xs text-[#4A7FA5] mb-2">YOUR COMMENT</p>
+                  <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    rows={4}
+                    placeholder="Share your experience with this product..."
+                    className="input-hud w-full resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-gold w-full py-2.5 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? <><Spinner size={15} /> SUBMITTING...</> : 'SUBMIT REVIEW'}
+                </button>
+              </form>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-[#4A7FA5] text-sm mb-4">Sign in to leave a review</p>
+                <Link href="/auth/login" className="btn-cyan">
+                  SIGN IN
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Reviews list */}
+          <div className="space-y-4">
+            {reviews.length === 0 ? (
+              <div className="hud-card p-8 text-center">
+                <p className="font-heading text-lg text-[#4A7FA5]">No reviews yet.</p>
+                <p className="text-sm text-[#4A7FA5] mt-1">Be the first to review this product.</p>
+              </div>
+            ) : (
+              reviews.map((r) => (
+                <div key={r.id} className="hud-card p-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-[#E8F4FD] font-mono">{r.user_name}</span>
+                    <span className="font-mono text-xs text-[#4A7FA5]">{fmtDate(r.created_at)}</span>
+                  </div>
+                  <Stars rating={r.rating} />
+                  <p className="text-sm text-[#4A7FA5] mt-2 leading-relaxed">{r.comment}</p>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

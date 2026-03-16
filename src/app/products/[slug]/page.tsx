@@ -1,14 +1,16 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ShoppingCart, ChevronLeft, Zap, Star, Heart } from 'lucide-react'
-import { useProduct, useProductReviews, useCreateReview } from '@/hooks'
+import { useProduct, useProductReviews, useCreateReview, useProducts } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import Gallery from '@/components/product/Gallery'
 import { Stars, StatusBadge, Badge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
 import { useWishlistStore } from '@/store/wishlist.store'
+import { useRecentlyViewedStore } from '@/store/recently-viewed.store'
+import ProductsGrid from '@/components/product/ProductsGrid'
 import type { ProductVariant } from '@/types'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
@@ -22,9 +24,21 @@ export default function ProductDetailPage() {
   const { isLoggedIn } = useAuthStore()
   const addItem = useCartStore((s) => s.addItem)
   const { toggle: toggleWishlist, has: inWishlist } = useWishlistStore()
+  const record = useRecentlyViewedStore((s) => s.record)
 
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
   const [qty, setQty] = useState(1)
+
+  // Record view once product is loaded
+  useEffect(() => {
+    if (product) record(product)
+  }, [product?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Related products — same category, limited to 4
+  const { data: relatedData } = useProducts(
+    product ? { category: product.category, limit: 5 } : undefined
+  )
+  const related = relatedData?.data?.filter((p) => p.id !== product?.id).slice(0, 4) ?? []
 
   // Review form state
   const [rating, setRating] = useState(0)
@@ -206,6 +220,15 @@ export default function ProductDetailPage() {
           )}
         </div>
       </div>
+
+      {/* ── Related Products ──────────────────────────────────────── */}
+      {related.length > 0 && (
+        <div className="mt-16">
+          <h2 className="font-heading text-2xl text-[#E8F4FD] tracking-wider mb-2">RELATED PRODUCTS</h2>
+          <div className="h-0.5 w-10 bg-[#00D4FF] mb-8" />
+          <ProductsGrid products={related} />
+        </div>
+      )}
 
       {/* ── Reviews Section ───────────────────────────────────────── */}
       <div className="mt-16">

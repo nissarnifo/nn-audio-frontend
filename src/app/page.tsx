@@ -8,6 +8,7 @@ import ProductsGrid from '@/components/product/ProductsGrid'
 import { SectionHeader, NoPhoto } from '@/components/ui'
 import { getPrimaryImage, cloudinaryUrl, fmt } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
+import { useRecentlyViewedStore } from '@/store/recently-viewed.store'
 import toast from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 
@@ -255,6 +256,7 @@ function DealCard({ title, offer, slug, delay }: { title: string; offer: string;
 /* ─── Page ───────────────────────────────────────────────────────── */
 export default function HomePage() {
   const { data: bestsellers, isLoading } = useProducts({ sort: 'rating', limit: 8 })
+  const recentlyViewed = useRecentlyViewedStore((s) => s.items)
 
   return (
     <div>
@@ -294,6 +296,14 @@ export default function HomePage() {
           <Link href="/products" className="btn-gold px-10 py-3 text-base">VIEW ALL PRODUCTS</Link>
         </div>
       </section>
+
+      {/* Recently Viewed */}
+      {recentlyViewed.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-10 border-t border-[rgba(0,212,255,0.1)]">
+          <SectionHeader title="RECENTLY VIEWED" subtitle="Pick up where you left off" />
+          <ProductsGrid products={recentlyViewed} />
+        </section>
+      )}
     </div>
   )
 }

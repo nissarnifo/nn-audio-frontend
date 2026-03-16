@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Settings, Eye, EyeOff, ExternalLink } from 'lucide-react'
+import { Settings, Eye, EyeOff, ExternalLink, Truck } from 'lucide-react'
 import { useAllSettings, useUpdateSettings } from '@/hooks'
 import { SectionHeader, Spinner } from '@/components/ui'
+import { fmt } from '@/lib/utils'
 
 const COLORS = [
   { value: 'cyan',  label: 'Cyan',  dot: 'bg-[#00D4FF]' },
@@ -22,10 +23,15 @@ export default function AdminSettingsPage() {
   const { data: settings, isLoading } = useAllSettings()
   const { mutate: save, isPending } = useUpdateSettings()
 
+  // Banner state
   const [enabled, setEnabled] = useState(false)
   const [text, setText] = useState('')
   const [color, setColor] = useState('cyan')
   const [link, setLink] = useState('')
+
+  // Shipping state
+  const [threshold, setThreshold] = useState('5000')
+  const [fee, setFee] = useState('299')
 
   // Sync from server on first load
   useEffect(() => {
@@ -34,9 +40,11 @@ export default function AdminSettingsPage() {
     setText(settings.banner_text ?? '')
     setColor(settings.banner_color ?? 'cyan')
     setLink(settings.banner_link ?? '')
+    setThreshold(settings.shipping_threshold ?? '5000')
+    setFee(settings.shipping_fee ?? '299')
   }, [settings])
 
-  function handleSave() {
+  function handleSaveBanner() {
     save({
       banner_enabled: enabled ? 'true' : 'false',
       banner_text: text,
@@ -45,7 +53,16 @@ export default function AdminSettingsPage() {
     })
   }
 
+  function handleSaveShipping() {
+    const t = parseFloat(threshold)
+    const f = parseFloat(fee)
+    if (isNaN(t) || t < 0 || isNaN(f) || f < 0) return
+    save({ shipping_threshold: String(t), shipping_fee: String(f) })
+  }
+
   const previewClass = COLOR_PREVIEW[color] ?? COLOR_PREVIEW.cyan
+  const thresholdNum = parseFloat(threshold) || 0
+  const feeNum       = parseFloat(fee) || 0
 
   return (
     <div className="p-6 max-w-2xl">
@@ -58,6 +75,62 @@ export default function AdminSettingsPage() {
         <div className="flex justify-center py-20"><Spinner size={24} /></div>
       ) : (
         <div className="space-y-6">
+          {/* ── Shipping ── */}
+          <div className="hud-card p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Truck size={15} className="text-[#00D4FF]" />
+              <h2 className="font-heading text-base text-[#E8F4FD] tracking-wider">SHIPPING</h2>
+            </div>
+            <p className="font-mono text-xs text-[#4A7FA5] mb-6">
+              Orders at or above the free-shipping threshold get free delivery; others pay the flat fee.
+              Changes take effect immediately for all new orders.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 mb-5">
+              <div>
+                <label className="font-mono text-xs text-[#4A7FA5] block mb-1.5 tracking-widest">
+                  FREE SHIPPING ABOVE (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={threshold}
+                  onChange={(e) => setThreshold(e.target.value)}
+                  className="input-hud w-full text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label className="font-mono text-xs text-[#4A7FA5] block mb-1.5 tracking-widest">
+                  FLAT SHIPPING FEE (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={fee}
+                  onChange={(e) => setFee(e.target.value)}
+                  className="input-hud w-full text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Live preview */}
+            <div className="mb-5 px-4 py-3 rounded border border-[rgba(0,212,255,0.12)] bg-[rgba(0,212,255,0.03)] font-mono text-xs text-[#4A7FA5] space-y-1">
+              <p>Orders below <span className="text-[#FFB700]">{fmt(thresholdNum)}</span> → shipping fee <span className="text-[#FF3366]">{fmt(feeNum)}</span></p>
+              <p>Orders at or above <span className="text-[#FFB700]">{fmt(thresholdNum)}</span> → <span className="text-[#00FF88]">FREE shipping</span></p>
+            </div>
+
+            <button
+              onClick={handleSaveShipping}
+              disabled={isPending}
+              className="btn-cyan px-6 py-2.5 font-heading tracking-widest text-sm flex items-center gap-2"
+            >
+              {isPending && <Spinner size={14} />}
+              SAVE SHIPPING
+            </button>
+          </div>
+
           {/* ── Announcement Banner ── */}
           <div className="hud-card p-6">
             <h2 className="font-heading text-base text-[#E8F4FD] tracking-wider mb-1">ANNOUNCEMENT BANNER</h2>
@@ -141,12 +214,12 @@ export default function AdminSettingsPage() {
 
             {/* Save */}
             <button
-              onClick={handleSave}
+              onClick={handleSaveBanner}
               disabled={isPending}
               className="btn-gold px-6 py-2.5 font-heading tracking-widest text-sm flex items-center gap-2"
             >
               {isPending && <Spinner size={14} />}
-              SAVE SETTINGS
+              SAVE BANNER
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { Download, Truck, X, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
+import { Download, Truck, X, ChevronDown, ChevronUp, MessageSquare, CalendarDays } from 'lucide-react'
 import { useAdminOrders, useUpdateOrderStatus } from '@/hooks'
 import { StatusBadge, PageLoading, SectionHeader, Pagination, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
@@ -8,6 +8,41 @@ import { exportCsv } from '@/lib/exportCsv'
 import type { OrderStatus, Order } from '@/types'
 
 const STATUSES: OrderStatus[] = ['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+
+/* ─── Date helpers ───────────────────────────────────────────────── */
+function toISO(d: Date) { return d.toISOString().slice(0, 10) }
+
+const PRESETS = [
+  {
+    label: 'TODAY',
+    range: () => { const d = toISO(new Date()); return { from: d, to: d } },
+  },
+  {
+    label: '7 DAYS',
+    range: () => {
+      const to = new Date()
+      const from = new Date(); from.setDate(from.getDate() - 6)
+      return { from: toISO(from), to: toISO(to) }
+    },
+  },
+  {
+    label: 'THIS MONTH',
+    range: () => {
+      const now = new Date()
+      const from = new Date(now.getFullYear(), now.getMonth(), 1)
+      return { from: toISO(from), to: toISO(now) }
+    },
+  },
+  {
+    label: 'LAST MONTH',
+    range: () => {
+      const now = new Date()
+      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const to   = new Date(now.getFullYear(), now.getMonth(), 0)
+      return { from: toISO(from), to: toISO(to) }
+    },
+  },
+]
 
 /* ─── Tracking modal (shown when admin picks SHIPPED) ──────────── */
 function TrackingModal({
@@ -84,7 +119,16 @@ function TrackingModal({
 export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
-  const { data, isLoading } = useAdminOrders({ status: statusFilter || undefined, page })
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo]     = useState('')
+  const [activePreset, setActivePreset] = useState<string | null>(null)
+
+  const { data, isLoading } = useAdminOrders({
+    status: statusFilter || undefined,
+    page,
+    from: dateFrom || undefined,
+    to:   dateTo   || undefined,
+  })
   const { mutate: updateStatus, isPending } = useUpdateOrderStatus()
 
   // Tracking modal state
@@ -93,6 +137,21 @@ export default function AdminOrdersPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   function handleStatusFilter(s: string) { setStatusFilter(s); setPage(1) }
+
+  function applyPreset(preset: typeof PRESETS[number]) {
+    const { from, to } = preset.range()
+    setDateFrom(from)
+    setDateTo(to)
+    setPage(1)
+    setActivePreset(preset.label)
+  }
+
+  function clearDates() {
+    setDateFrom('')
+    setDateTo('')
+    setPage(1)
+    setActivePreset(null)
+  }
 
   function handleStatusChange(order: Order, newStatus: string) {
     if (newStatus === 'SHIPPED') {
@@ -136,8 +195,9 @@ export default function AdminOrdersPage() {
       'Tracking URL': o.tracking_url ?? '',
       'Delivery Notes': o.notes ?? '',
     }))
-    const label = statusFilter ? statusFilter.toLowerCase() : 'all'
-    exportCsv(`orders-${label}-${new Date().toISOString().slice(0, 10)}.csv`, rows)
+    const statusLabel = statusFilter ? statusFilter.toLowerCase() : 'all'
+    const dateLabel = dateFrom ? `${dateFrom}${dateTo && dateTo !== dateFrom ? `_to_${dateTo}` : ''}` : new Date().toISOString().slice(0, 10)
+    exportCsv(`orders-${statusLabel}-${dateLabel}.csv`, rows)
   }
 
   if (isLoading) return <PageLoading />
@@ -164,7 +224,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Status filter */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4">
         {(['', ...STATUSES] as const).map((s) => (
           <button
             key={s}
@@ -178,6 +238,53 @@ export default function AdminOrdersPage() {
             {s === '' ? 'ALL' : s}
           </button>
         ))}
+      </div>
+
+      {/* Date range filter */}
+      <div className="flex flex-wrap items-center gap-3 mb-6 pb-5 border-b border-[rgba(0,212,255,0.08)]">
+        <div className="flex items-center gap-1.5 text-[#4A7FA5]">
+          <CalendarDays size={13} />
+          <span className="font-mono text-xs tracking-widest">DATE</span>
+        </div>
+
+        {/* Quick presets */}
+        {PRESETS.map((p) => (
+          <button
+            key={p.label}
+            onClick={() => activePreset === p.label ? clearDates() : applyPreset(p)}
+            className={`px-3 py-1 rounded font-mono text-xs border transition-all ${
+              activePreset === p.label
+                ? 'border-[#FFB700] text-[#FFB700] bg-[rgba(255,183,0,0.08)]'
+                : 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[rgba(0,212,255,0.4)]'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+
+        {/* Manual date inputs */}
+        <div className="flex items-center gap-2 ml-1">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setActivePreset(null); setPage(1) }}
+            className="input-hud text-xs py-1 px-2 font-mono w-36"
+          />
+          <span className="font-mono text-xs text-[#4A7FA5]">—</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setActivePreset(null); setPage(1) }}
+            className="input-hud text-xs py-1 px-2 font-mono w-36"
+          />
+        </div>
+
+        {/* Clear */}
+        {(dateFrom || dateTo) && (
+          <button onClick={clearDates} className="flex items-center gap-1 font-mono text-xs text-[#FF3366] hover:text-white transition-colors">
+            <X size={11} /> CLEAR
+          </button>
+        )}
       </div>
 
       <div className="hud-card overflow-hidden">

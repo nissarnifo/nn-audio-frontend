@@ -107,11 +107,20 @@ router.get('/stats', requireAdmin, async (_req: AuthRequest, res) => {
 
 // GET /api/v1/admin/orders
 router.get('/orders', requireAdmin, async (req: AuthRequest, res) => {
-  const { status, page = '1', limit = '20' } = req.query as Record<string, string>
+  const { status, page = '1', limit = '20', from, to } = req.query as Record<string, string>
   const skip = (parseInt(page) - 1) * parseInt(limit)
 
   const where: any = {}
   if (status) where.status = status
+  if (from || to) {
+    where.createdAt = {}
+    if (from) where.createdAt.gte = new Date(from)
+    if (to) {
+      const toDate = new Date(to)
+      toDate.setHours(23, 59, 59, 999)   // include the full end day
+      where.createdAt.lte = toDate
+    }
+  }
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({ where, include: orderInclude, orderBy: { createdAt: 'desc' }, skip, take: parseInt(limit) }),

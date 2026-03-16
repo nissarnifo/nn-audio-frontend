@@ -341,7 +341,7 @@ export const adminApi = {
   getAnalytics() {
     return api.get<AnalyticsData>(ENDPOINTS.admin.analytics)
   },
-  getAllOrders(params?: { status?: string; page?: number }) {
+  getAllOrders(params?: { status?: string; page?: number; from?: string; to?: string }) {
     return api.get<PaginatedResponse<Order>>(ENDPOINTS.admin.orders, { params })
   },
   updateOrderStatus(id: string, status: string, tracking_number?: string, tracking_url?: string) {

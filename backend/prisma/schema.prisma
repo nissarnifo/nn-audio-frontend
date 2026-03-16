@@ -92,6 +92,7 @@ model User {
   orders     Order[]
   reviews    Review[]
   returns    Return[]
+  questions  Question[]
   cart       Cart?
 
   @@map("users")
@@ -117,6 +118,7 @@ model Product {
   images   ProductImage[]
   variants ProductVariant[]
   reviews  Review[]
+  questions Question[]
   orderItems OrderItem[]
   cartItems  CartItem[]
 
@@ -178,6 +180,22 @@ model Review {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("reviews")
+}
+
+model Question {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  userId      String   @map("user_id")
+  question    String
+  answer      String?
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+  answeredAt  DateTime? @map("answered_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
 }
 
 model Cart {

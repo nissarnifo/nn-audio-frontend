@@ -2,7 +2,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut, Boxes, Tag, RotateCcw } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut, Boxes, Tag, RotateCcw, MessageCircle } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
 import { PageLoading } from '@/components/ui'
@@ -16,6 +16,7 @@ const NAV = [
   { href: '/admin/analytics', label: 'ANALYTICS', icon: <TrendingUp size={16} /> },
   { href: '/admin/coupons',   label: 'COUPONS',   icon: <Tag size={16} /> },
   { href: '/admin/returns',   label: 'RETURNS',   icon: <RotateCcw size={16} /> },
+  { href: '/admin/questions', label: 'Q&A',       icon: <MessageCircle size={16} /> },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

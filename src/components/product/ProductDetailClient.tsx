@@ -1,8 +1,8 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ShoppingCart, ChevronLeft, Zap, Star, Heart, Bell, Timer } from 'lucide-react'
-import { useProduct, useProductReviews, useCreateReview, useProducts } from '@/hooks'
+import { ShoppingCart, ChevronLeft, Zap, Star, Heart, Bell, Timer, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { useProduct, useProductReviews, useCreateReview, useProducts, useProductQuestions, useSubmitQuestion } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import Gallery from '@/components/product/Gallery'
 import { Stars, Badge, PageLoading, Divider, Spinner } from '@/components/ui'
@@ -21,6 +21,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const { data: product, isLoading } = useProduct(slug)
   const { data: reviews = [] } = useProductReviews(slug)
   const { mutateAsync: submitReview, isPending: isSubmitting } = useCreateReview(slug)
+  const { data: questions = [] } = useProductQuestions(slug)
+  const { mutateAsync: submitQuestion, isPending: isQuestionPending } = useSubmitQuestion(slug)
   const { isLoggedIn } = useAuthStore()
   const addItem = useCartStore((s) => s.addItem)
   const { toggle: toggleWishlist, has: inWishlist } = useWishlistStore()
@@ -36,6 +38,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const [notifyDone, setNotifyDone] = useState(false)
   const [timeLeft, setTimeLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [questionText, setQuestionText] = useState('')
+  const [expandedQ, setExpandedQ] = useState<string | null>(null)
 
   useEffect(() => {
     if (product) record(product)
@@ -116,6 +120,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     await submitReview({ rating, comment: comment.trim() })
     setRating(0)
     setComment('')
+  }
+
+  async function handleQuestionSubmit(e: { preventDefault(): void }) {
+    e.preventDefault()
+    if (!questionText.trim()) { toast.error('Please enter your question'); return }
+    await submitQuestion({ question: questionText.trim() })
+    setQuestionText('')
   }
 
   return (
@@ -299,6 +310,75 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           <ProductsGrid products={related} />
         </div>
       )}
+
+      {/* Q&A */}
+      <div className="mt-16">
+        <h2 className="font-heading text-2xl text-[#E8F4FD] tracking-wider mb-2">
+          Q&amp;A
+          {questions.length > 0 && <span className="font-mono text-sm text-[#4A7FA5] ml-3">({questions.length})</span>}
+        </h2>
+        <div className="h-0.5 w-10 bg-[#FFB700] mb-8" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Ask form */}
+          <div className="hud-card p-6 h-fit">
+            <p className="font-heading text-base text-[#E8F4FD] tracking-wider mb-5 flex items-center gap-2">
+              <MessageCircle size={16} className="text-[#FFB700]" /> ASK A QUESTION
+            </p>
+            {isLoggedIn ? (
+              <form onSubmit={handleQuestionSubmit} className="space-y-4">
+                <textarea
+                  value={questionText}
+                  onChange={(e) => setQuestionText(e.target.value)}
+                  rows={3}
+                  placeholder="What would you like to know about this product?"
+                  className="input-hud w-full resize-none"
+                />
+                <button type="submit" disabled={isQuestionPending}
+                  className="btn-gold w-full py-2.5 flex items-center justify-center gap-2">
+                  {isQuestionPending ? <><Spinner size={15} /> SUBMITTING...</> : 'SUBMIT QUESTION'}
+                </button>
+              </form>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-[#4A7FA5] text-sm mb-4">Sign in to ask a question</p>
+                <Link href="/auth/login" className="btn-cyan">SIGN IN</Link>
+              </div>
+            )}
+          </div>
+
+          {/* Questions list */}
+          <div className="space-y-3">
+            {questions.length === 0 ? (
+              <div className="hud-card p-8 text-center">
+                <p className="font-heading text-lg text-[#4A7FA5]">No questions yet.</p>
+                <p className="text-sm text-[#4A7FA5] mt-1">Be the first to ask about this product.</p>
+              </div>
+            ) : (
+              questions.map((q) => (
+                <div key={q.id} className="hud-card overflow-hidden">
+                  <button
+                    onClick={() => setExpandedQ(expandedQ === q.id ? null : q.id)}
+                    className="w-full flex items-start justify-between gap-3 p-4 text-left hover:bg-[rgba(0,212,255,0.02)] transition-colors"
+                  >
+                    <div className="flex gap-2 flex-1">
+                      <span className="font-mono text-xs text-[#FFB700] mt-0.5 flex-shrink-0">Q</span>
+                      <span className="font-mono text-sm text-[#E8F4FD]">{q.question}</span>
+                    </div>
+                    {expandedQ === q.id ? <ChevronUp size={14} className="text-[#4A7FA5] flex-shrink-0 mt-0.5" /> : <ChevronDown size={14} className="text-[#4A7FA5] flex-shrink-0 mt-0.5" />}
+                  </button>
+                  {expandedQ === q.id && q.answer && (
+                    <div className="border-t border-[rgba(0,212,255,0.08)] px-4 py-3 flex gap-2">
+                      <span className="font-mono text-xs text-[#00D4FF] mt-0.5 flex-shrink-0">A</span>
+                      <p className="font-mono text-sm text-[#4A7FA5] leading-relaxed">{q.answer}</p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Reviews */}
       <div className="mt-16">

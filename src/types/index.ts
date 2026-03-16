@@ -60,6 +60,20 @@ export interface Review {
   created_at: string
 }
 
+/* ─── Question ───────────────────────────────────────────────────── */
+export interface Question {
+  id: string
+  question: string
+  answer: string | null
+  is_published: boolean
+  created_at: string
+  answered_at: string | null
+  user_name?: string
+  // admin only
+  user?: { name: string; email: string }
+  product?: { id: string; name: string; slug: string }
+}
+
 /* ─── Return ─────────────────────────────────────────────────────── */
 export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'REFUNDED'
 

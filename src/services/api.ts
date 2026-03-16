@@ -14,6 +14,7 @@ import type {
   Coupon,
   CouponValidation,
   ReturnRequest,
+  Question,
 } from '@/types'
 
 const api = axios.create({
@@ -90,6 +91,12 @@ export const productsApi = {
   },
   setSale(id: string, data: { sale_price: number | null; sale_start_at?: string | null; sale_end_at?: string | null }) {
     return api.patch<Product>(ENDPOINTS.products.sale(id), data)
+  },
+  getQuestions(slug: string) {
+    return api.get<Question[]>(ENDPOINTS.products.questions(slug))
+  },
+  submitQuestion(slug: string, data: { question: string }) {
+    return api.post<{ id: string; question: string; created_at: string }>(ENDPOINTS.products.questions(slug), data)
   },
 }
 
@@ -319,6 +326,17 @@ export const adminApi = {
   },
   updateReturnStatus(id: string, status: string, admin_note?: string) {
     return api.put(ENDPOINTS.admin.returnStatus(id), { status, admin_note })
+  },
+  getQuestions(params?: { page?: number; answered?: boolean }) {
+    return api.get<{ data: Question[]; total: number; page: number; total_pages: number }>(
+      ENDPOINTS.admin.questions, { params }
+    )
+  },
+  answerQuestion(id: string, data: { answer?: string; is_published?: boolean }) {
+    return api.put<Question>(ENDPOINTS.admin.questionById(id), data)
+  },
+  deleteQuestion(id: string) {
+    return api.delete(ENDPOINTS.admin.questionById(id))
   },
 }
 

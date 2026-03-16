@@ -290,4 +290,40 @@ router.post('/:slug/reviews', requireAuth, async (req: AuthRequest, res) => {
   res.status(201).json({ id: review.id, user_name: review.user.name, rating: review.rating, comment: review.comment, created_at: review.createdAt })
 })
 
+// GET /api/v1/products/:slug/questions — published questions only
+router.get('/:slug/questions', async (req, res) => {
+  const product = await prisma.product.findUnique({ where: { slug: req.params.slug } })
+  if (!product) { res.status(404).json({ error: 'Product not found' }); return }
+
+  const questions = await prisma.question.findMany({
+    where: { productId: product.id, isPublished: true },
+    include: { user: { select: { name: true } } },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  res.json(questions.map((q) => ({
+    id: q.id,
+    user_name: q.user.name,
+    question: q.question,
+    answer: q.answer,
+    created_at: q.createdAt,
+    answered_at: q.answeredAt,
+  })))
+})
+
+// POST /api/v1/products/:slug/questions — auth required
+router.post('/:slug/questions', requireAuth, async (req: AuthRequest, res) => {
+  const { question } = req.body
+  if (!question?.trim()) { res.status(400).json({ error: 'Question is required' }); return }
+
+  const product = await prisma.product.findUnique({ where: { slug: req.params.slug } })
+  if (!product) { res.status(404).json({ error: 'Product not found' }); return }
+
+  const q = await prisma.question.create({
+    data: { productId: product.id, userId: req.user!.id, question: question.trim() },
+  })
+
+  res.status(201).json({ id: q.id, question: q.question, created_at: q.createdAt })
+})
+
 export default router

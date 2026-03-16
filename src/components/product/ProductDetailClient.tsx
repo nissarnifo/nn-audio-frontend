@@ -42,6 +42,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const [questionText, setQuestionText] = useState('')
   const [expandedQ, setExpandedQ] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [showSticky, setShowSticky] = useState(false)
+  const buyRef = useRef<HTMLDivElement>(null)
 
   function handleCopyLink() {
     const url = window.location.href
@@ -88,6 +90,18 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   useEffect(() => {
     setNotifyDone(false)
   }, [selectedVariant?.id])
+
+  // Sticky bar: show when buy section scrolls out of view
+  useEffect(() => {
+    const el = buyRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowSticky(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '-64px 0px 0px 0px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [product?.id])
 
   const { data: relatedData } = useProducts(
     product ? { category: product.category, limit: 5 } : undefined
@@ -152,6 +166,65 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   }
 
   return (
+    <>
+    {/* ── Sticky Add-to-Cart Bar ── */}
+    <div
+      className={`fixed top-0 inset-x-0 z-40 transition-all duration-300 ${
+        showSticky ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
+      }`}
+      style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}
+    >
+      <div className="bg-[#0D1B2A] border-b border-[rgba(0,212,255,0.2)]">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-4">
+          {/* Name */}
+          <p className="font-heading text-sm text-[#E8F4FD] truncate flex-1 min-w-0">{product?.name}</p>
+
+          {/* Variant selector (compact) */}
+          {activeVariants.length > 1 && (
+            <div className="hidden sm:flex gap-1.5 flex-shrink-0">
+              {activeVariants.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setSelectedVariant(v)}
+                  disabled={v.stock_qty === 0}
+                  className={`px-2.5 py-1 rounded border font-mono text-xs transition-all ${
+                    variant?.id === v.id
+                      ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
+                      : v.stock_qty === 0
+                        ? 'border-[rgba(0,212,255,0.08)] text-[#4A7FA5] opacity-40 cursor-not-allowed'
+                        : 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[#00D4FF]'
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Price */}
+          <div className="flex-shrink-0">
+            {product?.on_sale && product.sale_price != null ? (
+              <span className="font-mono text-base font-bold text-[#FF3366]">{fmt(product.sale_price)}</span>
+            ) : (
+              <span className="font-mono text-base font-bold text-[#FFB700]">{fmt(variant?.price ?? 0)}</span>
+            )}
+          </div>
+
+          {/* Add to cart */}
+          <button
+            onClick={handleAdd}
+            disabled={!inStock}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 font-heading tracking-widest text-xs rounded transition-all ${
+              inStock ? 'btn-gold' : 'border border-[rgba(255,51,102,0.3)] text-[#FF3366] opacity-60 cursor-not-allowed'
+            }`}
+          >
+            <ShoppingCart size={14} />
+            {inStock ? 'ADD TO CART' : 'SOLD OUT'}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div className="max-w-7xl mx-auto px-4 py-10">
       {/* Back */}
       <button
@@ -219,7 +292,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             </div>
           )}
 
-          <div className="flex items-baseline gap-3 mb-6">
+          <div ref={buyRef} className="flex items-baseline gap-3 mb-6">
             {product.on_sale && product.sale_price != null ? (
               <>
                 <span className="font-mono text-4xl text-[#FF3366] font-bold">{fmt(product.sale_price)}</span>
@@ -540,5 +613,6 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
         </div>
       </div>
     </div>
+    </>
   )
 }

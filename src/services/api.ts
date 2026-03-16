@@ -83,6 +83,9 @@ export const productsApi = {
   deleteImage(productId: string, imageId: string) {
     return api.delete(ENDPOINTS.products.imageDelete(productId, imageId))
   },
+  bulkAction(ids: string[], action: 'activate' | 'deactivate') {
+    return api.patch<{ updated: number }>(`${ENDPOINTS.products.list}/bulk`, { ids, action })
+  },
   getReviews(slug: string) {
     return api.get<Review[]>(ENDPOINTS.products.reviews(slug))
   },

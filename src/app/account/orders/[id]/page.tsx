@@ -1,7 +1,7 @@
 'use client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, FileText } from 'lucide-react'
 import { useOrder, useCancelOrder } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import { StatusBadge, PageLoading, Divider, Spinner } from '@/components/ui'
@@ -38,7 +38,15 @@ export default function OrderDetailPage() {
           <h1 className="font-heading text-3xl text-[#E8F4FD] tracking-wider">{order.order_number}</h1>
           <p className="font-mono text-xs text-[#4A7FA5] mt-1">Placed on {fmtDate(order.created_at)}</p>
         </div>
-        <StatusBadge status={order.status} />
+        <div className="flex items-center gap-3">
+          <StatusBadge status={order.status} />
+          <Link
+            href={`/account/orders/${order.id}/invoice`}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#00D4FF] hover:text-[#00D4FF] font-mono text-xs rounded transition-all"
+          >
+            <FileText size={13} /> INVOICE
+          </Link>
+        </div>
       </div>
 
       {/* Items */}
@@ -65,6 +73,12 @@ export default function OrderDetailPage() {
             <span className="text-[#4A7FA5] font-mono">Shipping</span>
             <span className={`font-mono ${order.shipping === 0 ? 'text-[#00FF88]' : 'text-[#E8F4FD]'}`}>{order.shipping === 0 ? 'FREE' : fmt(order.shipping)}</span>
           </div>
+          {(order.discount ?? 0) > 0 && (
+            <div className="flex justify-between">
+              <span className="text-[#00FF88] font-mono">Discount {order.coupon_code && `(${order.coupon_code})`}</span>
+              <span className="font-mono text-[#00FF88]">−{fmt(order.discount)}</span>
+            </div>
+          )}
         </div>
         <Divider className="my-4" />
         <div className="flex justify-between">

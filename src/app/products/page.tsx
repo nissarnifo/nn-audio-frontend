@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { useProducts } from '@/hooks'
 import ProductsGrid from '@/components/product/ProductsGrid'
+import { Pagination } from '@/components/ui'
 import type { ProductCategory } from '@/types'
 
 const CATEGORIES: { value: ProductCategory | ''; label: string }[] = [
@@ -27,12 +28,18 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<ProductCategory | ''>('')
   const [sort, setSort] = useState('rating')
+  const [page, setPage] = useState(1)
 
   const { data, isLoading } = useProducts({
     search: search || undefined,
     category: (category || undefined) as ProductCategory | undefined,
     sort: sort as 'rating' | 'newest' | 'price_asc' | 'price_desc',
+    page,
   })
+
+  function handleSearch(val: string) { setSearch(val); setPage(1) }
+  function handleCategory(val: ProductCategory | '') { setCategory(val); setPage(1) }
+  function handleSort(val: string) { setSort(val); setPage(1) }
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -50,7 +57,7 @@ export default function ProductsPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search products..."
             className="input-hud pl-9"
           />
@@ -61,7 +68,7 @@ export default function ProductsPage() {
           <SlidersHorizontal size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4A7FA5]" />
           <select
             value={sort}
-            onChange={(e) => setSort(e.target.value)}
+            onChange={(e) => handleSort(e.target.value)}
             className="input-hud pl-9 pr-4 w-full sm:w-48"
           >
             {SORTS.map((s) => (
@@ -76,7 +83,7 @@ export default function ProductsPage() {
         {CATEGORIES.map((cat) => (
           <button
             key={cat.value}
-            onClick={() => setCategory(cat.value)}
+            onClick={() => handleCategory(cat.value)}
             className={`px-4 py-1.5 rounded font-mono text-xs border transition-all ${
               category === cat.value
                 ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
@@ -96,6 +103,12 @@ export default function ProductsPage() {
       )}
 
       <ProductsGrid products={data?.data} isLoading={isLoading} />
+
+      <Pagination
+        page={page}
+        totalPages={data?.total_pages ?? 1}
+        onPage={setPage}
+      />
     </div>
   )
 }

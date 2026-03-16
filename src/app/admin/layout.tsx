@@ -6,6 +6,7 @@ import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut, Boxes
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
 import { PageLoading } from '@/components/ui'
+import NotificationBell from '@/components/admin/NotificationBell'
 
 const NAV = [
   { href: '/admin', label: 'DASHBOARD', icon: <LayoutDashboard size={16} />, exact: true },
@@ -92,9 +93,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="flex items-center justify-end gap-3 px-6 py-3 border-b border-[rgba(0,212,255,0.08)] bg-[#080C16] flex-shrink-0">
+          <NotificationBell />
+        </header>
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

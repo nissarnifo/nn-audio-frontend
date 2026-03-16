@@ -233,6 +233,15 @@ export function useAdminStats() {
   })
 }
 
+export function useAdminNotifications() {
+  return useQuery({
+    queryKey: ['admin-notifications'],
+    queryFn: () => adminApi.getNotifications().then((r) => r.data),
+    refetchInterval: 60_000, // poll every 60s
+    staleTime: 30_000,
+  })
+}
+
 export function useAdminAnalytics() {
   return useQuery({
     queryKey: ['admin-analytics'],

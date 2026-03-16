@@ -4,18 +4,37 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import Providers from './providers'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nnaudio.in'
+
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: {
     default: 'N & N Audio Systems — Precision Audio, Made in India',
     template: '%s | N & N Audio Systems',
   },
   description:
     'Premium amplifiers, speakers, subwoofers and audio equipment. Shop N & N Audio Systems — trusted by audiophiles across India.',
-  keywords: 'audio systems, amplifier, speaker, subwoofer, car audio, India',
+  keywords: 'audio systems, amplifier, speaker, subwoofer, car audio, India, N&N Audio',
+  authors: [{ name: 'N & N Audio Systems', url: APP_URL }],
+  creator: 'N & N Audio Systems',
   openGraph: {
     siteName: 'N & N Audio Systems',
     type: 'website',
     locale: 'en_IN',
+    url: APP_URL,
+    title: 'N & N Audio Systems — Precision Audio, Made in India',
+    description:
+      'Premium amplifiers, speakers, subwoofers and audio equipment. Trusted by audiophiles across India.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'N & N Audio Systems',
+    description: 'Premium audio equipment. Trusted by audiophiles across India.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
   },
 }
 

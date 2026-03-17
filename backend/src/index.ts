@@ -2,6 +2,7 @@ import 'express-async-errors'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
 import bcrypt from 'bcryptjs'
 import { PrismaClient } from '@prisma/client'
 
@@ -65,6 +66,39 @@ app.use(cors({
 app.use(express.json())
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
+
+// ── Rate limiters ───────────────────────────────────────────────────
+// Strict limiter for auth endpoints (login, register, password reset)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+  skip: (req) => req.method === 'GET', // only throttle mutating calls
+})
+
+// Looser limiter for coupon validation to prevent brute-force guessing
+const couponLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many coupon attempts, please try again later.' },
+})
+
+// General API limiter — catches everything else
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+})
+
+app.use('/api/v1', generalLimiter)
+app.use('/api/v1/auth', authLimiter)
+app.use('/api/v1/coupons/validate', couponLimiter)
 
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/products', productRoutes)

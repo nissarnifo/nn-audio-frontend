@@ -102,6 +102,9 @@ export const productsApi = {
   submitQuestion(slug: string, data: { question: string }) {
     return api.post<{ id: string; question: string; created_at: string }>(ENDPOINTS.products.questions(slug), data)
   },
+  getByIds(ids: string[]) {
+    return api.get<PaginatedResponse<Product>>(ENDPOINTS.products.list, { params: { ids: ids.join(','), limit: ids.length || 1 } })
+  },
 }
 
 /* ─── Cart ───────────────────────────────────────────────────────── */

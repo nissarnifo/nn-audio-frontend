@@ -52,11 +52,12 @@ function formatProduct(p: any) {
 
 // GET /api/v1/products
 router.get('/', async (req, res) => {
-  const { category, search, sort, page = '1', limit = '12', min_price, max_price, in_stock, min_rating, on_sale } = req.query as Record<string, string>
+  const { category, search, sort, page = '1', limit = '12', min_price, max_price, in_stock, min_rating, on_sale, ids } = req.query as Record<string, string>
   const skip = (parseInt(page) - 1) * parseInt(limit)
 
   const now = new Date()
   const where: any = { isActive: true }
+  if (ids) where.id = { in: ids.split(',').map((id) => id.trim()).filter(Boolean) }
   if (category) where.category = category
   if (search) where.OR = [
     { name: { contains: search, mode: 'insensitive' } },

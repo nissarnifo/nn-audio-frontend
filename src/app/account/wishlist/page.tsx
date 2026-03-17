@@ -1,8 +1,8 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Heart, ShoppingCart, Trash2 } from 'lucide-react'
+import { Heart, ShoppingCart, Trash2, Share2, Copy, Check } from 'lucide-react'
 import { useWishlist, useServerWishlist } from '@/hooks'
 import { useWishlistStore } from '@/store/wishlist.store'
 import { useAuthStore } from '@/store/auth.store'
@@ -18,6 +18,8 @@ export default function WishlistPage() {
   const { items, clear, toggle } = useWishlist()
   const { isLoading } = useServerWishlist()
   const addItem = useCartStore((s) => s.addItem)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // On first login: migrate local guest items to server, then clear local
   const localItems = useWishlistStore((s) => s.items)
@@ -32,6 +34,27 @@ export default function WishlistPage() {
   }, [isLoggedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoggedIn && isLoading) return <PageLoading />
+
+  function buildShareUrl() {
+    const ids = items.map((p) => p.id).join(',')
+    const encoded = btoa(ids)
+    return `${window.location.origin}/wishlist/shared?ids=${encoded}`
+  }
+
+  async function handleShare() {
+    setShowShareModal(true)
+    setCopied(false)
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(buildShareUrl())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } catch {
+      toast.error('Could not copy to clipboard')
+    }
+  }
 
   function handleAddToCart(product: Product) {
     const variant = product.variants.find((v) => v.is_active && v.stock_qty > 0)
@@ -50,14 +73,57 @@ export default function WishlistPage() {
           <div className="h-0.5 w-12 bg-[#FF3366]" />
         </div>
         {items.length > 0 && (
-          <button
-            onClick={() => { if (confirm('Clear entire wishlist?')) clear() }}
-            className="font-mono text-xs text-[#4A7FA5] hover:text-[#FF3366] transition-colors flex items-center gap-1.5"
-          >
-            <Trash2 size={13} /> CLEAR ALL
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleShare}
+              className="font-mono text-xs text-[#4A7FA5] hover:text-[#00D4FF] transition-colors flex items-center gap-1.5"
+            >
+              <Share2 size={13} /> SHARE
+            </button>
+            <button
+              onClick={() => { if (confirm('Clear entire wishlist?')) clear() }}
+              className="font-mono text-xs text-[#4A7FA5] hover:text-[#FF3366] transition-colors flex items-center gap-1.5"
+            >
+              <Trash2 size={13} /> CLEAR ALL
+            </button>
+          </div>
         )}
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[rgba(10,14,26,0.85)] backdrop-blur-sm" onClick={() => setShowShareModal(false)}>
+          <div className="hud-card p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <Share2 size={18} className="text-[#00D4FF]" />
+              <h3 className="font-heading text-base text-[#E8F4FD] tracking-wider">SHARE WISHLIST</h3>
+            </div>
+            <p className="font-mono text-xs text-[#4A7FA5] mb-4">
+              Share this link with anyone — they can browse your saved items and add them to their own cart.
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1 input-hud font-mono text-xs text-[#4A7FA5] px-3 py-2 truncate select-all">
+                {buildShareUrl()}
+              </div>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 btn-cyan px-4 py-2 font-heading text-xs tracking-widest flex-shrink-0"
+              >
+                {copied ? <Check size={13} className="text-[#00FF88]" /> : <Copy size={13} />}
+                {copied ? 'COPIED' : 'COPY'}
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="font-mono text-xs text-[#4A7FA5] hover:text-[#E8F4FD] transition-colors"
+              >
+                CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <div className="hud-card p-16 text-center">

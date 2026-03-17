@@ -179,6 +179,25 @@ export interface CouponValidation {
   discount: number
 }
 
+export interface CouponUsageOrder {
+  id: string
+  date: string
+  customer: string
+  email: string
+  subtotal: number
+  discount: number
+  total: number
+  status: string
+}
+
+export interface CouponUsage {
+  code: string
+  used_count: number
+  max_uses: number | null
+  total_discount: number
+  orders: CouponUsageOrder[]
+}
+
 /* ─── User / Auth ────────────────────────────────────────────────── */
 export interface User {
   id: string

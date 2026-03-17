@@ -121,6 +121,7 @@ export const ENDPOINTS = {
     validate: '/coupons/validate',
     root: '/coupons',
     byId: (id: string) => `/coupons/${id}`,
+    usage: (id: string) => `/coupons/${id}/usage`,
   },
   stockAlerts: {
     subscribe: '/stock-alerts',

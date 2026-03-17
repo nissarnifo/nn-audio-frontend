@@ -13,6 +13,7 @@ import type {
   Review,
   Coupon,
   CouponValidation,
+  CouponUsage,
   ReturnRequest,
   Question,
 } from '@/types'
@@ -138,6 +139,9 @@ export const couponsApi = {
   },
   remove(id: string) {
     return api.delete(ENDPOINTS.coupons.byId(id))
+  },
+  getUsage(id: string) {
+    return api.get<CouponUsage>(ENDPOINTS.coupons.usage(id))
   },
 }
 

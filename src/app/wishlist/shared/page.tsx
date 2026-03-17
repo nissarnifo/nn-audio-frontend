@@ -19,7 +19,7 @@ export default function SharedWishlistPage() {
     if (!encoded) { setLoading(false); setError(true); return }
     let ids: string[]
     try {
-      ids = atob(encoded).split(',').filter(Boolean)
+      ids = atob(decodeURIComponent(encoded)).split(',').filter(Boolean)
     } catch {
       setLoading(false); setError(true); return
     }

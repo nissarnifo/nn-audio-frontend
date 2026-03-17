@@ -36,7 +36,7 @@ async function ensureAdminExists() {
         role: 'ADMIN',
       },
     })
-    console.log('Admin user created: admin@nnaudio.com / admin123')
+    console.info('[startup] Default admin created: admin@nnaudio.com')
   }
 }
 
@@ -96,9 +96,24 @@ const generalLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
 })
 
+// Limiter for user-generated content (reviews, questions, stock alerts)
+// Prevents spam: 10 submissions per 10 minutes per IP
+const contentLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'You are submitting too frequently, please try again later.' },
+  skip: (req) => req.method !== 'POST',
+})
+
 app.use('/api/v1', generalLimiter)
 app.use('/api/v1/auth', authLimiter)
 app.use('/api/v1/coupons/validate', couponLimiter)
+// Apply content limiter to UGC endpoints
+app.use('/api/v1/products', contentLimiter)   // reviews + questions (POST only)
+app.use('/api/v1/stock-alerts', contentLimiter)
+app.use('/api/v1/newsletter', contentLimiter)
 
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/products', productRoutes)
@@ -121,5 +136,5 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 })
 
 ensureAdminExists()
-  .then(() => app.listen(PORT, () => console.log(`Server running on port ${PORT}`)))
+  .then(() => app.listen(PORT, () => console.info(`[startup] Server listening on port ${PORT}`)))
   .catch((err) => { console.error('Startup error:', err); process.exit(1) })

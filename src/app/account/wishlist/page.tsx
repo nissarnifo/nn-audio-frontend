@@ -37,7 +37,7 @@ export default function WishlistPage() {
 
   function buildShareUrl() {
     const ids = items.map((p) => p.id).join(',')
-    const encoded = btoa(ids)
+    const encoded = encodeURIComponent(btoa(ids))
     return `${window.location.origin}/wishlist/shared?ids=${encoded}`
   }
 

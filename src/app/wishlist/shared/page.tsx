@@ -1,14 +1,14 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Heart, ShoppingBag } from 'lucide-react'
 import { productsApi } from '@/services/api'
-import { ProductsGrid } from '@/components/product'
+import ProductsGrid from '@/components/product/ProductsGrid'
 import { Spinner } from '@/components/ui'
 import type { Product } from '@/types'
 
-export default function SharedWishlistPage() {
+function SharedWishlistInner() {
   const params = useSearchParams()
   const encoded = params.get('ids') ?? ''
   const [products, setProducts] = useState<Product[]>([])
@@ -57,7 +57,6 @@ export default function SharedWishlistPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
-      {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <Heart size={24} className="text-[#FF3366]" />
@@ -68,9 +67,7 @@ export default function SharedWishlistPage() {
           {products.length} item{products.length !== 1 ? 's' : ''} · Shared by a fellow audiophile
         </p>
       </div>
-
       <ProductsGrid products={products} />
-
       <div className="mt-10 text-center">
         <Link href="/products" className="inline-flex items-center gap-2 btn-gold px-8 py-3 font-heading tracking-widest">
           <ShoppingBag size={16} />
@@ -78,5 +75,13 @@ export default function SharedWishlistPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+export default function SharedWishlistPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-[60vh]"><Spinner size={28} /></div>}>
+      <SharedWishlistInner />
+    </Suspense>
   )
 }

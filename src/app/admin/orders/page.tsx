@@ -260,7 +260,7 @@ export default function AdminOrdersPage() {
 
       {search && (
         <p className="font-mono text-xs text-[#4A7FA5] mb-3">
-          Showing results for <span className="text-[#00D4FF]">"{search}"</span>
+          Showing results for <span className="text-[#00D4FF]">&ldquo;{search}&rdquo;</span>
           <button onClick={clearSearch} className="ml-2 text-[#FF3366] hover:text-white transition-colors">× clear</button>
         </p>
       )}

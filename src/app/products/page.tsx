@@ -7,6 +7,15 @@ import ProductsGrid from '@/components/product/ProductsGrid'
 import { Pagination } from '@/components/ui'
 import type { ProductCategory } from '@/types'
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
+  return debounced
+}
+
 const CATEGORIES: { value: ProductCategory | ''; label: string }[] = [
   { value: '', label: 'All' },
   { value: 'amplifier', label: 'Amplifiers' },
@@ -47,10 +56,11 @@ function ProductsInner() {
   const [minRating, setMinRating] = useState(0)
   const [onSale, setOnSale] = useState(false)
 
+  const debouncedSearch = useDebounce(search, 350)
   const hasActiveFilters = minPrice !== '' || maxPrice !== '' || inStock || minRating > 0 || onSale
 
   const { data, isLoading } = useProducts({
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     category: (category || undefined) as ProductCategory | undefined,
     sort: sort as 'rating' | 'newest' | 'price_asc' | 'price_desc',
     page,

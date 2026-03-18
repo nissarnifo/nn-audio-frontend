@@ -1,7 +1,7 @@
 'use client'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, FileText, RotateCcw } from 'lucide-react'
+import { ChevronLeft, FileText, RotateCcw, Package, Truck, CheckCircle2, XCircle, Clock, RefreshCcw } from 'lucide-react'
 import { useOrder, useCancelOrder, useSubmitReturn, useMyReturns } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import { useCartStore } from '@/store/cart.store'
@@ -9,6 +9,111 @@ import { StatusBadge, PageLoading, Divider, Spinner } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+
+/* ── Order status timeline ────────────────────────────────────────── */
+type StepStatus = 'done' | 'active' | 'pending'
+
+interface Step {
+  label: string
+  icon: React.ReactNode
+  status: StepStatus
+}
+
+function OrderTimeline({ status }: { status: string }) {
+  const isCancelled = status === 'CANCELLED'
+  const isReturned  = status === 'RETURNED'
+
+  if (isCancelled) {
+    return (
+      <div className="hud-card p-5 mb-4 border border-[rgba(255,51,102,0.2)] bg-[rgba(255,51,102,0.03)]">
+        <div className="flex items-center gap-3">
+          <XCircle size={20} className="text-[#FF3366] flex-shrink-0" />
+          <div>
+            <p className="font-heading text-sm text-[#FF3366] tracking-wider">ORDER CANCELLED</p>
+            <p className="font-mono text-xs text-[#4A7FA5] mt-0.5">This order has been cancelled and will not be shipped.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isReturned) {
+    return (
+      <div className="hud-card p-5 mb-4 border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.03)]">
+        <div className="flex items-center gap-3">
+          <RefreshCcw size={20} className="text-[#00D4FF] flex-shrink-0" />
+          <div>
+            <p className="font-heading text-sm text-[#00D4FF] tracking-wider">ORDER RETURNED</p>
+            <p className="font-mono text-xs text-[#4A7FA5] mt-0.5">Return processed. Refund will be credited within 5–7 business days.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const ORDER_STEPS = ['PROCESSING', 'SHIPPED', 'DELIVERED']
+  const currentIdx = ORDER_STEPS.indexOf(status)
+
+  const steps: Step[] = [
+    {
+      label: 'Order Placed',
+      icon: <Clock size={15} />,
+      status: currentIdx >= 0 ? 'done' : 'pending',
+    },
+    {
+      label: 'Processing',
+      icon: <Package size={15} />,
+      status: currentIdx > 0 ? 'done' : currentIdx === 0 ? 'active' : 'pending',
+    },
+    {
+      label: 'Shipped',
+      icon: <Truck size={15} />,
+      status: currentIdx > 1 ? 'done' : currentIdx === 1 ? 'active' : 'pending',
+    },
+    {
+      label: 'Delivered',
+      icon: <CheckCircle2 size={15} />,
+      status: currentIdx >= 2 ? 'done' : 'pending',
+    },
+  ]
+
+  return (
+    <div className="hud-card p-5 mb-4">
+      <div className="flex items-center justify-between relative">
+        {/* Connector line */}
+        <div className="absolute left-0 right-0 top-4 h-0.5 bg-[rgba(0,212,255,0.1)] mx-8" />
+        {steps.map((step, i) => {
+          const isDone   = step.status === 'done'
+          const isActive = step.status === 'active'
+          return (
+            <div key={i} className="relative flex flex-col items-center gap-2 flex-1">
+              {/* Circle */}
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center z-10 transition-colors border ${
+                  isDone
+                    ? 'bg-[#00FF88] border-[#00FF88] text-[#0A0E1A]'
+                    : isActive
+                    ? 'bg-[rgba(0,212,255,0.15)] border-[#00D4FF] text-[#00D4FF] animate-pulse'
+                    : 'bg-[rgba(0,212,255,0.05)] border-[rgba(0,212,255,0.15)] text-[rgba(74,127,165,0.5)]'
+                }`}
+              >
+                {step.icon}
+              </div>
+              {/* Label */}
+              <span
+                className={`font-mono text-[10px] tracking-wide text-center leading-tight ${
+                  isDone ? 'text-[#00FF88]' : isActive ? 'text-[#00D4FF]' : 'text-[rgba(74,127,165,0.5)]'
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 const RETURN_REASONS = [
   'Defective / not working',
@@ -84,6 +189,9 @@ export default function OrderDetailPage() {
           </Link>
         </div>
       </div>
+
+      {/* Status timeline */}
+      <OrderTimeline status={order.status} />
 
       {/* Items */}
       <div className="hud-card p-6 mb-4">
@@ -238,7 +346,7 @@ export default function OrderDetailPage() {
           )
         }
 
-        const daysSince = (Date.now() - new Date(order.updated_at).getTime()) / (1000 * 60 * 60 * 24)
+        const daysSince = (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)
         if (daysSince > 30) return null
 
         return (

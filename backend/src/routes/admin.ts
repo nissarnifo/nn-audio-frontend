@@ -372,7 +372,7 @@ router.post('/inventory/restock', requireAdmin, async (req: AuthRequest, res) =>
       })
     )
     if (pendingAlerts.length > 0) {
-      console.log(`[restock] Sent ${pendingAlerts.length} back-in-stock alerts for variant ${variantId}`)
+      console.info(`[restock] Sent ${pendingAlerts.length} back-in-stock alert(s) for variant ${variantId}`)
     }
   }
 

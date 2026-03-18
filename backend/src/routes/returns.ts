@@ -27,7 +27,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     return res.status(400).json({ error: 'Only delivered orders can be returned' })
   }
 
-  const daysSinceDelivery = (Date.now() - order.updatedAt.getTime()) / (1000 * 60 * 60 * 24)
+  const daysSinceDelivery = (Date.now() - order.createdAt.getTime()) / (1000 * 60 * 60 * 24)
   if (daysSinceDelivery > RETURN_WINDOW_DAYS) {
     return res.status(400).json({ error: `Return window of ${RETURN_WINDOW_DAYS} days has passed` })
   }

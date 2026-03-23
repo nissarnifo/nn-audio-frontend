@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 import { signIn } from 'next-auth/react'
 import { authApi } from '@/services/api'
@@ -36,6 +36,8 @@ const ALL_PROVIDERS = [
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromPath = searchParams.get('from')
   const setUser = useAuthStore((s) => s.setUser)
   const serverReady = useServerStore((s) => s.serverReady)
   const [form, setForm] = useState({ email: '', password: '' })
@@ -86,7 +88,7 @@ export default function LoginPage() {
       const { data } = await authApi.login(form)
       setUser(data.user, data.token)
       toast.success(`Welcome back, ${data.user.name}!`)
-      router.push(data.user.role === 'ADMIN' ? '/admin' : '/')
+      router.push(data.user.role === 'ADMIN' ? '/admin' : (fromPath ?? '/'))
     } catch (err: unknown) {
       const axiosErr = err as { response?: { status?: number; data?: { message?: string } }; code?: string }
       const status = axiosErr?.response?.status

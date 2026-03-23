@@ -2,11 +2,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { ShoppingCart, Zap, Heart, GitCompareArrows, Eye } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { Product } from '@/types'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
+import { useAuthStore } from '@/store/auth.store'
 import { useWishlist } from '@/hooks'
 import { useCompareStore } from '@/store/compare.store'
 import { Stars, Badge, NoPhoto } from '@/components/ui'
@@ -25,6 +27,9 @@ export default function ProductCard({ product, onQuickView }: { product: Product
   const defaultVariant = product.variants.find((v) => v.is_active) ?? product.variants[0]
   const [selectedVariant, setSelectedVariant] = useState(defaultVariant)
   const addItem = useCartStore((s) => s.addItem)
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const router = useRouter()
+  const pathname = usePathname()
   const { toggle: toggleWishlist, has } = useWishlist()
   const wishlisted = has(product.id)
   const { add: addCompare, remove: removeCompare, has: inCompare, isFull } = useCompareStore()
@@ -34,6 +39,10 @@ export default function ProductCard({ product, onQuickView }: { product: Product
 
   function handleAdd() {
     if (!selectedVariant || !inStock) return
+    if (!isLoggedIn) {
+      router.push(`/auth/login?from=${encodeURIComponent(pathname)}`)
+      return
+    }
     addItem(product, selectedVariant)
     toast.success(`${product.name} added to cart`)
   }

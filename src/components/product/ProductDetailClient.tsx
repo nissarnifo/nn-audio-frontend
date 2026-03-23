@@ -121,12 +121,20 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   function handleAdd() {
     if (!variant) return
+    if (!isLoggedIn) {
+      router.push(`/auth/login?from=/products/${slug}`)
+      return
+    }
     addItem(product!, variant, qty)
     toast.success(`${product!.name} added to cart!`)
   }
 
   function handleBuyNow() {
     if (!variant) return
+    if (!isLoggedIn) {
+      router.push(`/auth/login?from=/products/${slug}`)
+      return
+    }
     addItem(product!, variant, qty)
     router.push('/checkout')
   }

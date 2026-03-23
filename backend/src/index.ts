@@ -44,9 +44,11 @@ const app = express()
 const PORT = process.env.PORT || 5000
 
 app.use(helmet())
+// Support comma-separated list of origins in FRONTEND_URL
+// e.g. FRONTEND_URL=https://audiosets.store,https://www.audiosets.store
 const allowedOrigins = [
   'http://localhost:3000',
-  process.env.FRONTEND_URL,
+  ...(process.env.FRONTEND_URL?.split(',').map((u) => u.trim()) ?? []),
 ].filter(Boolean) as string[]
 
 app.use(cors({

@@ -31,8 +31,22 @@ export async function GET(req: NextRequest) {
       prisma.return.count({ where }),
     ])
 
+    const mapped = returns.map((r) => ({
+      id: r.id,
+      order_number: r.order.orderNumber,
+      order_total: r.order.total,
+      order_date: r.order.createdAt,
+      reason: r.reason,
+      notes: r.notes,
+      status: r.status,
+      admin_note: r.adminNote,
+      created_at: r.createdAt,
+      updated_at: r.updatedAt,
+      user: r.user,
+    }))
+
     return NextResponse.json({
-      data: returns,
+      data: mapped,
       total,
       page,
       limit,

@@ -2,10 +2,12 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter, usePathname } from 'next/navigation'
 import { X, ShoppingCart, Zap, Heart, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Product } from '@/types'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
+import { useAuthStore } from '@/store/auth.store'
 import { useWishlist } from '@/hooks'
 import { Stars, Badge, NoPhoto } from '@/components/ui'
 import toast from 'react-hot-toast'
@@ -22,6 +24,9 @@ export default function QuickViewModal({ product, onClose }: Props) {
   const [qty, setQty] = useState(1)
   const [imgIdx, setImgIdx] = useState(0)
   const addItem = useCartStore((s) => s.addItem)
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const router = useRouter()
+  const pathname = usePathname()
   const { toggle: toggleWishlist, has } = useWishlist()
 
   // Reset state when product changes
@@ -63,6 +68,11 @@ export default function QuickViewModal({ product, onClose }: Props) {
 
   function handleAdd() {
     if (!selectedVariant || !inStock) return
+    if (!isLoggedIn) {
+      onClose()
+      router.push(`/auth/login?from=${encodeURIComponent(pathname)}`)
+      return
+    }
     addItem(product!, selectedVariant, qty)
     toast.success(`${product!.name} added to cart`)
     onClose()

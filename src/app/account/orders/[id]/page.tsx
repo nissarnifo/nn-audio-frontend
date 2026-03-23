@@ -347,7 +347,7 @@ export default function OrderDetailPage() {
         }
 
         const daysSince = (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)
-        if (daysSince > 30) return null
+        if (daysSince > 7) return null
 
         return (
           <div className="hud-card p-5 mt-4">

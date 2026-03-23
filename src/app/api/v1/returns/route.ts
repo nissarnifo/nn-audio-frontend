@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Only delivered orders can be returned' }, { status: 400 })
     }
 
-    // Check within 30 days
+    // Check within 7 days
     const daysSinceOrder = (Date.now() - order.createdAt.getTime()) / (1000 * 60 * 60 * 24)
-    if (daysSinceOrder > 30) {
-      return NextResponse.json({ error: 'Return window of 30 days has expired' }, { status: 400 })
+    if (daysSinceOrder > 7) {
+      return NextResponse.json({ error: 'Return window of 7 days has expired' }, { status: 400 })
     }
 
     // Check no existing return

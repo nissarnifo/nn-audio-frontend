@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       where: { userId: user.id },
       include: { product: { include: productInclude } },
     })
-    return NextResponse.json({ wishlist: items.map((item: any) => formatProduct(item.product)) })
+    return NextResponse.json(items.map((item: any) => formatProduct(item.product)))
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

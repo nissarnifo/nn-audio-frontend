@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
             select: {
               id: true,
               label: true,
+              price: true,
               product: {
                 select: {
                   name: true,
@@ -43,7 +44,15 @@ export async function GET(req: NextRequest) {
     ])
 
     return NextResponse.json({
-      data: movements,
+      data: movements.map((m) => ({
+        id: m.id,
+        type: m.type,
+        qty: m.qty,
+        note: m.note,
+        created_at: m.createdAt,
+        variant: { id: m.variant.id, label: m.variant.label, price: m.variant.price },
+        product: { name: m.variant.product.name, sku: m.variant.product.sku, category: m.variant.product.category },
+      })),
       total,
       page,
       total_pages: Math.ceil(total / limit),

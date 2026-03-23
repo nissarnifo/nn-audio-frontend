@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
           name: v.product.name,
           sku: v.product.sku,
           category: v.product.category,
-          primary_image: v.product.images[0]?.url ?? null,
+          image: v.product.images[0]?.url ?? null,
         },
       })),
       summary: { total_skus, out_of_stock, low_stock, total_value },

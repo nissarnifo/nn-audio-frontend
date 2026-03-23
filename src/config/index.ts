@@ -29,7 +29,7 @@
 // In production, NEXT_PUBLIC_API_URL should be omitted (relative /api/v1 works automatically)
 // or set to https://audiosets.store/api/v1
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'
+  process.env.NEXT_PUBLIC_API_URL || '/api/v1'
 
 // ─── App (Frontend) URL ────────────────────────────────────────────────────────
 // Used for canonical URLs, sitemap, OG tags

@@ -5,10 +5,10 @@ import { prisma } from '@/lib/prisma'
 import { requireUser } from '@/lib/api-helpers'
 
 export async function POST(req: NextRequest) {
-  const user = requireUser(req)
-  if (user instanceof NextResponse) return user
-
   try {
+    const user = requireUser(req)
+    if (user instanceof NextResponse) return user
+
     const body = await req.json()
     const { orderId, reason, notes } = body
 
@@ -43,9 +43,13 @@ export async function POST(req: NextRequest) {
       data: { orderId, userId: user.id, reason, notes: notes ?? null },
     })
 
-    return NextResponse.json({ return: returnRequest }, { status: 201 })
+    return NextResponse.json({
+      id: returnRequest.id,
+      status: returnRequest.status,
+      created_at: returnRequest.createdAt,
+    }, { status: 201 })
   } catch (e) {
-    console.error(e)
+    console.error('[POST /returns]', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

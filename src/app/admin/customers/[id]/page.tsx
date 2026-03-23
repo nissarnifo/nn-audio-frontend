@@ -103,7 +103,7 @@ export default function AdminCustomerDetailPage() {
                 {customer.orders.map((o) => (
                   <tr key={o.id} className="border-b border-[rgba(0,212,255,0.05)] hover:bg-[rgba(0,212,255,0.02)] transition-colors">
                     <td className="px-5 py-3 font-mono text-sm text-[#00D4FF]">{o.order_number}</td>
-                    <td className="px-5 py-3"><StatusBadge status={o.status} /></td>
+                    <td className="px-5 py-3"><StatusBadge status={o.status as any} /></td>
                     <td className="px-5 py-3 font-mono text-sm text-[#E8F4FD]">{o.item_count}</td>
                     <td className="px-5 py-3 font-mono text-sm text-[#FFB700]">{fmt(o.total)}</td>
                     <td className="px-5 py-3 font-mono text-xs text-[#4A7FA5]">{fmtDate(o.created_at)}</td>

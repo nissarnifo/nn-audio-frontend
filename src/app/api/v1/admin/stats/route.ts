@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
       prisma.productVariant.findMany({
         where: { stockQty: { lte: 5 }, isActive: true },
         take: 8,
-        include: { product: { select: { name: true, sku: true } } },
+        include: { product: { select: { id: true, name: true, sku: true } } },
         orderBy: { stockQty: 'asc' },
       }),
     ])
@@ -77,12 +77,13 @@ export async function GET(req: NextRequest) {
       monthly_revenue: monthlyRaw,
       top_products: topProductsRaw,
       orders_by_status: ordersByStatus.map((s) => ({ status: s.status, count: s._count })),
-      low_stock: lowStockRaw.map((v) => ({
+      low_stock_variants: lowStockRaw.map((v) => ({
         id: v.id,
         label: v.label,
         stock_qty: v.stockQty,
+        product_id: v.product.id,
         product_name: v.product.name,
-        product_sku: v.product.sku,
+        sku: v.product.sku,
       })),
     })
   } catch (e) {

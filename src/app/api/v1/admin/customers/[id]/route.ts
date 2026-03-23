@@ -15,8 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         orders: {
           orderBy: { createdAt: 'desc' },
           include: {
-            address: true,
-            items: { include: { product: { select: { id: true, name: true, slug: true } }, variant: true } },
+            items: true,
           },
         },
         returns: {
@@ -43,17 +42,42 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       id: customer.id,
       name: customer.name,
       email: customer.email,
+      phone: customer.phone ?? null,
+      role: customer.role,
       created_at: customer.createdAt,
       stats: {
-        total_orders: customer._count.orders,
-        total_returns: customer._count.returns,
-        total_reviews: customer._count.reviews,
         total_spend: totalSpend,
         avg_order_value: avgOrderValue,
+        order_count: customer._count.orders,
+        return_count: customer._count.returns,
+        review_count: customer._count.reviews,
       },
-      orders: customer.orders,
-      returns: customer.returns,
-      reviews: customer.reviews,
+      orders: customer.orders.map((o) => ({
+        id: o.id,
+        order_number: o.orderNumber,
+        status: o.status,
+        payment_status: o.paymentStatus,
+        total: o.total,
+        item_count: o.items.length,
+        created_at: o.createdAt,
+      })),
+      returns: customer.returns.map((r) => ({
+        id: r.id,
+        status: r.status,
+        reason: r.reason,
+        admin_note: r.adminNote ?? null,
+        order_number: r.order.orderNumber,
+        order_total: r.order.total,
+        created_at: r.createdAt,
+      })),
+      reviews: customer.reviews.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        product_name: r.product.name,
+        product_slug: r.product.slug,
+        created_at: r.createdAt,
+      })),
     })
   } catch (e) {
     return err('Failed to fetch customer', 500)

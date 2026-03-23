@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       where: { userId: user.id },
       orderBy: { isDefault: 'desc' },
     })
-    return NextResponse.json({ addresses: addresses.map(fmt) })
+    return NextResponse.json(addresses.map(fmt))
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

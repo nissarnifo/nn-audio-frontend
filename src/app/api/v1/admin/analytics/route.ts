@@ -54,10 +54,10 @@ export async function GET(req: NextRequest) {
     ])
 
     return NextResponse.json({
-      daily_revenue: dailyRevenue,
+      daily_revenue: dailyRevenue.map((r) => ({ day: r.date, revenue: r.revenue, orders: r.orders })),
       category_revenue: categoryRevenue,
-      new_customers: newCustomers,
-      coupon_usage: couponUsage,
+      new_customers: newCustomers.map((r) => ({ month: r.month, count: r.new_customers })),
+      coupon_usage: couponUsage.map((r) => ({ code: r.coupon_code, uses: r.uses, total_savings: r.total_discount })),
     })
   } catch (e) {
     return err('Failed to fetch analytics', 500)

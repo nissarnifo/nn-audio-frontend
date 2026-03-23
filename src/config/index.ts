@@ -25,10 +25,11 @@
  */
 
 // ─── Backend API ───────────────────────────────────────────────────────────────
-// Change NEXT_PUBLIC_API_URL in .env to point to ANY backend, anywhere.
-// Format: https://your-backend.com/api/v1
+// The API now runs as Next.js Route Handlers on the same Vercel project.
+// In production, NEXT_PUBLIC_API_URL should be omitted (relative /api/v1 works automatically)
+// or set to https://audiosets.store/api/v1
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1'
 
 // ─── App (Frontend) URL ────────────────────────────────────────────────────────
 // Used for canonical URLs, sitemap, OG tags

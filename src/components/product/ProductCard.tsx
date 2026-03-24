@@ -93,7 +93,7 @@ export default function ProductCard({ product, onQuickView }: { product: Product
               else if (!isFull()) addCompare(product)
               else toast('Max 3 products to compare', { icon: '⚡' })
             }}
-            className={`w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110 ${compared ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+            className={`w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110 ${compared ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'}`}
             aria-label={compared ? 'Remove from compare' : 'Add to compare'}
           >
             <GitCompareArrows
@@ -104,7 +104,7 @@ export default function ProductCard({ product, onQuickView }: { product: Product
           {onQuickView && (
             <button
               onClick={(e) => { e.preventDefault(); onQuickView(product) }}
-              className="w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110 opacity-0 group-hover:opacity-100 hover:text-[#00D4FF] text-[#4A7FA5]"
+              className="w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-[#00D4FF] text-[#4A7FA5]"
               aria-label="Quick view"
             >
               <Eye size={14} />

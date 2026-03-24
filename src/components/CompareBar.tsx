@@ -44,7 +44,7 @@ export default function CompareBar() {
                 return (
                   <div
                     key={i}
-                    className="flex-1 min-w-[100px] max-w-[180px] h-12 rounded border border-dashed border-[rgba(0,212,255,0.2)] flex items-center justify-center"
+                    className="flex-1 min-w-[80px] max-w-[180px] h-12 rounded border border-dashed border-[rgba(0,212,255,0.2)] flex items-center justify-center"
                   >
                     <span className="font-mono text-[10px] text-[rgba(74,127,165,0.5)]">EMPTY SLOT</span>
                   </div>
@@ -54,7 +54,7 @@ export default function CompareBar() {
               return (
                 <div
                   key={product.id}
-                  className="flex-1 min-w-[100px] max-w-[180px] h-12 rounded border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] flex items-center gap-2 px-2 group"
+                  className="flex-1 min-w-[80px] max-w-[180px] h-12 rounded border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] flex items-center gap-2 px-2 group"
                 >
                   <div className="relative w-8 h-8 rounded overflow-hidden shrink-0 bg-[#0D1B2A]">
                     {img ? (
@@ -74,7 +74,7 @@ export default function CompareBar() {
                   </p>
                   <button
                     onClick={() => remove(product.id)}
-                    className="shrink-0 text-[#4A7FA5] hover:text-[#FF3366] opacity-0 group-hover:opacity-100 transition-all"
+                    className="shrink-0 text-[#4A7FA5] hover:text-[#FF3366] transition-all"
                     aria-label="Remove from comparison"
                   >
                     <X size={12} />

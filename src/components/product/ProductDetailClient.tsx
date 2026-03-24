@@ -261,7 +261,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
           <Stars rating={product.rating} count={product.review_count} />
 
-          <p className="text-[#4A7FA5] leading-relaxed mt-4 mb-6">{product.description}</p>
+          <p className="font-body text-sm text-[#4A7FA5] leading-relaxed mt-4 mb-6">{product.description}</p>
 
           <Divider className="mb-6" />
 
@@ -300,20 +300,24 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             </div>
           )}
 
-          <div ref={buyRef} className="flex flex-wrap items-baseline gap-3 mb-6">
-            {product.on_sale && product.sale_price != null ? (
-              <>
-                <span className="font-mono text-4xl text-[#FF3366] font-bold">{fmt(product.sale_price)}</span>
-                <span className="font-mono text-xl text-[#4A7FA5] line-through">{fmt(variant?.price ?? 0)}</span>
-                <span className="font-mono text-sm text-[#00FF88]">
-                  -{Math.round((1 - product.sale_price / (variant?.price ?? 1)) * 100)}% OFF
+          <div ref={buyRef} className="mb-6">
+            {/* Price line */}
+            <div className="flex flex-wrap items-baseline gap-2 mb-2">
+              {product.on_sale && product.sale_price != null ? (
+                <>
+                  <span className="font-mono text-3xl md:text-4xl text-[#FF3366] font-bold">{fmt(product.sale_price)}</span>
+                  <span className="font-mono text-lg text-[#4A7FA5] line-through">{fmt(variant?.price ?? 0)}</span>
+                  <span className="font-mono text-sm text-[#00FF88]">
+                    -{Math.round((1 - product.sale_price / (variant?.price ?? 1)) * 100)}% OFF
+                  </span>
+                </>
+              ) : (
+                <span className="font-mono text-3xl md:text-4xl text-[#FFB700] font-bold">
+                  {fmt(variant?.price ?? 0)}
                 </span>
-              </>
-            ) : (
-              <span className="font-mono text-4xl text-[#FFB700] font-bold">
-                {fmt(variant?.price ?? 0)}
-              </span>
-            )}
+              )}
+            </div>
+            {/* Stock info on its own line */}
             {variant?.stock_qty > 0 ? (
               variant.stock_qty <= 5 ? (
                 <span className="flex items-center gap-1 font-mono text-xs text-[#FFB700] animate-pulse">
@@ -329,11 +333,14 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
           {inStock ? (
             <>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-center border border-[rgba(0,212,255,0.25)] rounded overflow-hidden">
-                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">−</button>
-                  <span className="px-4 py-2 font-mono text-[#E8F4FD] border-x border-[rgba(0,212,255,0.25)]">{qty}</span>
-                  <button onClick={() => setQty((q) => q + 1)} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">+</button>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-mono text-xs text-[#4A7FA5]">QTY</span>
+                  <div className="flex items-center border border-[rgba(0,212,255,0.25)] rounded overflow-hidden">
+                    <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">−</button>
+                    <span className="px-4 py-2 font-mono text-[#E8F4FD] border-x border-[rgba(0,212,255,0.25)]">{qty}</span>
+                    <button onClick={() => setQty((q) => q + 1)} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">+</button>
+                  </div>
                 </div>
                 <button
                   onClick={handleAdd}
@@ -364,7 +371,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 </button>
                 <button
                   onClick={() => toggleWishlist(product!)}
-                  className={`w-12 flex items-center justify-center border rounded transition-all ${
+                  className={`w-12 py-3 flex items-center justify-center border rounded transition-all ${
                     inWishlist(product!.id)
                       ? 'border-[#FF3366] bg-[rgba(255,51,102,0.08)] text-[#FF3366]'
                       : 'border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#FF3366] hover:text-[#FF3366]'
@@ -379,7 +386,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     else if (!compareFull()) addCompare(product!)
                     else toast('Max 3 products to compare', { icon: '⚡' })
                   }}
-                  className={`w-12 flex items-center justify-center border rounded transition-all ${
+                  className={`w-12 py-3 flex items-center justify-center border rounded transition-all ${
                     inCompare(product!.id)
                       ? 'border-[#00FF88] bg-[rgba(0,255,136,0.08)] text-[#00FF88]'
                       : 'border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#00FF88] hover:text-[#00FF88]'

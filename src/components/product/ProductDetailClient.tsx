@@ -300,7 +300,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             </div>
           )}
 
-          <div ref={buyRef} className="flex items-baseline gap-3 mb-6">
+          <div ref={buyRef} className="flex flex-wrap items-baseline gap-3 mb-6">
             {product.on_sale && product.sale_price != null ? (
               <>
                 <span className="font-mono text-4xl text-[#FF3366] font-bold">{fmt(product.sale_price)}</span>
@@ -391,7 +391,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               </div>
 
               {/* ── Share row ── */}
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex flex-wrap items-center gap-2 mb-6">
                 <Share2 size={13} className="text-[#4A7FA5]" />
                 <span className="font-mono text-[10px] text-[#4A7FA5] tracking-widest mr-1">SHARE</span>
                 <button

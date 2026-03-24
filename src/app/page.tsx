@@ -53,7 +53,7 @@ function HeroCarousel() {
   if (isLoading || products.length === 0) {
     return (
       <div className="relative w-full hud-grid" style={{ minHeight: 340 }}>
-        <div className="max-w-7xl mx-auto px-16 py-14 flex items-center gap-12">
+        <div className="max-w-7xl mx-auto px-4 md:px-16 py-14 flex items-center gap-12">
           <div className="flex-1 space-y-4">
             {[24, '3/4', '1/3', '2/3'].map((w, i) => (
               <div key={i} className={`h-${i === 0 ? 4 : i === 2 ? 8 : 6} w-${w} rounded animate-pulse`}
@@ -93,7 +93,7 @@ function HeroCarousel() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: dir * -80 }}
           transition={{ duration: 0.4, ease: 'easeInOut' }}
-          className="relative max-w-7xl mx-auto px-12 md:px-16 py-10 md:py-14 flex flex-col md:flex-row items-center gap-8"
+          className="relative max-w-7xl mx-auto px-4 md:px-16 py-10 md:py-14 flex flex-col md:flex-row items-center gap-8"
         >
           {/* Left: text */}
           <div className="flex-1 min-w-0">
@@ -150,7 +150,7 @@ function HeroCarousel() {
           </div>
 
           {/* Right: product image */}
-          <div className="flex-shrink-0 relative w-64 h-56 md:w-96 md:h-80 rounded-lg overflow-hidden"
+          <div className="flex-shrink-0 relative w-full max-w-[280px] h-52 sm:w-64 sm:h-56 md:w-96 md:h-80 rounded-lg overflow-hidden"
             style={{ border: `1px solid ${accent}30`, background: accent + '08' }}>
             {[['top-0 left-0','border-t border-l'],['top-0 right-0','border-t border-r'],
               ['bottom-0 left-0','border-b border-l'],['bottom-0 right-0','border-b border-r']].map(([p,b]) => (

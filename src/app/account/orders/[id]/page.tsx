@@ -119,7 +119,6 @@ const RETURN_REASONS = [
   'Defective / not working',
   'Wrong item received',
   'Item not as described',
-  'Changed my mind',
   'Damaged during shipping',
   'Other',
 ]

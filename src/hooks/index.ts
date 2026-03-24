@@ -404,14 +404,23 @@ export function useSubmitReturn() {
   return useMutation({
     mutationFn: (data: { orderId: string; reason: string; notes?: string }) =>
       returnsApi.submit(data).then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['my-returns'] })
       qc.invalidateQueries({ queryKey: ['orders'] })
+      qc.invalidateQueries({ queryKey: ['order', variables.orderId] })
       toast.success('Return request submitted')
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      toast.error(msg || 'Failed to submit return request')
+      const axErr = err as { response?: { data?: { error?: string } | string }; code?: string }
+      const data = axErr?.response?.data
+      const msg = typeof data === 'object' && data !== null ? data.error : undefined
+      if (msg) {
+        toast.error(msg)
+      } else if (!axErr?.response) {
+        toast.error('Network error. Please check your connection and try again.')
+      } else {
+        toast.error('Failed to submit return request. Please try again.')
+      }
     },
   })
 }

@@ -413,7 +413,7 @@ export function useSubmitReturn() {
     onError: (err: unknown) => {
       const axErr = err as { response?: { data?: { error?: string } | string }; code?: string }
       const data = axErr?.response?.data
-      const msg = typeof data === 'object' && data !== null ? data.error : undefined
+      const msg = typeof data === 'object' && data !== null ? (data.error || data.message) : undefined
       if (msg) {
         toast.error(msg)
       } else if (!axErr?.response) {

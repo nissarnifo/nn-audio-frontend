@@ -172,23 +172,39 @@ function HeroCarousel() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Arrows */}
+      {/* Side arrows — desktop only */}
       <button onClick={prev}
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
+        className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
         <ChevronLeft size={18} />
       </button>
       <button onClick={next}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
+        className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
         <ChevronRight size={18} />
       </button>
 
-      {/* Dots */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-        {products.map((_, i) => (
-          <button key={i} onClick={() => go(i)} className="rounded-full transition-all duration-300"
-            style={{ width: i === idx ? 20 : 6, height: 6,
-              background: i === idx ? accent : 'rgba(0,212,255,0.2)' }} />
-        ))}
+      {/* Bottom controls: prev + dots + next (all screen sizes, arrows hidden on md+) */}
+      <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 z-10">
+        <button
+          onClick={prev}
+          className="md:hidden w-7 h-7 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF]"
+          aria-label="Previous"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <div className="flex gap-2">
+          {products.map((_, i) => (
+            <button key={i} onClick={() => go(i)} className="rounded-full transition-all duration-300"
+              style={{ width: i === idx ? 20 : 6, height: 6,
+                background: i === idx ? accent : 'rgba(0,212,255,0.2)' }} />
+          ))}
+        </div>
+        <button
+          onClick={next}
+          className="md:hidden w-7 h-7 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF]"
+          aria-label="Next"
+        >
+          <ChevronRight size={14} />
+        </button>
       </div>
     </div>
   )

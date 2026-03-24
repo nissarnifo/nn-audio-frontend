@@ -333,8 +333,9 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
           {inStock ? (
             <>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center gap-2 shrink-0">
+              <div className="mb-4">
+                {/* Qty controls row */}
+                <div className="flex items-center gap-3 mb-3">
                   <span className="font-mono text-xs text-[#4A7FA5]">QTY</span>
                   <div className="flex items-center border border-[rgba(0,212,255,0.25)] rounded overflow-hidden">
                     <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">−</button>
@@ -342,9 +343,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     <button onClick={() => setQty((q) => q + 1)} className="px-3 py-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors font-mono">+</button>
                   </div>
                 </div>
+                {/* ADD TO CART — full width button */}
                 <button
                   onClick={handleAdd}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 font-heading tracking-widest btn-gold"
+                  className="w-full flex items-center justify-center gap-2 py-3 font-heading tracking-widest btn-gold"
                 >
                   <ShoppingCart size={18} />
                   ADD TO CART

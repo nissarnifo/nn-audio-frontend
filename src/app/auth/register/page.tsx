@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
-import { useSignUp } from '@clerk/nextjs'
+import { useSignUp, useSignIn } from '@clerk/nextjs'
 import { Spinner } from '@/components/ui'
 import toast from 'react-hot-toast'
 
@@ -31,6 +31,7 @@ function GitHubIcon() {
 export default function RegisterPage() {
   const router = useRouter()
   const { signUp, setActive, isLoaded } = useSignUp()
+  const { signIn } = useSignIn()
   const [step, setStep] = useState<Step>('form')
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
   const [code, setCode] = useState('')
@@ -44,10 +45,10 @@ export default function RegisterPage() {
   }
 
   async function handleOAuth(provider: 'oauth_google' | 'oauth_github') {
-    if (!isLoaded || !signUp) return
+    if (!signIn) return
     setOauthLoading(provider === 'oauth_google' ? 'google' : 'github')
     try {
-      await signUp.authenticateWithRedirect({
+      await signIn.authenticateWithRedirect({
         strategy: provider,
         redirectUrl: `${window.location.origin}/sso-callback`,
         redirectUrlComplete: `${window.location.origin}/`,

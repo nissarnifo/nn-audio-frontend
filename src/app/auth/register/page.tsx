@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
-import { useSignUp, useSignIn } from '@clerk/nextjs'
+import { useSignUp } from '@clerk/nextjs'
 import { Spinner } from '@/components/ui'
 import toast from 'react-hot-toast'
 
@@ -31,7 +31,6 @@ function GitHubIcon() {
 export default function RegisterPage() {
   const router = useRouter()
   const { signUp, setActive, isLoaded } = useSignUp()
-  const { signIn, isLoaded: signInLoaded } = useSignIn()
   const [step, setStep] = useState<Step>('form')
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
   const [code, setCode] = useState('')
@@ -45,10 +44,10 @@ export default function RegisterPage() {
   }
 
   async function handleOAuth(provider: 'oauth_google' | 'oauth_github') {
-    if (!signInLoaded || !signIn) return
+    if (!isLoaded || !signUp) return
     setOauthLoading(provider === 'oauth_google' ? 'google' : 'github')
     try {
-      await signIn.authenticateWithRedirect({
+      await signUp.authenticateWithRedirect({
         strategy: provider,
         redirectUrl: `${window.location.origin}/sso-callback`,
         redirectUrlComplete: `${window.location.origin}/`,
@@ -226,7 +225,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => handleOAuth('oauth_google')}
-              disabled={!signInLoaded || oauthLoading !== null}
+              disabled={!isLoaded || oauthLoading !== null}
               className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] hover:bg-[rgba(0,212,255,0.08)] hover:border-[rgba(0,212,255,0.4)] text-[#E8F4FD] font-mono text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {oauthLoading === 'google' ? <Spinner size={16} /> : <GoogleIcon />}
@@ -235,7 +234,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => handleOAuth('oauth_github')}
-              disabled={!signInLoaded || oauthLoading !== null}
+              disabled={!isLoaded || oauthLoading !== null}
               className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] hover:bg-[rgba(0,212,255,0.08)] hover:border-[rgba(0,212,255,0.4)] text-[#E8F4FD] font-mono text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {oauthLoading === 'github' ? <Spinner size={16} /> : <GitHubIcon />}

@@ -50,8 +50,8 @@ export default function RegisterPage() {
     try {
       await signIn.authenticateWithRedirect({
         strategy: provider,
-        redirectUrl: '/sso-callback',
-        redirectUrlComplete: '/',
+        redirectUrl: `${window.location.origin}/sso-callback`,
+        redirectUrlComplete: `${window.location.origin}/`,
       })
     } catch (err: unknown) {
       const clerkErr = err as { errors?: Array<{ message: string }> }

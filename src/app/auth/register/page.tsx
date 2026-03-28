@@ -200,9 +200,16 @@ export default function RegisterPage() {
                 value={form.confirm}
                 onChange={handleChange}
                 required
+                aria-invalid={form.confirm.length > 0 && form.password !== form.confirm}
+                aria-describedby="confirm-hint"
                 className="input-hud"
                 placeholder="••••••••"
               />
+              {form.confirm.length > 0 && (
+                <p id="confirm-hint" className={`mt-1 font-mono text-[10px] ${form.password === form.confirm ? 'text-[#00FF88]' : 'text-[#FF3366]'}`}>
+                  {form.password === form.confirm ? '✓ Passwords match' : '✗ Passwords do not match'}
+                </p>
+              )}
             </div>
 
             {/* Terms & Conditions */}

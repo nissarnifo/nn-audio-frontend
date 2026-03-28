@@ -1,6 +1,8 @@
 'use client'
+import { useState } from 'react'
 import type { Product } from '@/types'
 import ProductCard from './ProductCard'
+import QuickViewModal from './QuickViewModal'
 import { PageLoading, EmptyState } from '@/components/ui'
 import { Package, WifiOff } from 'lucide-react'
 
@@ -11,6 +13,7 @@ interface Props {
   onRetry?: () => void
   emptyTitle?: string
   emptyDesc?: string
+  disableQuickView?: boolean
 }
 
 export default function ProductsGrid({
@@ -20,7 +23,10 @@ export default function ProductsGrid({
   onRetry,
   emptyTitle = 'No Products Found',
   emptyDesc = 'Try adjusting your filters or search terms.',
+  disableQuickView = false,
 }: Props) {
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null)
+
   if (isLoading) return <PageLoading />
 
   if (isError) {
@@ -53,10 +59,23 @@ export default function ProductsGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {products.map((product) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onQuickView={disableQuickView ? undefined : setQuickViewProduct}
+          />
+        ))}
+      </div>
+
+      {quickViewProduct && (
+        <QuickViewModal
+          product={quickViewProduct}
+          onClose={() => setQuickViewProduct(null)}
+        />
+      )}
+    </>
   )
 }

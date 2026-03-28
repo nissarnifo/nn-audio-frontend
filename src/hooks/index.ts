@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi } from '@/services/api'
+import { productsApi, cartApi, ordersApi, addressesApi, authApi, adminApi, returnsApi, wishlistApi, settingsApi, newsletterApi } from '@/services/api'
+import type { StoreSettings } from '@/services/api'
 import { useAuthStore } from '@/store/auth.store'
+import { useWishlistStore } from '@/store/wishlist.store'
 import type { ProductFilters } from '@/types'
 import toast from 'react-hot-toast'
 
@@ -33,6 +35,49 @@ export function useProductReviews(slug: string) {
     queryKey: ['reviews', slug],
     queryFn: () => productsApi.getReviews(slug).then((r) => r.data),
     enabled: !!slug,
+  })
+}
+
+export function useCreateReview(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { rating: number; comment: string }) =>
+      productsApi.createReview(slug, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reviews', slug] })
+      qc.invalidateQueries({ queryKey: ['product', slug] })
+      toast.success('Review submitted!')
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'Failed to submit review')
+    },
+  })
+}
+
+export function useSetProductSale() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; sale_price: number | null; sale_start_at?: string | null; sale_end_at?: string | null }) =>
+      productsApi.setSale(id, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Sale updated')
+    },
+    onError: () => toast.error('Failed to update sale'),
+  })
+}
+
+export function useBulkProductAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ids, action }: { ids: string[]; action: 'activate' | 'deactivate' }) =>
+      productsApi.bulkAction(ids, action).then((r) => r.data),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['products'] })
+      toast.success(`${data.updated} product${data.updated !== 1 ? 's' : ''} updated`)
+    },
+    onError: () => toast.error('Bulk action failed'),
   })
 }
 
@@ -112,6 +157,8 @@ export function useCreateOrder() {
       paymentMethod: string
       addressId: string
       razorpay?: Record<string, string>
+      couponCode?: string
+      notes?: string
       idempotencyKey?: string
     }) => ordersApi.create(data, idempotencyKey).then((r) => r.data),
     onSuccess: () => {
@@ -202,7 +249,24 @@ export function useAdminStats() {
   })
 }
 
-export function useAdminOrders(params?: { status?: string; page?: number }) {
+export function useAdminNotifications() {
+  return useQuery({
+    queryKey: ['admin-notifications'],
+    queryFn: () => adminApi.getNotifications().then((r) => r.data),
+    refetchInterval: 60_000, // poll every 60s
+    staleTime: 30_000,
+  })
+}
+
+export function useAdminAnalytics() {
+  return useQuery({
+    queryKey: ['admin-analytics'],
+    queryFn: () => adminApi.getAnalytics().then((r) => r.data),
+    staleTime: 5 * 60 * 1000, // 5 min — chart data doesn't need real-time updates
+  })
+}
+
+export function useAdminOrders(params?: { status?: string; page?: number; from?: string; to?: string; search?: string }) {
   return useQuery({
     queryKey: ['admin-orders', params],
     queryFn: () => adminApi.getAllOrders(params).then((r) => r.data),
@@ -216,11 +280,19 @@ export function useAdminCustomers(params?: { page?: number; search?: string }) {
   })
 }
 
+export function useAdminCustomer(id: string) {
+  return useQuery({
+    queryKey: ['admin-customer', id],
+    queryFn: () => adminApi.getCustomer(id).then((r) => r.data),
+    enabled: !!id,
+  })
+}
+
 export function useUpdateOrderStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      adminApi.updateOrderStatus(id, status),
+    mutationFn: ({ id, status, tracking_number, tracking_url }: { id: string; status: string; tracking_number?: string; tracking_url?: string }) =>
+      adminApi.updateOrderStatus(id, status, tracking_number, tracking_url),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-orders'] })
       toast.success('Order status updated')
@@ -314,5 +386,261 @@ export function useDeleteAccount() {
   return useMutation({
     mutationFn: () => authApi.deleteAccount(),
     onError: () => toast.error('Failed to delete account'),
+  })
+}
+
+/* ─── Returns ────────────────────────────────────────────────────── */
+export function useMyReturns() {
+  const { isLoggedIn } = useAuthStore()
+  return useQuery({
+    queryKey: ['my-returns'],
+    queryFn: () => returnsApi.getMyReturns().then((r) => r.data),
+    enabled: isLoggedIn,
+  })
+}
+
+export function useSubmitReturn() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { orderId: string; reason: string; notes?: string }) =>
+      returnsApi.submit(data).then((r) => r.data),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['my-returns'] })
+      qc.invalidateQueries({ queryKey: ['orders'] })
+      qc.invalidateQueries({ queryKey: ['order', variables.orderId] })
+      toast.success('Return request submitted')
+    },
+    onError: (err: unknown) => {
+      const axErr = err as { response?: { data?: { error?: string; message?: string } | string }; code?: string }
+      const data = axErr?.response?.data
+      const msg = typeof data === 'object' && data !== null ? (data.error || data.message) : undefined
+      if (msg) {
+        toast.error(msg)
+      } else if (!axErr?.response) {
+        toast.error('Network error. Please check your connection and try again.')
+      } else {
+        toast.error('Failed to submit return request. Please try again.')
+      }
+    },
+  })
+}
+
+export function useAdminReturns(params?: { page?: number; status?: string }) {
+  return useQuery({
+    queryKey: ['admin-returns', params],
+    queryFn: () => adminApi.getReturns(params).then((r) => r.data),
+  })
+}
+
+export function useUpdateReturnStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, status, admin_note }: { id: string; status: string; admin_note?: string }) =>
+      adminApi.updateReturnStatus(id, status, admin_note),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-returns'] })
+      toast.success('Return status updated')
+    },
+    onError: () => toast.error('Failed to update return status'),
+  })
+}
+
+/* ─── Wishlist ───────────────────────────────────────────────────── */
+export function useServerWishlist() {
+  const { isLoggedIn } = useAuthStore()
+  return useQuery({
+    queryKey: ['wishlist'],
+    queryFn: () => wishlistApi.get().then((r) => r.data),
+    enabled: isLoggedIn,
+  })
+}
+
+/**
+ * Unified wishlist hook — server-backed when logged in, Zustand when guest.
+ * Returns the same { toggle, has, items, count, clear } interface as the store.
+ */
+export function useWishlist() {
+  const { isLoggedIn } = useAuthStore()
+  const qc = useQueryClient()
+
+  // Guest: Zustand store
+  const store = useWishlistStore()
+
+  // Logged-in: server data
+  const { data: serverItems = [] } = useServerWishlist()
+
+  const addMutation = useMutation({
+    mutationFn: (productId: string) => wishlistApi.add(productId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    onError: () => toast.error('Failed to update wishlist'),
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: (productId: string) => wishlistApi.remove(productId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    onError: () => toast.error('Failed to update wishlist'),
+  })
+
+  const clearMutation = useMutation({
+    mutationFn: () => wishlistApi.clear(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wishlist'] }),
+    onError: () => toast.error('Failed to clear wishlist'),
+  })
+
+  if (!isLoggedIn) {
+    return {
+      items: store.items,
+      count: store.count,
+      toggle: (product: import('@/types').Product) => store.toggle(product),
+      has: (id: string) => store.has(id),
+      clear: () => store.clear(),
+      isServer: false,
+    }
+  }
+
+  return {
+    items: serverItems,
+    count: serverItems.length,
+    toggle: (product: import('@/types').Product) => {
+      const isIn = serverItems.some((p) => p.id === product.id)
+      if (isIn) removeMutation.mutate(product.id)
+      else addMutation.mutate(product.id)
+    },
+    has: (id: string) => serverItems.some((p) => p.id === id),
+    clear: () => clearMutation.mutate(),
+    isServer: true,
+  }
+}
+
+/* ─── Questions ──────────────────────────────────────────────────── */
+export function useProductQuestions(slug: string) {
+  return useQuery({
+    queryKey: ['questions', slug],
+    queryFn: () => productsApi.getQuestions(slug).then((r) => r.data),
+    enabled: !!slug,
+  })
+}
+
+export function useSubmitQuestion(slug: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { question: string }) =>
+      productsApi.submitQuestion(slug, data).then((r) => r.data),
+    onSuccess: () => {
+      toast.success('Question submitted! It will appear once answered.')
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+      toast.error(msg || 'Failed to submit question')
+    },
+  })
+}
+
+export function useAdminQuestions(params?: { page?: number; answered?: boolean }) {
+  return useQuery({
+    queryKey: ['admin-questions', params],
+    queryFn: () => adminApi.getQuestions(params).then((r) => r.data),
+  })
+}
+
+export function useAnswerQuestion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; answer?: string; is_published?: boolean }) =>
+      adminApi.answerQuestion(id, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-questions'] })
+      toast.success('Question answered')
+    },
+    onError: () => toast.error('Failed to answer question'),
+  })
+}
+
+export function useDeleteQuestion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteQuestion(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-questions'] })
+      toast.success('Question deleted')
+    },
+    onError: () => toast.error('Failed to delete question'),
+  })
+}
+
+/* ─── Settings ──────────────────────────────────────────────────── */
+export function usePublicSettings() {
+  return useQuery({
+    queryKey: ['settings-public'],
+    queryFn: () => settingsApi.getPublic().then((r) => r.data),
+    staleTime: 60_000, // refetch at most once per minute
+  })
+}
+
+export function useAllSettings() {
+  return useQuery({
+    queryKey: ['settings-all'],
+    queryFn: () => settingsApi.getAll().then((r) => r.data),
+  })
+}
+
+export function useUpdateSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (settings: Partial<StoreSettings>) => settingsApi.update(settings),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['settings-public'] })
+      qc.invalidateQueries({ queryKey: ['settings-all'] })
+      toast.success('Settings saved')
+    },
+    onError: () => toast.error('Failed to save settings'),
+  })
+}
+
+/* ─── Admin Reviews ──────────────────────────────────────────────── */
+export function useAdminReviews(params?: { page?: number; rating?: number; search?: string }) {
+  return useQuery({
+    queryKey: ['admin-reviews', params],
+    queryFn: () => adminApi.getAllReviews(params).then((r) => r.data),
+  })
+}
+
+export function useDeleteAdminReview() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteReview(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-reviews'] })
+      toast.success('Review deleted')
+    },
+    onError: () => toast.error('Failed to delete review'),
+  })
+}
+
+// ─── Newsletter ──────────────────────────────────────────────────────────────
+
+export function useNewsletterSubscribe() {
+  return useMutation({
+    mutationFn: ({ email, source }: { email: string; source?: string }) =>
+      newsletterApi.subscribe(email, source).then((r) => r.data),
+  })
+}
+
+export function useNewsletterSubscribers(params?: { page?: number; limit?: number; search?: string; filter?: string }) {
+  return useQuery({
+    queryKey: ['newsletter-subscribers', params],
+    queryFn: () => newsletterApi.getSubscribers(params).then((r) => r.data),
+  })
+}
+
+export function useDeleteNewsletterSubscriber() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => newsletterApi.deleteSubscriber(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['newsletter-subscribers'] })
+      toast.success('Subscriber removed')
+    },
+    onError: () => toast.error('Failed to remove subscriber'),
   })
 }

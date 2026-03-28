@@ -1,12 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Package } from 'lucide-react'
+import { Package, RotateCcw } from 'lucide-react'
 import { useOrders } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
+import { useCartStore } from '@/store/cart.store'
 import { StatusBadge, EmptyState, PageLoading } from '@/components/ui'
 import { fmt, fmtDate } from '@/lib/utils'
 import { useEffect } from 'react'
+import toast from 'react-hot-toast'
+import type { Order } from '@/types'
 
 const STATUS_STEPS = ['PROCESSING', 'SHIPPED', 'DELIVERED']
 
@@ -14,6 +17,22 @@ export default function OrdersPage() {
   const router = useRouter()
   const { isLoggedIn, _hasHydrated } = useAuthStore()
   const { data: orders, isLoading, isFetching } = useOrders()
+  const addItem = useCartStore((s) => s.addItem)
+
+  function handleReorder(order: Order) {
+    let added = 0
+    for (const item of order.items) {
+      const variant = item.variant
+      if (!variant || !item.product) continue
+      // Re-add only if variant is still active and in stock
+      if (variant.is_active && variant.stock_qty > 0) {
+        addItem(item.product as any, variant as any, item.qty)
+        added++
+      }
+    }
+    if (added > 0) toast.success(`${added} item${added > 1 ? 's' : ''} added to cart`)
+    else toast.error('No in-stock items available to reorder')
+  }
 
   useEffect(() => {
     if (_hasHydrated && !isLoggedIn) router.push('/auth/login')
@@ -87,9 +106,17 @@ export default function OrdersPage() {
 
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[#FFB700] font-bold">{fmt(order.total)}</span>
-                  <Link href={`/account/orders/${order.id}`} className="btn-cyan text-xs">
-                    VIEW DETAILS
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleReorder(order)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#00D4FF] hover:text-[#00D4FF] font-mono text-xs rounded transition-all"
+                    >
+                      <RotateCcw size={12} /> REORDER
+                    </button>
+                    <Link href={`/account/orders/${order.id}`} className="btn-cyan text-xs">
+                      VIEW DETAILS
+                    </Link>
+                  </div>
                 </div>
               </div>
             )

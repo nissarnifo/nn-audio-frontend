@@ -2,11 +2,15 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ShoppingCart, Zap } from 'lucide-react'
+import { useRouter, usePathname } from 'next/navigation'
+import { ShoppingCart, Zap, Heart, GitCompareArrows, Eye } from 'lucide-react'
 import { motion } from 'framer-motion'
 import type { Product } from '@/types'
 import { fmt, getPrimaryImage, cloudinaryUrl } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
+import { useAuthStore } from '@/store/auth.store'
+import { useWishlist } from '@/hooks'
+import { useCompareStore } from '@/store/compare.store'
 import { Stars, Badge, NoPhoto } from '@/components/ui'
 import toast from 'react-hot-toast'
 
@@ -18,16 +22,27 @@ const BADGE_COLORS: Record<string, 'cyan' | 'gold' | 'green' | 'red'> = {
   FLAGSHIP: 'gold',
 }
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({ product, onQuickView }: { product: Product; onQuickView?: (p: Product) => void }) {
   const primaryImage = getPrimaryImage(product.images)
   const defaultVariant = product.variants.find((v) => v.is_active) ?? product.variants[0]
   const [selectedVariant, setSelectedVariant] = useState(defaultVariant)
   const addItem = useCartStore((s) => s.addItem)
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const router = useRouter()
+  const pathname = usePathname()
+  const { toggle: toggleWishlist, has } = useWishlist()
+  const wishlisted = has(product.id)
+  const { add: addCompare, remove: removeCompare, has: inCompare, isFull } = useCompareStore()
+  const compared = inCompare(product.id)
 
   const inStock = selectedVariant?.stock_qty > 0
 
   function handleAdd() {
     if (!selectedVariant || !inStock) return
+    if (!isLoggedIn) {
+      router.push(`/auth/login?from=${encodeURIComponent(pathname)}`)
+      return
+    }
     addItem(product, selectedVariant)
     toast.success(`${product.name} added to cart`)
   }
@@ -53,11 +68,49 @@ export default function ProductCard({ product }: { product: Product }) {
           <NoPhoto className="w-full h-full" />
         )}
         {/* Badge overlay */}
-        {product.badge && (
-          <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex flex-col gap-1">
+          {product.on_sale && <Badge color="red">SALE</Badge>}
+          {product.badge && !product.on_sale && (
             <Badge color={BADGE_COLORS[product.badge] ?? 'cyan'}>{product.badge}</Badge>
-          </div>
-        )}
+          )}
+        </div>
+        {/* Right action buttons */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5">
+          <button
+            onClick={(e) => { e.preventDefault(); toggleWishlist(product) }}
+            className="w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110"
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart
+              size={15}
+              className={wishlisted ? 'fill-[#FF3366] text-[#FF3366]' : 'text-[#4A7FA5]'}
+            />
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              if (compared) removeCompare(product.id)
+              else if (!isFull()) addCompare(product)
+              else toast('Max 3 products to compare', { icon: '⚡' })
+            }}
+            className={`w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110 ${compared ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'}`}
+            aria-label={compared ? 'Remove from compare' : 'Add to compare'}
+          >
+            <GitCompareArrows
+              size={14}
+              className={compared ? 'text-[#00FF88]' : 'text-[#4A7FA5]'}
+            />
+          </button>
+          {onQuickView && (
+            <button
+              onClick={(e) => { e.preventDefault(); onQuickView(product) }}
+              className="w-8 h-8 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center transition-all hover:scale-110 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-[#00D4FF] text-[#4A7FA5]"
+              aria-label="Quick view"
+            >
+              <Eye size={14} />
+            </button>
+          )}
+        </div>
         {/* Out of stock overlay */}
         {!inStock && (
           <div className="absolute inset-0 bg-[rgba(10,14,26,0.7)] flex items-center justify-center">
@@ -97,9 +150,21 @@ export default function ProductCard({ product }: { product: Product }) {
 
         {/* Price + CTA */}
         <div className="flex items-center justify-between mt-4">
-          <span className="font-mono text-lg text-[#FFB700] font-bold">
-            {fmt(selectedVariant?.price ?? 0)}
-          </span>
+          <div>
+            {product.on_sale && product.sale_price != null ? (
+              <>
+                <span className="font-mono text-lg text-[#FF3366] font-bold">{fmt(product.sale_price)}</span>
+                <span className="font-mono text-xs text-[#4A7FA5] line-through ml-2">{fmt(selectedVariant?.price ?? 0)}</span>
+                <span className="font-mono text-[10px] text-[#00FF88] ml-1">
+                  -{Math.round((1 - product.sale_price / (selectedVariant?.price ?? 1)) * 100)}%
+                </span>
+              </>
+            ) : (
+              <span className="font-mono text-lg text-[#FFB700] font-bold">
+                {fmt(selectedVariant?.price ?? 0)}
+              </span>
+            )}
+          </div>
           <button
             onClick={handleAdd}
             disabled={!inStock}
@@ -122,6 +187,12 @@ export default function ProductCard({ product }: { product: Product }) {
             )}
           </button>
         </div>
+        {/* Sale countdown */}
+        {product.on_sale && product.sale_end_at && (
+          <p className="font-mono text-[10px] text-[#FF3366] mt-1.5">
+            ⏱ Ends {new Date(product.sale_end_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+          </p>
+        )}
       </div>
     </motion.div>
   )

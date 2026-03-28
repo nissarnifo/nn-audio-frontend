@@ -1,21 +1,48 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import Navbar from '@/components/layout/Navbar'
-import Footer from '@/components/layout/Footer'
+import StorefrontShell from '@/components/layout/StorefrontShell'
+import ConditionalFooter from '@/components/layout/ConditionalFooter'
 import Providers from './providers'
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://nnaudio.in'
+
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: {
     default: 'N & N Audio Systems — Precision Audio, Made in India',
     template: '%s | N & N Audio Systems',
   },
   description:
     'Premium amplifiers, speakers, subwoofers and audio equipment. Shop N & N Audio Systems — trusted by audiophiles across India.',
-  keywords: 'audio systems, amplifier, speaker, subwoofer, car audio, India',
+  keywords: 'audio systems, amplifier, speaker, subwoofer, car audio, India, N&N Audio',
+  authors: [{ name: 'N & N Audio Systems', url: APP_URL }],
+  creator: 'N & N Audio Systems',
   openGraph: {
     siteName: 'N & N Audio Systems',
     type: 'website',
     locale: 'en_IN',
+    url: APP_URL,
+    title: 'N & N Audio Systems — Precision Audio, Made in India',
+    description:
+      'Premium amplifiers, speakers, subwoofers and audio equipment. Trusted by audiophiles across India.',
+    images: [
+      {
+        url: `${APP_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'N & N Audio Systems',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'N & N Audio Systems',
+    description: 'Premium audio equipment. Trusted by audiophiles across India.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large' },
   },
 }
 
@@ -32,12 +59,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         {/* Razorpay SDK — loaded once globally so window.Razorpay is always available */}
         <script src="https://checkout.razorpay.com/v1/checkout.js" async />
+        {/* Organization structured data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'N & N Audio Systems',
+              url: APP_URL,
+              logo: `${APP_URL}/og-image.jpg`,
+              contactPoint: {
+                '@type': 'ContactPoint',
+                telephone: '+91-9700929591',
+                contactType: 'customer service',
+                availableLanguage: ['English', 'Hindi'],
+              },
+            }),
+          }}
+        />
       </head>
       <body className="hud-grid flex flex-col min-h-screen">
         <Providers>
-          <Navbar />
+          <StorefrontShell />
           <main className="flex-1">{children}</main>
-          <Footer />
+          <ConditionalFooter />
         </Providers>
       </body>
     </html>

@@ -11,6 +11,11 @@ import type {
   User,
   AdminStats,
   Review,
+  Coupon,
+  CouponValidation,
+  CouponUsage,
+  ReturnRequest,
+  Question,
 } from '@/types'
 
 const api = axios.create({
@@ -79,8 +84,26 @@ export const productsApi = {
   deleteImage(productId: string, imageId: string) {
     return api.delete(ENDPOINTS.products.imageDelete(productId, imageId))
   },
+  bulkAction(ids: string[], action: 'activate' | 'deactivate') {
+    return api.patch<{ updated: number }>(`${ENDPOINTS.products.list}/bulk`, { ids, action })
+  },
   getReviews(slug: string) {
     return api.get<Review[]>(ENDPOINTS.products.reviews(slug))
+  },
+  createReview(slug: string, data: { rating: number; comment: string }) {
+    return api.post<Review>(ENDPOINTS.products.reviews(slug), data)
+  },
+  setSale(id: string, data: { sale_price: number | null; sale_start_at?: string | null; sale_end_at?: string | null }) {
+    return api.patch<Product>(ENDPOINTS.products.sale(id), data)
+  },
+  getQuestions(slug: string) {
+    return api.get<Question[]>(ENDPOINTS.products.questions(slug))
+  },
+  submitQuestion(slug: string, data: { question: string }) {
+    return api.post<{ id: string; question: string; created_at: string }>(ENDPOINTS.products.questions(slug), data)
+  },
+  getByIds(ids: string[]) {
+    return api.get<PaginatedResponse<Product>>(ENDPOINTS.products.list, { params: { ids: ids.join(','), limit: ids.length || 1 } })
   },
 }
 
@@ -104,9 +127,30 @@ export const cartApi = {
 }
 
 /* ─── Orders ─────────────────────────────────────────────────────── */
+export const couponsApi = {
+  validate(code: string, subtotal: number) {
+    return api.get<CouponValidation>(ENDPOINTS.coupons.validate, { params: { code, subtotal } })
+  },
+  getAll() {
+    return api.get<Coupon[]>(ENDPOINTS.coupons.root)
+  },
+  create(data: { code: string; type: string; value: number; min_order?: number; max_uses?: number | null; expires_at?: string | null }) {
+    return api.post<Coupon>(ENDPOINTS.coupons.root, data)
+  },
+  update(id: string, data: Partial<Coupon>) {
+    return api.put<Coupon>(ENDPOINTS.coupons.byId(id), data)
+  },
+  remove(id: string) {
+    return api.delete(ENDPOINTS.coupons.byId(id))
+  },
+  getUsage(id: string) {
+    return api.get<CouponUsage>(ENDPOINTS.coupons.usage(id))
+  },
+}
+
 export const ordersApi = {
   create(
-    data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string> },
+    data: { paymentMethod: string; addressId: string; razorpay?: Record<string, string>; couponCode?: string; notes?: string },
     idempotencyKey?: string
   ) {
     return api.post<Order>(ENDPOINTS.orders.root, data, {
@@ -191,19 +235,130 @@ export const paymentsApi = {
   },
 }
 
+/* ─── Settings ──────────────────────────────────────────────────── */
+export interface AdminReview {
+  id: string
+  rating: number
+  comment: string
+  created_at: string
+  product: { id: string; name: string; slug: string }
+  user: { id: string; name: string; email: string }
+}
+
+export interface StoreSettings {
+  banner_enabled: string
+  banner_text: string
+  banner_color: string
+  banner_link: string
+  [key: string]: string
+}
+
+export const settingsApi = {
+  getPublic() {
+    return api.get<StoreSettings>(ENDPOINTS.settings.public)
+  },
+  getAll() {
+    return api.get<StoreSettings>(ENDPOINTS.settings.all)
+  },
+  update(settings: Partial<StoreSettings>) {
+    return api.put<{ ok: boolean }>(ENDPOINTS.settings.update, settings)
+  },
+}
+
+/* ─── Wishlist ───────────────────────────────────────────────────── */
+export const wishlistApi = {
+  get() {
+    return api.get<Product[]>(ENDPOINTS.wishlist.root)
+  },
+  add(productId: string) {
+    return api.post<{ ok: boolean }>(ENDPOINTS.wishlist.root, { productId })
+  },
+  remove(productId: string) {
+    return api.delete(ENDPOINTS.wishlist.item(productId))
+  },
+  clear() {
+    return api.delete(ENDPOINTS.wishlist.root)
+  },
+}
+
+/* ─── Returns ────────────────────────────────────────────────────── */
+export const returnsApi = {
+  submit(data: { orderId: string; reason: string; notes?: string }) {
+    return api.post<{ id: string; status: string; created_at: string }>(ENDPOINTS.returns.root, data)
+  },
+  getMyReturns() {
+    return api.get<ReturnRequest[]>(ENDPOINTS.returns.me)
+  },
+}
+
 /* ─── Admin ──────────────────────────────────────────────────────── */
+export interface CustomerDetail {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  role: string
+  created_at: string
+  stats: {
+    total_spend: number
+    avg_order_value: number
+    order_count: number
+    return_count: number
+    review_count: number
+  }
+  orders: {
+    id: string
+    order_number: string
+    status: string
+    payment_status: string
+    total: number
+    item_count: number
+    created_at: string
+  }[]
+  returns: {
+    id: string
+    status: string
+    reason: string
+    admin_note: string | null
+    order_number: string
+    order_total: number
+    created_at: string
+  }[]
+  reviews: {
+    id: string
+    rating: number
+    comment: string
+    product_name: string
+    product_slug: string
+    created_at: string
+  }[]
+}
+
+export interface AnalyticsData {
+  daily_revenue: { day: string; revenue: number; orders: number }[]
+  category_revenue: { category: string; revenue: number; units: number }[]
+  new_customers: { month: string; count: number }[]
+  coupon_usage: { code: string; uses: number; total_savings: number }[]
+}
+
 export const adminApi = {
   getStats() {
     return api.get<AdminStats>(ENDPOINTS.admin.stats)
   },
-  getAllOrders(params?: { status?: string; page?: number }) {
+  getAnalytics() {
+    return api.get<AnalyticsData>(ENDPOINTS.admin.analytics)
+  },
+  getAllOrders(params?: { status?: string; page?: number; from?: string; to?: string; search?: string }) {
     return api.get<PaginatedResponse<Order>>(ENDPOINTS.admin.orders, { params })
   },
-  updateOrderStatus(id: string, status: string) {
-    return api.put(ENDPOINTS.admin.orderStatus(id), { status })
+  updateOrderStatus(id: string, status: string, tracking_number?: string, tracking_url?: string) {
+    return api.put(ENDPOINTS.admin.orderStatus(id), { status, tracking_number, tracking_url })
   },
   getAllCustomers(params?: { page?: number; search?: string }) {
     return api.get(ENDPOINTS.admin.customers, { params })
+  },
+  getCustomer(id: string) {
+    return api.get<CustomerDetail>(ENDPOINTS.admin.customerById(id))
   },
   // Inventory
   getInventory() {
@@ -219,6 +374,45 @@ export const adminApi = {
     return api.get<{ data: StockMovement[]; total: number; page: number; total_pages: number }>(
       ENDPOINTS.admin.inventoryMovements, { params }
     )
+  },
+  getReturns(params?: { page?: number; status?: string }) {
+    return api.get<{ data: ReturnRequest[]; total: number; page: number; total_pages: number }>(
+      ENDPOINTS.admin.returns, { params }
+    )
+  },
+  updateReturnStatus(id: string, status: string, admin_note?: string) {
+    return api.put(ENDPOINTS.admin.returnStatus(id), { status, admin_note })
+  },
+  getQuestions(params?: { page?: number; answered?: boolean }) {
+    return api.get<{ data: Question[]; total: number; page: number; total_pages: number }>(
+      ENDPOINTS.admin.questions, { params }
+    )
+  },
+  answerQuestion(id: string, data: { answer?: string; is_published?: boolean }) {
+    return api.put<Question>(ENDPOINTS.admin.questionById(id), data)
+  },
+  deleteQuestion(id: string) {
+    return api.delete(ENDPOINTS.admin.questionById(id))
+  },
+  getAllReviews(params?: { page?: number; rating?: number; search?: string }) {
+    return api.get<{
+      data: AdminReview[]
+      total: number
+      page: number
+      total_pages: number
+    }>(ENDPOINTS.admin.reviews, { params })
+  },
+  deleteReview(id: string) {
+    return api.delete(ENDPOINTS.admin.reviewById(id))
+  },
+  getNotifications() {
+    return api.get<{
+      total: number
+      new_orders: number
+      pending_returns: number
+      unanswered_questions: number
+      low_stock_variants: number
+    }>(ENDPOINTS.admin.notifications)
   },
 }
 
@@ -245,6 +439,63 @@ export interface StockMovement {
   created_at: string
   variant: { id: string; label: string; price: number }
   product: { name: string; sku: string; category: string }
+}
+
+/* ─── Stock Alerts ───────────────────────────────────────────────── */
+export const stockAlertsApi = {
+  subscribe(data: { email: string; variantId: string }) {
+    return api.post<{ ok: boolean; message: string }>(ENDPOINTS.stockAlerts.subscribe, data)
+  },
+  adminList() {
+    return api.get<StockAlertItem[]>(ENDPOINTS.stockAlerts.adminList)
+  },
+}
+
+export interface StockAlertItem {
+  id: string
+  email: string
+  created_at: string
+  variant: {
+    id: string
+    label: string
+    stock_qty: number
+    product: { id: string; name: string; slug: string; sku: string }
+  }
+}
+
+/* ─── Newsletter ─────────────────────────────────────────────────── */
+export interface NewsletterSubscriber {
+  id: string
+  email: string
+  source: string
+  unsubscribed: boolean
+  createdAt: string
+}
+
+export interface NewsletterSubscribersResponse {
+  subscribers: NewsletterSubscriber[]
+  total: number
+  page: number
+  limit: number
+  pages: number
+}
+
+export const newsletterApi = {
+  subscribe(email: string, source = 'footer') {
+    return api.post<{ ok: boolean; message: string }>(ENDPOINTS.newsletter.subscribe, { email, source })
+  },
+  unsubscribe(email: string) {
+    return api.post<{ ok: boolean }>(ENDPOINTS.newsletter.unsubscribe, { email })
+  },
+  getSubscribers(params?: { page?: number; limit?: number; search?: string; filter?: string }) {
+    return api.get<NewsletterSubscribersResponse>(ENDPOINTS.newsletter.subscribers, { params })
+  },
+  deleteSubscriber(id: string) {
+    return api.delete<{ ok: boolean }>(ENDPOINTS.newsletter.deleteSubscriber(id))
+  },
+  getExportUrl() {
+    return `${api.defaults.baseURL}${ENDPOINTS.newsletter.export}`
+  },
 }
 
 export default api

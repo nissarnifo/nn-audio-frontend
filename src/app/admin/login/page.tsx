@@ -1,22 +1,15 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react'
-import { authApi } from '@/services/api'
-import { useAuthStore } from '@/store/auth.store'
-import { useServerStore } from '@/store/server.store'
-import { Spinner } from '@/components/ui'
-import toast from 'react-hot-toast'
 
-export default function AdminLoginPage() {
+/**
+ * /admin/login — redirects to the main sign-in page.
+ * Admin authentication now goes through Clerk (same login flow).
+ * After sign-in, ClerkSync syncs the backend JWT and role.
+ * AdminLayout grants access only when isAdmin === true.
+ */
+export default function AdminLoginRedirect() {
   const router = useRouter()
-  const { setUser, isAdmin, isLoggedIn } = useAuthStore()
-  const serverReady = useServerStore((s) => s.serverReady)
-  const [form, setForm] = useState({ email: '', password: '' })
-  const [showPass, setShowPass] = useState(false)
-  const [loading, setLoading] = useState(false)
-
-  // Already logged in as admin → go straight to dashboard
   useEffect(() => {
     if (isLoggedIn && isAdmin) router.replace('/admin')
   }, [isLoggedIn, isAdmin, router])

@@ -197,8 +197,8 @@ router.post('/forgot-password', async (req, res) => {
       console.error('Email send failed:', err)
     }
   } else {
-    // No email configured — log the link server-side (dev/admin use)
-    console.log(`[RESET LINK for ${user.email}]: ${resetLink}`)
+    // No email configured — log a redacted notice only (never log the token)
+    console.info(`[auth] Password reset requested for ${user.email} — configure EMAIL_USER/EMAIL_PASS to send the link.`)
   }
 
   res.json({ message: 'If that email exists, a reset link has been sent.' })

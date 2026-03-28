@@ -3,8 +3,15 @@ import { prisma, requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
-const SHIPPING_THRESHOLD = 5000
-const SHIPPING_FEE = 299
+async function getShippingSettings(): Promise<{ threshold: number; fee: number }> {
+  const rows = await prisma.setting.findMany({ where: { key: { in: ['shipping_threshold', 'shipping_fee'] } } })
+  const map: Record<string, string> = {}
+  for (const r of rows) map[r.key] = r.value
+  return {
+    threshold: parseFloat(map.shipping_threshold ?? '5000'),
+    fee: parseFloat(map.shipping_fee ?? '299'),
+  }
+}
 
 const cartInclude = {
   items: {
@@ -45,7 +52,8 @@ function formatCart(cart: any) {
   }))
 
   const subtotal = items.reduce((sum: number, i: any) => sum + i.variant.price * i.qty, 0)
-  const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
+  const { threshold, fee } = await getShippingSettings()
+  const shipping = subtotal >= threshold ? 0 : fee
   return { items, count: items.reduce((s: number, i: any) => s + i.qty, 0), subtotal, shipping, total: subtotal + shipping }
 }
 

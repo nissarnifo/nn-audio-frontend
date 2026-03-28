@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { prisma, requireAdmin, AuthRequest } from '../middleware/auth'
+import { sendStockAlertEmail, sendOrderStatusEmail, sendReturnStatusEmail } from '../utils/notify'
 
 const router = Router()
 
@@ -23,7 +24,12 @@ function formatOrder(o: any) {
     payment_status: o.paymentStatus,
     subtotal: o.subtotal,
     shipping: o.shipping,
+    discount: o.discount,
+    coupon_code: o.couponCode ?? null,
     total: o.total,
+    tracking_number: o.trackingNumber ?? null,
+    tracking_url: o.trackingUrl ?? null,
+    notes: o.notes ?? null,
     created_at: o.createdAt,
     updated_at: o.updatedAt,
     user: o.user,
@@ -43,7 +49,7 @@ router.get('/stats', requireAdmin, async (_req: AuthRequest, res) => {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const [totalRevenue, monthRevenue, totalOrders, monthOrders, totalCustomers, pendingOrders, monthlyRaw, topProductsRaw, ordersByStatus] = await Promise.all([
+  const [totalRevenue, monthRevenue, totalOrders, monthOrders, totalCustomers, pendingOrders, monthlyRaw, topProductsRaw, ordersByStatus, lowStockRaw] = await Promise.all([
     prisma.order.aggregate({ where: { status: { not: 'CANCELLED' } }, _sum: { total: true } }),
     prisma.order.aggregate({ where: { status: { not: 'CANCELLED' }, createdAt: { gte: monthStart } }, _sum: { total: true } }),
     prisma.order.count(),
@@ -70,6 +76,12 @@ router.get('/stats', requireAdmin, async (_req: AuthRequest, res) => {
       LIMIT 5
     `,
     prisma.order.groupBy({ by: ['status'], _count: { status: true } }),
+    prisma.productVariant.findMany({
+      where: { stockQty: { lte: 5 }, isActive: true },
+      orderBy: { stockQty: 'asc' },
+      take: 8,
+      include: { product: { select: { id: true, name: true, sku: true } } },
+    }),
   ])
 
   res.json({
@@ -82,16 +94,39 @@ router.get('/stats', requireAdmin, async (_req: AuthRequest, res) => {
     monthly_revenue: monthlyRaw,
     top_products: topProductsRaw,
     orders_by_status: ordersByStatus.map((o) => ({ status: o.status, count: o._count.status })),
+    low_stock_variants: lowStockRaw.map((v) => ({
+      id: v.id,
+      label: v.label,
+      stock_qty: v.stockQty,
+      product_id: v.product.id,
+      product_name: v.product.name,
+      sku: v.product.sku,
+    })),
   })
 })
 
 // GET /api/v1/admin/orders
 router.get('/orders', requireAdmin, async (req: AuthRequest, res) => {
-  const { status, page = '1', limit = '20' } = req.query as Record<string, string>
+  const { status, page = '1', limit = '20', from, to, search } = req.query as Record<string, string>
   const skip = (parseInt(page) - 1) * parseInt(limit)
 
   const where: any = {}
   if (status) where.status = status
+  if (from || to) {
+    where.createdAt = {}
+    if (from) where.createdAt.gte = new Date(from)
+    if (to) {
+      const toDate = new Date(to)
+      toDate.setHours(23, 59, 59, 999)
+      where.createdAt.lte = toDate
+    }
+  }
+  if (search) {
+    where.OR = [
+      { orderNumber: { contains: search, mode: 'insensitive' } },
+      { address: { name: { contains: search, mode: 'insensitive' } } },
+    ]
+  }
 
   const [orders, total] = await Promise.all([
     prisma.order.findMany({ where, include: orderInclude, orderBy: { createdAt: 'desc' }, skip, take: parseInt(limit) }),
@@ -109,12 +144,28 @@ router.get('/orders', requireAdmin, async (req: AuthRequest, res) => {
 
 // PUT /api/v1/admin/orders/:id/status
 router.put('/orders/:id/status', requireAdmin, async (req: AuthRequest, res) => {
-  const { status } = req.body
+  const { status, tracking_number, tracking_url } = req.body
   const order = await prisma.order.update({
     where: { id: req.params.id },
-    data: { status },
-    include: orderInclude,
+    data: {
+      status,
+      ...(tracking_number !== undefined && { trackingNumber: tracking_number || null }),
+      ...(tracking_url    !== undefined && { trackingUrl:    tracking_url    || null }),
+    },
+    include: { ...orderInclude, user: { select: { name: true, email: true } } },
   })
+
+  // Send customer email for SHIPPED / DELIVERED (fire-and-forget)
+  if (status === 'SHIPPED' || status === 'DELIVERED') {
+    sendOrderStatusEmail({
+      customerName: order.user.name,
+      customerEmail: order.user.email,
+      orderNumber: order.orderNumber,
+      status,
+      total: order.total,
+    }).catch(() => {})
+  }
+
   res.json(formatOrder(order))
 })
 
@@ -147,6 +198,89 @@ router.get('/customers', requireAdmin, async (req: AuthRequest, res) => {
     page: parseInt(page),
     limit,
     total_pages: Math.ceil(total / limit),
+  })
+})
+
+// GET /api/v1/admin/customers/:id
+router.get('/customers/:id', requireAdmin, async (req: AuthRequest, res) => {
+  const { id } = req.params
+
+  const customer = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true, name: true, email: true, phone: true, role: true, createdAt: true,
+      orders: {
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: {
+          id: true, orderNumber: true, status: true, paymentStatus: true,
+          total: true, createdAt: true,
+          items: { select: { qty: true, price: true } },
+        },
+      },
+      returns: {
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, status: true, reason: true, adminNote: true, createdAt: true,
+          order: { select: { orderNumber: true, total: true } },
+        },
+      },
+      reviews: {
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, rating: true, comment: true, createdAt: true,
+          product: { select: { name: true, slug: true } },
+        },
+      },
+      _count: { select: { orders: true, returns: true, reviews: true } },
+    },
+  })
+
+  if (!customer) return res.status(404).json({ error: 'Customer not found' })
+
+  const totalSpend = customer.orders.reduce((sum, o) => sum + o.total, 0)
+  const avgOrderValue = customer.orders.length ? totalSpend / customer.orders.length : 0
+
+  res.json({
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    role: customer.role,
+    created_at: customer.createdAt,
+    stats: {
+      total_spend: totalSpend,
+      avg_order_value: avgOrderValue,
+      order_count: customer._count.orders,
+      return_count: customer._count.returns,
+      review_count: customer._count.reviews,
+    },
+    orders: customer.orders.map((o) => ({
+      id: o.id,
+      order_number: o.orderNumber,
+      status: o.status,
+      payment_status: o.paymentStatus,
+      total: o.total,
+      item_count: o.items.reduce((s, i) => s + i.qty, 0),
+      created_at: o.createdAt,
+    })),
+    returns: customer.returns.map((r) => ({
+      id: r.id,
+      status: r.status,
+      reason: r.reason,
+      admin_note: r.adminNote,
+      order_number: r.order.orderNumber,
+      order_total: r.order.total,
+      created_at: r.createdAt,
+    })),
+    reviews: customer.reviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      product_name: r.product.name,
+      product_slug: r.product.slug,
+      created_at: r.createdAt,
+    })),
   })
 })
 
@@ -198,6 +332,14 @@ router.post('/inventory/restock', requireAdmin, async (req: AuthRequest, res) =>
     res.status(400).json({ error: 'variantId and qty (≥1) are required' })
     return
   }
+
+  // Capture whether variant was out of stock BEFORE restocking
+  const before = await prisma.productVariant.findUnique({
+    where: { id: variantId },
+    include: { product: { select: { name: true, slug: true } } },
+  })
+  const wasOutOfStock = before && before.stockQty === 0
+
   const [variant] = await prisma.$transaction([
     prisma.productVariant.update({
       where: { id: variantId },
@@ -207,6 +349,33 @@ router.post('/inventory/restock', requireAdmin, async (req: AuthRequest, res) =>
       data: { variantId, type: 'PURCHASE', qty, note: note || null },
     }),
   ])
+
+  // Fire back-in-stock emails if variant just came back in stock
+  if (wasOutOfStock && before) {
+    const pendingAlerts = await prisma.stockAlert.findMany({
+      where: { variantId, notifiedAt: null },
+    })
+    const frontendUrl = process.env.FRONTEND_URL || 'https://nnaudio.in'
+    await Promise.allSettled(
+      pendingAlerts.map(async (alert) => {
+        await sendStockAlertEmail({
+          toEmail: alert.email,
+          productName: before.product.name,
+          variantLabel: before.label,
+          productSlug: before.product.slug,
+          frontendUrl,
+        })
+        await prisma.stockAlert.update({
+          where: { id: alert.id },
+          data: { notifiedAt: new Date() },
+        })
+      })
+    )
+    if (pendingAlerts.length > 0) {
+      console.info(`[restock] Sent ${pendingAlerts.length} back-in-stock alert(s) for variant ${variantId}`)
+    }
+  }
+
   res.json({ id: variant.id, stock_qty: variant.stockQty })
 })
 
@@ -271,6 +440,315 @@ router.get('/inventory/movements', requireAdmin, async (req: AuthRequest, res) =
     page: parseInt(page),
     total_pages: Math.ceil(total / limit),
   })
+})
+
+// GET /api/v1/admin/analytics  — chart data
+router.get('/analytics', requireAdmin, async (_req: AuthRequest, res) => {
+  const [dailyRevenue, categoryRevenue, newCustomers, couponUsage] = await Promise.all([
+    // Daily revenue — last 30 days
+    prisma.$queryRaw<Array<{ day: string; revenue: number; orders: number }>>`
+      SELECT TO_CHAR(DATE_TRUNC('day', "created_at"), 'DD Mon') as day,
+             COALESCE(SUM(total), 0)::float as revenue,
+             COUNT(*)::int as orders
+      FROM orders
+      WHERE status != 'CANCELLED'
+        AND "created_at" >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE_TRUNC('day', "created_at")
+      ORDER BY DATE_TRUNC('day', "created_at")
+    `,
+    // Revenue by category — all time
+    prisma.$queryRaw<Array<{ category: string; revenue: number; units: number }>>`
+      SELECT p.category,
+             COALESCE(SUM(oi.price * oi.qty), 0)::float as revenue,
+             COALESCE(SUM(oi.qty), 0)::int as units
+      FROM order_items oi
+      JOIN products p ON p.id = oi.product_id
+      JOIN orders o ON o.id = oi.order_id
+      WHERE o.status != 'CANCELLED'
+      GROUP BY p.category
+      ORDER BY revenue DESC
+    `,
+    // New customers per month — last 6 months
+    prisma.$queryRaw<Array<{ month: string; count: number }>>`
+      SELECT TO_CHAR(DATE_TRUNC('month', "created_at"), 'Mon YY') as month,
+             COUNT(*)::int as count
+      FROM users
+      WHERE role = 'CUSTOMER'
+        AND "created_at" >= NOW() - INTERVAL '6 months'
+      GROUP BY DATE_TRUNC('month', "created_at")
+      ORDER BY DATE_TRUNC('month', "created_at")
+    `,
+    // Coupon usage — top 10 by savings
+    prisma.$queryRaw<Array<{ code: string; uses: number; total_savings: number }>>`
+      SELECT coupon_code as code,
+             COUNT(*)::int as uses,
+             COALESCE(SUM(discount), 0)::float as total_savings
+      FROM orders
+      WHERE coupon_code IS NOT NULL
+        AND status != 'CANCELLED'
+      GROUP BY coupon_code
+      ORDER BY total_savings DESC
+      LIMIT 10
+    `,
+  ])
+
+  res.json({
+    daily_revenue: dailyRevenue,
+    category_revenue: categoryRevenue,
+    new_customers: newCustomers,
+    coupon_usage: couponUsage,
+  })
+})
+
+// GET /api/v1/admin/returns  — list all return requests
+router.get('/returns', requireAdmin, async (req: AuthRequest, res) => {
+  const { page = '1', status } = req.query as Record<string, string>
+  const limit = 20
+  const skip = (parseInt(page) - 1) * limit
+  const where: any = {}
+  if (status) where.status = status
+
+  const [returns, total] = await Promise.all([
+    prisma.return.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        order: { select: { orderNumber: true, total: true, createdAt: true } },
+        user: { select: { name: true, email: true } },
+      },
+    }),
+    prisma.return.count({ where }),
+  ])
+
+  res.json({
+    data: returns.map((r) => ({
+      id: r.id,
+      order_number: r.order.orderNumber,
+      order_total: r.order.total,
+      order_date: r.order.createdAt,
+      user: r.user,
+      reason: r.reason,
+      notes: r.notes,
+      status: r.status,
+      admin_note: r.adminNote,
+      created_at: r.createdAt,
+      updated_at: r.updatedAt,
+    })),
+    total,
+    page: parseInt(page),
+    total_pages: Math.ceil(total / limit),
+  })
+})
+
+// PUT /api/v1/admin/returns/:id/status  — approve / reject / refund
+router.put('/returns/:id/status', requireAdmin, async (req: AuthRequest, res) => {
+  const { id } = req.params
+  const { status, admin_note } = req.body
+
+  const allowed = ['APPROVED', 'REJECTED', 'REFUNDED']
+  if (!allowed.includes(status)) {
+    return res.status(400).json({ error: `status must be one of ${allowed.join(', ')}` })
+  }
+
+  const ret = await prisma.return.update({
+    where: { id },
+    data: { status, adminNote: admin_note ?? null },
+    include: {
+      order: { select: { orderNumber: true } },
+      user: { select: { name: true, email: true } },
+    },
+  })
+
+  // If refunded, mark the order payment status as REFUNDED too
+  if (status === 'REFUNDED') {
+    await prisma.order.update({
+      where: { id: ret.orderId },
+      data: { paymentStatus: 'REFUNDED' },
+    })
+  }
+
+  // Notify customer (fire-and-forget)
+  sendReturnStatusEmail({
+    customerName: ret.user.name,
+    customerEmail: ret.user.email,
+    orderNumber: ret.order.orderNumber,
+    status,
+    adminNote: ret.adminNote,
+  }).catch(() => {})
+
+  res.json({ id: ret.id, status: ret.status, admin_note: ret.adminNote })
+})
+
+// GET /api/v1/admin/notifications  — badge counts for admin bell
+router.get('/notifications', requireAdmin, async (_req: AuthRequest, res) => {
+  const now = new Date()
+  const since24h = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+  const [newOrders, pendingReturns, unansweredQuestions, lowStockVariants] = await Promise.all([
+    prisma.order.count({ where: { status: 'PROCESSING', createdAt: { gte: since24h } } }),
+    prisma.return.count({ where: { status: 'REQUESTED' } }),
+    prisma.question.count({ where: { answer: null } }),
+    prisma.productVariant.count({ where: { stockQty: { lte: 5, gt: 0 }, isActive: true } }),
+  ])
+
+  const total = newOrders + pendingReturns + unansweredQuestions + lowStockVariants
+
+  res.json({
+    total,
+    new_orders: newOrders,
+    pending_returns: pendingReturns,
+    unanswered_questions: unansweredQuestions,
+    low_stock_variants: lowStockVariants,
+  })
+})
+
+// ─── Questions ────────────────────────────────────────────────────────────────
+
+// GET /api/v1/admin/questions  — all questions, unanswered first
+router.get('/questions', requireAdmin, async (req: AuthRequest, res) => {
+  const { page = '1', answered } = req.query as Record<string, string>
+  const limit = 20
+  const skip = (parseInt(page) - 1) * limit
+  const where: any = {}
+  if (answered === 'true') where.answer = { not: null }
+  else if (answered === 'false') where.answer = null
+
+  const [questions, total] = await Promise.all([
+    prisma.question.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: [{ answer: 'asc' }, { createdAt: 'desc' }],
+      include: {
+        product: { select: { id: true, name: true, slug: true } },
+        user: { select: { name: true, email: true } },
+      },
+    }),
+    prisma.question.count({ where }),
+  ])
+
+  res.json({
+    data: questions.map((q) => ({
+      id: q.id,
+      question: q.question,
+      answer: q.answer,
+      is_published: q.isPublished,
+      created_at: q.createdAt,
+      answered_at: q.answeredAt,
+      user: q.user,
+      product: q.product,
+    })),
+    total,
+    page: parseInt(page),
+    total_pages: Math.ceil(total / limit),
+  })
+})
+
+// PUT /api/v1/admin/questions/:id  — answer and publish a question
+router.put('/questions/:id', requireAdmin, async (req: AuthRequest, res) => {
+  const { answer, is_published } = req.body
+  const data: any = {}
+  if (answer !== undefined) {
+    data.answer = answer || null
+    data.answeredAt = answer ? new Date() : null
+    data.isPublished = answer ? true : false
+  }
+  if (is_published !== undefined) data.isPublished = is_published
+
+  const q = await prisma.question.update({
+    where: { id: req.params.id },
+    data,
+    include: {
+      product: { select: { id: true, name: true, slug: true } },
+      user: { select: { name: true, email: true } },
+    },
+  })
+
+  res.json({
+    id: q.id,
+    question: q.question,
+    answer: q.answer,
+    is_published: q.isPublished,
+    answered_at: q.answeredAt,
+    user: q.user,
+    product: q.product,
+  })
+})
+
+// DELETE /api/v1/admin/questions/:id  — remove spam/inappropriate question
+router.delete('/questions/:id', requireAdmin, async (req: AuthRequest, res) => {
+  await prisma.question.delete({ where: { id: req.params.id } })
+  res.json({ message: 'Question deleted' })
+})
+
+// ── Review Moderation ──────────────────────────────────────────────
+
+// GET /api/v1/admin/reviews?page=&rating=&search=
+router.get('/reviews', requireAdmin, async (req: AuthRequest, res) => {
+  const { page = '1', rating, search } = req.query as Record<string, string>
+  const limit = 20
+  const skip = (parseInt(page) - 1) * limit
+
+  const where: any = {}
+  if (rating) where.rating = parseInt(rating)
+  if (search) {
+    where.OR = [
+      { comment: { contains: search, mode: 'insensitive' } },
+      { product: { name: { contains: search, mode: 'insensitive' } } },
+      { user: { name: { contains: search, mode: 'insensitive' } } },
+    ]
+  }
+
+  const [reviews, total] = await Promise.all([
+    prisma.review.findMany({
+      where,
+      include: {
+        product: { select: { id: true, name: true, slug: true } },
+        user:    { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.review.count({ where }),
+  ])
+
+  res.json({
+    data: reviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      created_at: r.createdAt,
+      product: r.product,
+      user: r.user,
+    })),
+    total,
+    page: parseInt(page),
+    total_pages: Math.ceil(total / limit),
+  })
+})
+
+// DELETE /api/v1/admin/reviews/:id — delete review and recalculate product rating
+router.delete('/reviews/:id', requireAdmin, async (req: AuthRequest, res) => {
+  const review = await prisma.review.findUnique({ where: { id: req.params.id } })
+  if (!review) { res.status(404).json({ error: 'Review not found' }); return }
+
+  await prisma.review.delete({ where: { id: req.params.id } })
+
+  // Recalculate product aggregate rating
+  const agg = await prisma.review.aggregate({
+    where: { productId: review.productId },
+    _avg: { rating: true },
+    _count: true,
+  })
+  await prisma.product.update({
+    where: { id: review.productId },
+    data: { rating: agg._avg.rating ?? 0, reviewCount: agg._count },
+  })
+
+  res.json({ ok: true })
 })
 
 export default router

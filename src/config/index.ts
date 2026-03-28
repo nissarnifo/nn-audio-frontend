@@ -3,59 +3,40 @@
  *
  * ALL environment variables are read exactly once, here.
  *
- * LOOSE COUPLING GUIDE — to migrate after 3 months to your own server:
+ * LOOSE COUPLING GUIDE — to migrate to your own server:
  *   1. Change NEXT_PUBLIC_API_URL  → points to any backend, anywhere
- *   2. Change NEXTAUTH_URL         → your own domain
- *   3. Change NEXTAUTH_SECRET      → new random secret
- *   4. Set Razorpay live key       → switch from test to production
- *   5. That's it. Zero code changes needed.
+ *   2. Set Razorpay live key       → switch from test to production
+ *   3. Update Clerk keys           → use production Clerk instance
+ *   4. That's it. Zero code changes needed.
  *
- * CURRENT STACK (3-month free tier):
- *   Frontend  → Vercel (free)
- *   Backend   → Render (free)
- *   Database  → Neon PostgreSQL (free, via render.yaml)
- *   Storage   → Cloudinary (free tier)
+ * CURRENT STACK:
+ *   Auth      → Clerk (identity + session management)
+ *   Frontend  → Vercel
+ *   Backend   → Render (issues backend JWT after Clerk sync)
+ *   Database  → Neon PostgreSQL
+ *   Storage   → Cloudinary
  *   Payments  → Razorpay
- *
- * FUTURE STACK (own server):
- *   Frontend  → Any CDN / VPS / Docker
- *   Backend   → Any Node server / Docker
- *   Database  → Any PostgreSQL (same schema, pg_dump → restore)
- *   Storage   → Any S3-compatible / Cloudinary / own
  */
 
 // ─── Backend API ───────────────────────────────────────────────────────────────
-// Change NEXT_PUBLIC_API_URL in .env to point to ANY backend, anywhere.
-// Format: https://your-backend.com/api/v1
+// The API now runs as Next.js Route Handlers on the same Vercel project.
+// In production, NEXT_PUBLIC_API_URL should be omitted (relative /api/v1 works automatically)
+// or set to https://audiosets.store/api/v1
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+  process.env.NEXT_PUBLIC_API_URL || '/api/v1'
+
+// ─── App (Frontend) URL ────────────────────────────────────────────────────────
+// Used for canonical URLs, sitemap, OG tags
+export const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://nnaudio.in'
 
 // ─── Payments ──────────────────────────────────────────────────────────────────
 // Switch from test to live by updating NEXT_PUBLIC_RAZORPAY_KEY_ID in .env
 export const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''
 
-// ─── OAuth Providers (all optional — enable by adding keys to .env) ───────────
-export const oauthConfig = {
-  google: {
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    enabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-  },
-  github: {
-    clientId: process.env.GITHUB_CLIENT_ID || '',
-    clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-    enabled: !!(
-      process.env.GITHUB_CLIENT_ID &&
-      process.env.GITHUB_CLIENT_SECRET &&
-      process.env.GITHUB_CLIENT_SECRET !== 'PASTE_YOUR_SECRET_HERE'
-    ),
-  },
-  discord: {
-    clientId: process.env.DISCORD_CLIENT_ID || '',
-    clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
-    enabled: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
-  },
-} as const
+// ─── OAuth Providers — now managed in the Clerk Dashboard ─────────────────────
+// Enable Google, GitHub, Discord, etc. from: https://dashboard.clerk.com
+// No environment variables needed on the frontend for OAuth any more.
 
 // ─── Image Hosting ─────────────────────────────────────────────────────────────
 // Add your own CDN hostname here when migrating to own server
@@ -90,6 +71,8 @@ export const ENDPOINTS = {
     imageDelete: (productId: string, imageId: string) =>
       `/products/${productId}/images/${imageId}`,
     reviews: (slug: string) => `/products/${slug}/reviews`,
+    sale: (id: string) => `/products/${id}/sale`,
+    questions: (slug: string) => `/products/${slug}/questions`,
   },
   cart: {
     root: '/cart',
@@ -110,14 +93,53 @@ export const ENDPOINTS = {
     razorpayOrder: '/payments/razorpay/order',
     razorpayVerify: '/payments/razorpay/verify',
   },
+  coupons: {
+    validate: '/coupons/validate',
+    root: '/coupons',
+    byId: (id: string) => `/coupons/${id}`,
+    usage: (id: string) => `/coupons/${id}/usage`,
+  },
+  stockAlerts: {
+    subscribe: '/stock-alerts',
+    adminList: '/stock-alerts/admin',
+  },
+  returns: {
+    root: '/returns',
+    me: '/returns/me',
+  },
+  wishlist: {
+    root: '/wishlist',
+    item: (productId: string) => `/wishlist/${productId}`,
+  },
+  settings: {
+    public: '/settings',
+    all: '/settings/all',
+    update: '/settings',
+  },
+  newsletter: {
+    subscribe: '/newsletter/subscribe',
+    unsubscribe: '/newsletter/unsubscribe',
+    subscribers: '/newsletter/subscribers',
+    export: '/newsletter/export',
+    deleteSubscriber: (id: string) => `/newsletter/subscribers/${id}`,
+  },
   admin: {
     stats: '/admin/stats',
+    analytics: '/admin/analytics',
     orders: '/admin/orders',
     orderStatus: (id: string) => `/admin/orders/${id}/status`,
     customers: '/admin/customers',
+    customerById: (id: string) => `/admin/customers/${id}`,
     inventory: '/admin/inventory',
     inventoryRestock: '/admin/inventory/restock',
     inventoryAdjust: '/admin/inventory/adjust',
     inventoryMovements: '/admin/inventory/movements',
+    returns: '/admin/returns',
+    returnStatus: (id: string) => `/admin/returns/${id}/status`,
+    questions: '/admin/questions',
+    questionById: (id: string) => `/admin/questions/${id}`,
+    notifications: '/admin/notifications',
+    reviews: '/admin/reviews',
+    reviewById: (id: string) => `/admin/reviews/${id}`,
   },
 } as const

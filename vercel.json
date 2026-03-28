@@ -1,9 +1,18 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npx prisma generate && next build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
   "functions": {
     "src/app/api/warmup/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/v1/returns/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/v1/orders/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/v1/orders/[id]/route.ts": {
       "maxDuration": 60
     }
   }

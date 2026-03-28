@@ -1,9 +1,9 @@
 'use client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { SessionProvider } from 'next-auth/react'
+import { ClerkProvider } from '@clerk/nextjs'
 import { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
-import SessionSync from '@/components/SessionSync'
+import ClerkSync from '@/components/ClerkSync'
 import BackendWarmup from '@/components/BackendWarmup'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -22,9 +22,25 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <SessionProvider>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: '#00D4FF',
+          colorBackground: '#0D1B2A',
+          colorInputBackground: '#0A1628',
+          colorText: '#E8F4FD',
+          colorTextSecondary: '#4A7FA5',
+          borderRadius: '4px',
+          fontFamily: 'Share Tech Mono, monospace',
+        },
+      }}
+      signInUrl="/auth/login"
+      signUpUrl="/auth/register"
+      afterSignInUrl="/"
+      afterSignUpUrl="/"
+    >
       <QueryClientProvider client={queryClient}>
-        <SessionSync />
+        <ClerkSync />
         <BackendWarmup />
         {children}
         <Toaster
@@ -40,6 +56,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           }}
         />
       </QueryClientProvider>
-    </SessionProvider>
+    </ClerkProvider>
   )
 }

@@ -11,6 +11,12 @@ const productInclude = {
 }
 
 function formatProduct(p: any) {
+  const now = new Date()
+  const onSale =
+    p.salePrice != null &&
+    (p.saleStartAt == null || p.saleStartAt <= now) &&
+    (p.saleEndAt == null || p.saleEndAt > now)
+
   return {
     id: p.id,
     name: p.name,
@@ -22,6 +28,10 @@ function formatProduct(p: any) {
     specs: p.specs,
     rating: p.rating,
     review_count: p.reviewCount,
+    sale_price: p.salePrice ?? null,
+    sale_start_at: p.saleStartAt ?? null,
+    sale_end_at: p.saleEndAt ?? null,
+    on_sale: onSale,
     is_active: p.isActive,
     created_at: p.createdAt,
     images: p.images.map((img: any) => ({
@@ -42,15 +52,35 @@ function formatProduct(p: any) {
 
 // GET /api/v1/products
 router.get('/', async (req, res) => {
-  const { category, search, sort, page = '1', limit = '12' } = req.query as Record<string, string>
+  const { category, search, sort, page = '1', limit = '12', min_price, max_price, in_stock, min_rating, on_sale, ids } = req.query as Record<string, string>
   const skip = (parseInt(page) - 1) * parseInt(limit)
 
+  const now = new Date()
   const where: any = { isActive: true }
+  if (ids) where.id = { in: ids.split(',').map((id) => id.trim()).filter(Boolean) }
   if (category) where.category = category
   if (search) where.OR = [
     { name: { contains: search, mode: 'insensitive' } },
     { description: { contains: search, mode: 'insensitive' } },
   ]
+  if (min_rating) where.rating = { gte: parseFloat(min_rating) }
+  if (on_sale === 'true') {
+    where.salePrice = { not: null }
+    where.OR = [
+      { saleStartAt: null },
+      { saleStartAt: { lte: now } },
+    ]
+    where.AND = [
+      { OR: [{ saleEndAt: null }, { saleEndAt: { gt: now } }] },
+    ]
+  }
+
+  // Variant-level filters (price range + in-stock)
+  const variantWhere: any = { isActive: true }
+  if (min_price) variantWhere.price = { ...variantWhere.price, gte: parseFloat(min_price) }
+  if (max_price) variantWhere.price = { ...variantWhere.price, lte: parseFloat(max_price) }
+  if (in_stock === 'true') variantWhere.stockQty = { gt: 0 }
+  if (min_price || max_price || in_stock === 'true') where.variants = { some: variantWhere }
 
   let orderBy: any = { createdAt: 'desc' }
   if (sort === 'price_asc') orderBy = { variants: { _min: { price: 'asc' } } }
@@ -153,10 +183,40 @@ router.put('/:id', requireAdmin, async (req: AuthRequest, res) => {
   res.json(formatProduct(product))
 })
 
+// PATCH /api/v1/products/:id/sale (admin) — set or clear a flash sale
+router.patch('/:id/sale', requireAdmin, async (req: AuthRequest, res) => {
+  const { sale_price, sale_start_at, sale_end_at } = req.body
+
+  // Passing sale_price: null clears the sale
+  const product = await prisma.product.update({
+    where: { id: req.params.id },
+    data: {
+      salePrice: sale_price ?? null,
+      saleStartAt: sale_start_at ? new Date(sale_start_at) : null,
+      saleEndAt: sale_end_at ? new Date(sale_end_at) : null,
+    },
+    include: productInclude,
+  })
+
+  res.json(formatProduct(product))
+})
+
 // DELETE /api/v1/products/:id (admin)
 router.delete('/:id', requireAdmin, async (req: AuthRequest, res) => {
   await prisma.product.delete({ where: { id: req.params.id } })
   res.json({ message: 'Product deleted' })
+})
+
+// PATCH /api/v1/products/bulk  (admin) — bulk activate / deactivate
+router.patch('/bulk', requireAdmin, async (req: AuthRequest, res) => {
+  const { ids, action } = req.body as { ids: string[]; action: 'activate' | 'deactivate' }
+  if (!Array.isArray(ids) || ids.length === 0 || !['activate', 'deactivate'].includes(action)) {
+    res.status(400).json({ error: 'ids (array) and action (activate|deactivate) are required' })
+    return
+  }
+  const isActive = action === 'activate'
+  const result = await prisma.product.updateMany({ where: { id: { in: ids } }, data: { isActive } })
+  res.json({ updated: result.count })
 })
 
 // POST /api/v1/products/:id/images (admin)
@@ -241,6 +301,42 @@ router.post('/:slug/reviews', requireAuth, async (req: AuthRequest, res) => {
   })
 
   res.status(201).json({ id: review.id, user_name: review.user.name, rating: review.rating, comment: review.comment, created_at: review.createdAt })
+})
+
+// GET /api/v1/products/:slug/questions — published questions only
+router.get('/:slug/questions', async (req, res) => {
+  const product = await prisma.product.findUnique({ where: { slug: req.params.slug } })
+  if (!product) { res.status(404).json({ error: 'Product not found' }); return }
+
+  const questions = await prisma.question.findMany({
+    where: { productId: product.id, isPublished: true },
+    include: { user: { select: { name: true } } },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  res.json(questions.map((q) => ({
+    id: q.id,
+    user_name: q.user.name,
+    question: q.question,
+    answer: q.answer,
+    created_at: q.createdAt,
+    answered_at: q.answeredAt,
+  })))
+})
+
+// POST /api/v1/products/:slug/questions — auth required
+router.post('/:slug/questions', requireAuth, async (req: AuthRequest, res) => {
+  const { question } = req.body
+  if (!question?.trim()) { res.status(400).json({ error: 'Question is required' }); return }
+
+  const product = await prisma.product.findUnique({ where: { slug: req.params.slug } })
+  if (!product) { res.status(404).json({ error: 'Product not found' }); return }
+
+  const q = await prisma.question.create({
+    data: { productId: product.id, userId: req.user!.id, question: question.trim() },
+  })
+
+  res.status(201).json({ id: q.id, question: q.question, created_at: q.createdAt })
 })
 
 export default router

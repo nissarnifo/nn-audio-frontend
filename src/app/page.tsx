@@ -8,6 +8,8 @@ import ProductsGrid from '@/components/product/ProductsGrid'
 import { SectionHeader, NoPhoto } from '@/components/ui'
 import { getPrimaryImage, cloudinaryUrl, fmt } from '@/lib/utils'
 import { useCartStore } from '@/store/cart.store'
+import { useRecentlyViewedStore } from '@/store/recently-viewed.store'
+import NewsletterSection from '@/components/NewsletterSection'
 import toast from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 
@@ -51,7 +53,7 @@ function HeroCarousel() {
   if (isLoading || products.length === 0) {
     return (
       <div className="relative w-full hud-grid" style={{ minHeight: 340 }}>
-        <div className="max-w-7xl mx-auto px-16 py-14 flex items-center gap-12">
+        <div className="max-w-7xl mx-auto px-4 md:px-16 py-14 flex items-center gap-12">
           <div className="flex-1 space-y-4">
             {[24, '3/4', '1/3', '2/3'].map((w, i) => (
               <div key={i} className={`h-${i === 0 ? 4 : i === 2 ? 8 : 6} w-${w} rounded animate-pulse`}
@@ -91,7 +93,7 @@ function HeroCarousel() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: dir * -80 }}
           transition={{ duration: 0.4, ease: 'easeInOut' }}
-          className="relative max-w-7xl mx-auto px-12 md:px-16 py-10 md:py-14 flex flex-col md:flex-row items-center gap-8"
+          className="relative max-w-7xl mx-auto px-4 md:px-16 py-10 md:py-14 flex flex-col md:flex-row items-center gap-8"
         >
           {/* Left: text */}
           <div className="flex-1 min-w-0">
@@ -148,7 +150,7 @@ function HeroCarousel() {
           </div>
 
           {/* Right: product image */}
-          <div className="flex-shrink-0 relative w-64 h-56 md:w-96 md:h-80 rounded-lg overflow-hidden"
+          <div className="flex-shrink-0 relative w-full max-w-[280px] h-52 sm:w-64 sm:h-56 md:w-96 md:h-80 rounded-lg overflow-hidden"
             style={{ border: `1px solid ${accent}30`, background: accent + '08' }}>
             {[['top-0 left-0','border-t border-l'],['top-0 right-0','border-t border-r'],
               ['bottom-0 left-0','border-b border-l'],['bottom-0 right-0','border-b border-r']].map(([p,b]) => (
@@ -170,23 +172,39 @@ function HeroCarousel() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Arrows */}
+      {/* Side arrows — desktop only */}
       <button onClick={prev}
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
+        className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
         <ChevronLeft size={18} />
       </button>
       <button onClick={next}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
+        className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF] hover:border-[#00D4FF] transition-colors z-10">
         <ChevronRight size={18} />
       </button>
 
-      {/* Dots */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-        {products.map((_, i) => (
-          <button key={i} onClick={() => go(i)} className="rounded-full transition-all duration-300"
-            style={{ width: i === idx ? 20 : 6, height: 6,
-              background: i === idx ? accent : 'rgba(0,212,255,0.2)' }} />
-        ))}
+      {/* Bottom controls: prev + dots + next (all screen sizes, arrows hidden on md+) */}
+      <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 z-10">
+        <button
+          onClick={prev}
+          className="md:hidden w-7 h-7 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF]"
+          aria-label="Previous"
+        >
+          <ChevronLeft size={14} />
+        </button>
+        <div className="flex gap-2">
+          {products.map((_, i) => (
+            <button key={i} onClick={() => go(i)} className="rounded-full transition-all duration-300"
+              style={{ width: i === idx ? 20 : 6, height: 6,
+                background: i === idx ? accent : 'rgba(0,212,255,0.2)' }} />
+          ))}
+        </div>
+        <button
+          onClick={next}
+          className="md:hidden w-7 h-7 flex items-center justify-center rounded border border-[rgba(0,212,255,0.25)] bg-[rgba(13,27,42,0.85)] text-[#00D4FF]"
+          aria-label="Next"
+        >
+          <ChevronRight size={14} />
+        </button>
       </div>
     </div>
   )
@@ -254,7 +272,7 @@ function DealCard({ title, offer, slug, delay }: { title: string; offer: string;
 
 /* ─── Page ───────────────────────────────────────────────────────── */
 export default function HomePage() {
-  const { data: bestsellers, isLoading, isError: bestsellersError, refetch: refetchBestsellers } = useProducts({ sort: 'rating', limit: 8 })
+  const { data: bestsellers, isLoading, isError: bestsellersError, refetch: refetchBestsellers } = useProducts({ sort: 'rating', limit: 8 }
 
   return (
     <div>
@@ -294,6 +312,17 @@ export default function HomePage() {
           <Link href="/products" className="btn-gold px-10 py-3 text-base">VIEW ALL PRODUCTS</Link>
         </div>
       </section>
+
+      {/* Recently Viewed */}
+      {recentlyViewed.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 py-10 border-t border-[rgba(0,212,255,0.1)]">
+          <SectionHeader title="RECENTLY VIEWED" subtitle="Pick up where you left off" />
+          <ProductsGrid products={recentlyViewed} />
+        </section>
+      )}
+
+      {/* Newsletter */}
+      <NewsletterSection />
     </div>
   )
 }

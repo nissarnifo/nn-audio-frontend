@@ -1,13 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X } from 'lucide-react'
+import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X, Heart, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useClerk, useUser } from '@clerk/nextjs'
 import { useCartStore } from '@/store/cart.store'
+import { useWishlistStore } from '@/store/wishlist.store'
 import { useAuthStore } from '@/store/auth.store'
-import { authApi } from '@/services/api'
 import { cn } from '@/lib/utils'
+import SearchBar from './SearchBar'
 
 const NAV_LINKS = [
   { href: '/', label: 'HOME' },
@@ -18,19 +20,25 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const { count } = useCartStore()
-  const { isLoggedIn, isAdmin, logout } = useAuthStore()
+  const wishlistCount = useWishlistStore((s) => s.count)
+  const { isAdmin, logout: clearBackendAuth } = useAuthStore()
+  const { signOut } = useClerk()
+  const { isSignedIn } = useUser()
   const qc = useQueryClient()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   async function handleLogout() {
-    try { await authApi.logout() } catch {}
-    logout()
+    try {
+      await signOut()
+    } catch {}
+    clearBackendAuth()
     qc.clear()
     router.push('/')
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[rgba(0,212,255,0.12)] bg-[rgba(10,14,26,0.95)] backdrop-blur-md">
+    <nav className="print:hidden sticky top-0 z-50 border-b border-[rgba(0,212,255,0.12)] bg-[rgba(10,14,26,0.95)] backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 animate-cyanglow rounded">
@@ -62,12 +70,28 @@ export default function Navbar() {
 
         {/* Right Icons */}
         <div className="flex items-center gap-3">
-          {/* Cart */}
-          <Link
-            href="/cart"
-            className="relative p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors"
+          {/* Search toggle */}
+          <button
+            onClick={() => { setSearchOpen((v) => !v); setMenuOpen(false) }}
+            className={`p-2 transition-colors ${searchOpen ? 'text-[#00D4FF]' : 'text-[#4A7FA5] hover:text-[#00D4FF]'}`}
+            aria-label="Search"
           >
-            <ShoppingCart size={20} />
+            <Search size={20} aria-hidden="true" />
+          </button>
+
+          {/* Wishlist */}
+          <Link href="/account/wishlist" className="relative p-2 text-[#4A7FA5] hover:text-[#FF3366] transition-colors">
+            <Heart size={20} aria-hidden="true" />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#FF3366] text-white text-[10px] font-bold flex items-center justify-center font-mono">
+                {wishlistCount > 9 ? '9+' : wishlistCount}
+              </span>
+            )}
+          </Link>
+
+          {/* Cart */}
+          <Link href="/cart" className="relative p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors">
+            <ShoppingCart size={20} aria-hidden="true" />
             {count > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#00D4FF] text-[#0A0E1A] text-[10px] font-bold flex items-center justify-center font-mono">
                 {count > 9 ? '9+' : count}
@@ -75,21 +99,22 @@ export default function Navbar() {
             )}
           </Link>
 
-          {isLoggedIn ? (
+          {isSignedIn ? (
             <>
               {isAdmin && (
-                <Link href="/admin" className="p-2 text-[#4A7FA5] hover:text-[#FFB700] transition-colors hidden md:block">
-                  <LayoutDashboard size={20} />
+                <Link href="/admin" className="p-2 text-[#4A7FA5] hover:text-[#FFB700] transition-colors hidden md:block" aria-label="Admin dashboard">
+                  <LayoutDashboard size={20} aria-hidden="true" />
                 </Link>
               )}
-              <Link href="/account/profile" className="p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors hidden md:block">
-                <User size={20} />
+              <Link href="/account/profile" className="p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors hidden md:block" aria-label="My account">
+                <User size={20} aria-hidden="true" />
               </Link>
               <button
+                aria-label="Logout"
                 onClick={handleLogout}
                 className="p-2 text-[#4A7FA5] hover:text-[#FF3366] transition-colors hidden md:block"
               >
-                <LogOut size={20} />
+                <LogOut size={20} aria-hidden="true" />
               </button>
             </>
           ) : (
@@ -100,13 +125,24 @@ export default function Navbar() {
 
           {/* Mobile menu toggle */}
           <button
-            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            onClick={() => { setMenuOpen(!menuOpen); setSearchOpen(false) }}
             className="p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors md:hidden"
           >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            {menuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
           </button>
         </div>
       </div>
+
+      {/* Search bar panel */}
+      {searchOpen && (
+        <div className="border-t border-[rgba(0,212,255,0.12)] bg-[rgba(10,14,26,0.98)] px-4 py-3">
+          <div className="max-w-2xl mx-auto">
+            <SearchBar onClose={() => setSearchOpen(false)} />
+          </div>
+        </div>
+      )}
 
       {/* Mobile Menu */}
       {menuOpen && (
@@ -124,7 +160,7 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
-          {isLoggedIn ? (
+          {isSignedIn ? (
             <>
               {isAdmin && (
                 <Link href="/admin" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#FFB700]">
@@ -136,6 +172,12 @@ export default function Navbar() {
               </Link>
               <Link href="/account/orders" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#4A7FA5]">
                 MY ORDERS
+              </Link>
+              <Link href="/account/returns" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#4A7FA5]">
+                MY RETURNS
+              </Link>
+              <Link href="/account/wishlist" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#4A7FA5] flex items-center gap-2">
+                WISHLIST {wishlistCount > 0 && <span className="text-[#FF3366]">({wishlistCount})</span>}
               </Link>
               <button onClick={() => { handleLogout(); setMenuOpen(false) }} className="text-left font-heading text-sm tracking-widest text-[#FF3366]">
                 LOGOUT

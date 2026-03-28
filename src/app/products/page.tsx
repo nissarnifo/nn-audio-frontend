@@ -1,9 +1,20 @@
 'use client'
-import { useState } from 'react'
-import { Search, SlidersHorizontal } from 'lucide-react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { useProducts } from '@/hooks'
 import ProductsGrid from '@/components/product/ProductsGrid'
+import { Pagination } from '@/components/ui'
 import type { ProductCategory } from '@/types'
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
+  return debounced
+}
 
 const CATEGORIES: { value: ProductCategory | ''; label: string }[] = [
   { value: '', label: 'All' },
@@ -23,16 +34,57 @@ const SORTS = [
   { value: 'price_desc', label: 'Price: High to Low' },
 ]
 
-export default function ProductsPage() {
-  const [search, setSearch] = useState('')
+const RATINGS = [4, 3, 2, 1]
+
+function ProductsInner() {
+  const searchParams = useSearchParams()
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
+
+  // Sync when URL param changes (e.g. user navigates from search bar)
+  useEffect(() => {
+    const q = searchParams.get('search') ?? ''
+    setSearch(q)
+    setPage(1)
+  }, [searchParams.get('search')]) // eslint-disable-line react-hooks/exhaustive-deps
   const [category, setCategory] = useState<ProductCategory | ''>('')
   const [sort, setSort] = useState('rating')
+  const [page, setPage] = useState(1)
+  // New filters
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [inStock, setInStock] = useState(false)
+  const [minRating, setMinRating] = useState(0)
+  const [onSale, setOnSale] = useState(false)
+
+  const debouncedSearch = useDebounce(search, 350)
+  const hasActiveFilters = minPrice !== '' || maxPrice !== '' || inStock || minRating > 0 || onSale
 
   const { data, isLoading, isError, refetch } = useProducts({
     search: search || undefined,
     category: (category || undefined) as ProductCategory | undefined,
     sort: sort as 'rating' | 'newest' | 'price_asc' | 'price_desc',
+    page,
+    min_price: minPrice ? Number(minPrice) : undefined,
+    max_price: maxPrice ? Number(maxPrice) : undefined,
+    in_stock: inStock || undefined,
+    min_rating: minRating || undefined,
+    on_sale: onSale || undefined,
   })
+
+  function resetPage() { setPage(1) }
+  function handleSearch(val: string) { setSearch(val); resetPage() }
+  function handleCategory(val: ProductCategory | '') { setCategory(val); resetPage() }
+  function handleSort(val: string) { setSort(val); resetPage() }
+  function handleMinPrice(val: string) { setMinPrice(val); resetPage() }
+  function handleMaxPrice(val: string) { setMaxPrice(val); resetPage() }
+  function handleInStock() { setInStock((v) => !v); resetPage() }
+  function handleOnSale() { setOnSale((v) => !v); resetPage() }
+  function handleMinRating(r: number) { setMinRating((v) => (v === r ? 0 : r)); resetPage() }
+  function clearFilters() { setMinPrice(''); setMaxPrice(''); setInStock(false); setMinRating(0); setOnSale(false); resetPage() }
+
+  const pillBase = 'px-3 py-1.5 rounded font-mono text-xs border transition-all'
+  const pillActive = 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
+  const pillIdle = 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[rgba(0,212,255,0.4)] hover:text-[#E8F4FD]'
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -42,26 +94,23 @@ export default function ProductsPage() {
         <div className="h-0.5 w-12 bg-[#00D4FF]" />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-8">
-        {/* Search */}
+      {/* Search + Sort */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4A7FA5]" />
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search products..."
             className="input-hud pl-9"
           />
         </div>
-
-        {/* Sort */}
         <div className="relative">
           <SlidersHorizontal size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4A7FA5]" />
           <select
             value={sort}
-            onChange={(e) => setSort(e.target.value)}
+            onChange={(e) => handleSort(e.target.value)}
             className="input-hud pl-9 pr-4 w-full sm:w-48"
           >
             {SORTS.map((s) => (
@@ -72,20 +121,81 @@ export default function ProductsPage() {
       </div>
 
       {/* Category pills */}
-      <div className="flex flex-wrap gap-2 mb-8">
+      <div className="flex flex-wrap gap-2 mb-5">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.value}
-            onClick={() => setCategory(cat.value)}
-            className={`px-4 py-1.5 rounded font-mono text-xs border transition-all ${
-              category === cat.value
-                ? 'border-[#00D4FF] text-[#00D4FF] bg-[rgba(0,212,255,0.08)]'
-                : 'border-[rgba(0,212,255,0.2)] text-[#4A7FA5] hover:border-[rgba(0,212,255,0.4)] hover:text-[#E8F4FD]'
-            }`}
+            onClick={() => handleCategory(cat.value)}
+            className={`${pillBase} ${category === cat.value ? pillActive : pillIdle}`}
           >
             {cat.label.toUpperCase()}
           </button>
         ))}
+      </div>
+
+      {/* Advanced filters row */}
+      <div className="flex flex-wrap items-center gap-3 mb-6 pb-5 border-b border-[rgba(0,212,255,0.1)]">
+        {/* Price range */}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-[#4A7FA5]">PRICE</span>
+          <input
+            type="number"
+            min={0}
+            placeholder="Min ₹"
+            value={minPrice}
+            onChange={(e) => handleMinPrice(e.target.value)}
+            className="input-hud w-24 text-xs py-1.5"
+          />
+          <span className="text-[#4A7FA5] font-mono text-xs">—</span>
+          <input
+            type="number"
+            min={0}
+            placeholder="Max ₹"
+            value={maxPrice}
+            onChange={(e) => handleMaxPrice(e.target.value)}
+            className="input-hud w-24 text-xs py-1.5"
+          />
+        </div>
+
+        {/* In Stock toggle */}
+        <button
+          onClick={handleInStock}
+          className={`${pillBase} ${inStock ? 'border-[#00FF88] text-[#00FF88] bg-[rgba(0,255,136,0.08)]' : pillIdle}`}
+        >
+          IN STOCK
+        </button>
+
+        {/* On Sale toggle */}
+        <button
+          onClick={handleOnSale}
+          className={`${pillBase} ${onSale ? 'border-[#FF3366] text-[#FF3366] bg-[rgba(255,51,102,0.08)]' : pillIdle}`}
+        >
+          ON SALE
+        </button>
+
+        {/* Min rating buttons */}
+        <div className="flex items-center gap-1">
+          <span className="font-mono text-xs text-[#4A7FA5] mr-1">RATING</span>
+          {RATINGS.map((r) => (
+            <button
+              key={r}
+              onClick={() => handleMinRating(r)}
+              className={`${pillBase} ${minRating === r ? 'border-[#FFB700] text-[#FFB700] bg-[rgba(255,183,0,0.08)]' : pillIdle}`}
+            >
+              {r}★+
+            </button>
+          ))}
+        </div>
+
+        {/* Clear filters */}
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1 font-mono text-xs text-[#FF3366] border border-[rgba(255,51,102,0.3)] hover:border-[#FF3366] px-3 py-1.5 rounded transition-all"
+          >
+            <X size={12} /> CLEAR
+          </button>
+        )}
       </div>
 
       {/* Results count */}
@@ -96,6 +206,15 @@ export default function ProductsPage() {
       )}
 
       <ProductsGrid products={data?.data} isLoading={isLoading} isError={isError} onRetry={refetch} />
+
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense>
+      <ProductsInner />
+    </Suspense>
   )
 }

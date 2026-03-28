@@ -35,13 +35,19 @@ export async function POST() {
   // Phone stored in Clerk unsafe metadata during registration
   const phone = (clerkUser.unsafeMetadata as { phone?: string })?.phone ?? ''
 
+  // Use the actual OAuth provider (google/github) if user signed in via OAuth
+  // Fall back to 'clerk' for email/password users
+  const externalAccount = clerkUser.externalAccounts?.[0]
+  const provider = externalAccount?.provider ?? 'clerk'
+  const providerId = externalAccount?.externalId ?? clerkUser.id
+
   try {
     const res = await fetch(`${API_BASE_URL}${ENDPOINTS.auth.oauth}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        provider: 'clerk',
-        providerId: clerkUser.id,
+        provider,
+        providerId,
         email,
         name,
         phone,

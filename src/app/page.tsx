@@ -273,6 +273,7 @@ function DealCard({ title, offer, slug, delay }: { title: string; offer: string;
 /* ─── Page ───────────────────────────────────────────────────────── */
 export default function HomePage() {
   const { data: bestsellers, isLoading, isError: bestsellersError, refetch: refetchBestsellers } = useProducts({ sort: 'rating', limit: 8 })
+  const recentlyViewed = useRecentlyViewedStore(s => s.items)
 
   return (
     <div>

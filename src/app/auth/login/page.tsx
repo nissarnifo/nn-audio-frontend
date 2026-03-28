@@ -81,8 +81,8 @@ function LoginForm() {
     try {
       await signIn.authenticateWithRedirect({
         strategy: provider,
-        redirectUrl: '/sso-callback',
-        redirectUrlComplete: fromPath ?? '/',
+        redirectUrl: `${window.location.origin}/sso-callback`,
+        redirectUrlComplete: `${window.location.origin}${fromPath ?? '/'}`,
       })
     } catch (err: unknown) {
       const clerkErr = err as { errors?: Array<{ message: string }> }

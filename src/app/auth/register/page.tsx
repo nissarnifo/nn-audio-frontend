@@ -38,6 +38,7 @@ export default function RegisterPage() {
   const setUser = useAuthStore((s) => s.setUser)
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
   const [showPass, setShowPass] = useState(false)
+  const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
   const [enabledProviders, setEnabledProviders] = useState<string[]>([])
@@ -79,6 +80,10 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!agreedToTerms) {
+      toast.error('Please accept the Terms & Conditions to continue')
+      return
+    }
     if (form.password !== form.confirm) {
       toast.error('Passwords do not match')
       return
@@ -182,8 +187,8 @@ export default function RegisterPage() {
                   className="input-hud pr-10"
                   placeholder="••••••••"
                 />
-                <button type="button" onClick={() => setShowPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors">
-                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                <button type="button" aria-label={showPass ? 'Hide password' : 'Show password'} onClick={() => setShowPass((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors">
+                  {showPass ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
                 </button>
               </div>
             </div>
@@ -195,12 +200,36 @@ export default function RegisterPage() {
                 value={form.confirm}
                 onChange={handleChange}
                 required
+                aria-invalid={form.confirm.length > 0 && form.password !== form.confirm}
+                aria-describedby="confirm-hint"
                 className="input-hud"
                 placeholder="••••••••"
               />
+              {form.confirm.length > 0 && (
+                <p id="confirm-hint" className={`mt-1 font-mono text-[10px] ${form.password === form.confirm ? 'text-[#00FF88]' : 'text-[#FF3366]'}`}>
+                  {form.password === form.confirm ? '✓ Passwords match' : '✗ Passwords do not match'}
+                </p>
+              )}
             </div>
 
-            <button type="submit" disabled={loading} className="btn-gold w-full py-3 flex items-center justify-center gap-2 mt-2">
+            {/* Terms & Conditions */}
+            <div className="flex items-start gap-3 pt-1">
+              <input
+                id="terms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border border-[rgba(0,212,255,0.4)] bg-transparent accent-[#00D4FF] cursor-pointer flex-shrink-0"
+              />
+              <label htmlFor="terms" className="text-xs text-[#4A7FA5] font-mono leading-relaxed cursor-pointer">
+                I agree to the{' '}
+                <Link href="/policies/terms" className="text-[#00D4FF] hover:underline">Terms &amp; Conditions</Link>
+                {' '}and{' '}
+                <Link href="/policies/privacy" className="text-[#00D4FF] hover:underline">Privacy Policy</Link>
+              </label>
+            </div>
+
+            <button type="submit" disabled={loading || !agreedToTerms} className="btn-gold w-full py-3 flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? <><Spinner size={16} /> CREATING ACCOUNT...</> : 'CREATE ACCOUNT'}
             </button>
           </form>

@@ -102,17 +102,26 @@ export default function SearchBar({ onClose }: Props) {
     }
   }, [open, results, activeIdx]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const listboxId = 'search-listbox'
+  const getOptionId = (i: number) => `search-option-${i}`
+
   return (
     <div ref={containerRef} className="relative w-full">
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2" role="search">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] pointer-events-none" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] pointer-events-none" aria-hidden="true" />
           {loading && (
-            <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] animate-spin" />
+            <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] animate-spin" aria-hidden="true" />
           )}
           <input
             ref={inputRef}
             type="text"
+            role="combobox"
+            aria-label="Search products"
+            aria-expanded={open && results.length > 0}
+            aria-controls={listboxId}
+            aria-activedescendant={activeIdx >= 0 ? getOptionId(activeIdx) : undefined}
+            aria-autocomplete="list"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -124,10 +133,11 @@ export default function SearchBar({ onClose }: Props) {
           {query && (
             <button
               type="button"
+              aria-label="Clear search"
               onClick={() => { setQuery(''); setResults([]); setOpen(false); inputRef.current?.focus() }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] hover:text-[#E8F4FD] transition-colors"
             >
-              <X size={14} />
+              <X size={14} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -138,7 +148,12 @@ export default function SearchBar({ onClose }: Props) {
 
       {/* Dropdown */}
       {open && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-50 rounded border border-[rgba(0,212,255,0.2)] bg-[#0D1B2A] shadow-2xl overflow-hidden">
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label="Search suggestions"
+          className="absolute top-full left-0 right-0 mt-1 z-50 rounded border border-[rgba(0,212,255,0.2)] bg-[#0D1B2A] shadow-2xl overflow-hidden"
+        >
           {results.map((product, i) => {
             const img = getPrimaryImage(product.images)
             const variant = product.variants.find((v) => v.is_active) ?? product.variants[0]
@@ -146,6 +161,9 @@ export default function SearchBar({ onClose }: Props) {
             return (
               <button
                 key={product.id}
+                id={getOptionId(i)}
+                role="option"
+                aria-selected={isActive}
                 onMouseDown={() => handleSelect(product.slug)}
                 onMouseEnter={() => setActiveIdx(i)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
@@ -194,7 +212,7 @@ export default function SearchBar({ onClose }: Props) {
               onMouseDown={() => { setOpen(false); onClose?.() }}
               className="flex items-center justify-center gap-1.5 py-2.5 font-mono text-xs text-[#00D4FF] hover:bg-[rgba(0,212,255,0.06)] transition-colors"
             >
-              <Search size={12} />
+              <Search size={12} aria-hidden="true" />
               SEE ALL RESULTS FOR &ldquo;{query.trim()}&rdquo;
             </Link>
           </div>

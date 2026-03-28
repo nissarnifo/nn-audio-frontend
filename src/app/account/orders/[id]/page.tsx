@@ -345,7 +345,7 @@ export default function OrderDetailPage() {
           )
         }
 
-        const daysSince = (Date.now() - new Date(order.created_at).getTime()) / (1000 * 60 * 60 * 24)
+        const daysSince = (Date.now() - new Date(order.updated_at).getTime()) / (1000 * 60 * 60 * 24)
         if (daysSince > 7) return null
 
         return (

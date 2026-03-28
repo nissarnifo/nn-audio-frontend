@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
@@ -23,6 +23,7 @@ export default function QuickViewModal({ product, onClose }: Props) {
   )
   const [qty, setQty] = useState(1)
   const [imgIdx, setImgIdx] = useState(0)
+  const panelRef = useRef<HTMLDivElement>(null)
   const addItem = useCartStore((s) => s.addItem)
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
   const router = useRouter()
@@ -37,9 +38,29 @@ export default function QuickViewModal({ product, onClose }: Props) {
     setImgIdx(0)
   }, [product?.id])
 
-  // Close on Escape
+  // Focus trap + Escape to close
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    const panel = panelRef.current
+    if (!panel) return
+
+    // Focus first focusable element on open
+    const focusable = panel.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    focusable[0]?.focus()
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key !== 'Tab') return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last?.focus() }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first?.focus() }
+      }
+    }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
@@ -87,6 +108,10 @@ export default function QuickViewModal({ product, onClose }: Props) {
     >
       {/* Panel */}
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={product.name}
         className="relative w-full max-w-3xl bg-[#0D1B2A] border border-[rgba(0,212,255,0.2)] rounded-lg overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -127,16 +152,18 @@ export default function QuickViewModal({ product, onClose }: Props) {
               {images.length > 1 && (
                 <>
                   <button
+                    aria-label="Previous image"
                     onClick={() => setImgIdx((i) => (i - 1 + images.length) % images.length)}
                     className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center text-[#4A7FA5] hover:text-[#E8F4FD] transition-all"
                   >
-                    <ChevronLeft size={15} />
+                    <ChevronLeft size={15} aria-hidden="true" />
                   </button>
                   <button
+                    aria-label="Next image"
                     onClick={() => setImgIdx((i) => (i + 1) % images.length)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center text-[#4A7FA5] hover:text-[#E8F4FD] transition-all"
                   >
-                    <ChevronRight size={15} />
+                    <ChevronRight size={15} aria-hidden="true" />
                   </button>
                 </>
               )}
@@ -153,7 +180,7 @@ export default function QuickViewModal({ product, onClose }: Props) {
                       i === imgIdx ? 'border-[#00D4FF]' : 'border-[rgba(0,212,255,0.15)] opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <Image src={cloudinaryUrl(img.url, 100)} alt="" width={48} height={48} className="object-cover w-full h-full" />
+                    <Image src={cloudinaryUrl(img.url, 100)} alt={`Thumbnail ${i + 1}`} width={48} height={48} className="object-cover w-full h-full" />
                   </button>
                 ))}
               </div>
@@ -240,6 +267,7 @@ export default function QuickViewModal({ product, onClose }: Props) {
                 {inStock ? <><ShoppingCart size={15} /> ADD TO CART</> : <><Zap size={15} /> SOLD OUT</>}
               </button>
               <button
+                aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                 onClick={() => toggleWishlist(product)}
                 className={`w-11 flex items-center justify-center border rounded transition-all ${
                   wishlisted
@@ -247,7 +275,7 @@ export default function QuickViewModal({ product, onClose }: Props) {
                     : 'border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#FF3366] hover:text-[#FF3366]'
                 }`}
               >
-                <Heart size={16} className={wishlisted ? 'fill-[#FF3366]' : ''} />
+                <Heart size={16} aria-hidden="true" className={wishlisted ? 'fill-[#FF3366]' : ''} />
               </button>
             </div>
 

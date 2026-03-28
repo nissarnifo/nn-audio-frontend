@@ -1,21 +1,22 @@
 'use client'
-import { Star, Loader2 } from 'lucide-react'
+import { Star, Loader2, Clock, Truck, CheckCircle2, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { OrderStatus } from '@/types'
 
 /* ─── Stars ──────────────────────────────────────────────────────── */
 export function Stars({ rating, count }: { rating: number; count?: number }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" aria-label={`${rating.toFixed(1)} out of 5 stars${count !== undefined ? `, ${count} reviews` : ''}`}>
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
           size={14}
+          aria-hidden="true"
           className={i < Math.round(rating) ? 'fill-[#FFB700] text-[#FFB700]' : 'text-[#4A7FA5]'}
         />
       ))}
       {count !== undefined && (
-        <span className="text-xs text-[#4A7FA5] ml-1 font-mono">({count})</span>
+        <span className="text-xs text-[#4A7FA5] ml-1 font-mono" aria-hidden="true">({count})</span>
       )}
     </div>
   )
@@ -58,8 +59,25 @@ const statusColors: Record<OrderStatus, 'cyan' | 'gold' | 'green' | 'red'> = {
   DELIVERED: 'green',
   CANCELLED: 'red',
 }
+const statusIcons: Record<OrderStatus, React.ReactNode> = {
+  PROCESSING: <Clock size={10} aria-hidden="true" />,
+  SHIPPED: <Truck size={10} aria-hidden="true" />,
+  DELIVERED: <CheckCircle2 size={10} aria-hidden="true" />,
+  CANCELLED: <XCircle size={10} aria-hidden="true" />,
+}
+const statusLabels: Record<OrderStatus, string> = {
+  PROCESSING: 'Processing',
+  SHIPPED: 'Shipped',
+  DELIVERED: 'Delivered',
+  CANCELLED: 'Cancelled',
+}
 export function StatusBadge({ status }: { status: OrderStatus }) {
-  return <Badge color={statusColors[status]}>{status}</Badge>
+  return (
+    <Badge color={statusColors[status]} className="inline-flex items-center gap-1">
+      {statusIcons[status]}
+      {statusLabels[status]}
+    </Badge>
+  )
 }
 
 /* ─── Divider ────────────────────────────────────────────────────── */
@@ -75,6 +93,8 @@ export function Divider({ className }: { className?: string }) {
 export function Spinner({ size = 20, className }: { size?: number; className?: string }) {
   return (
     <Loader2
+      role="status"
+      aria-label="Loading"
       size={size}
       className={cn('animate-spin text-[#00D4FF]', className)}
     />
@@ -184,6 +204,7 @@ export function Pagination({
           <button
             key={p}
             onClick={() => onPage(p as number)}
+            aria-current={page === p ? 'page' : undefined}
             className={cn(
               btnBase,
               page === p

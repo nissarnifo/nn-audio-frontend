@@ -127,16 +127,18 @@ export default function QuickViewModal({ product, onClose }: Props) {
               {images.length > 1 && (
                 <>
                   <button
+                    aria-label="Previous image"
                     onClick={() => setImgIdx((i) => (i - 1 + images.length) % images.length)}
                     className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center text-[#4A7FA5] hover:text-[#E8F4FD] transition-all"
                   >
-                    <ChevronLeft size={15} />
+                    <ChevronLeft size={15} aria-hidden="true" />
                   </button>
                   <button
+                    aria-label="Next image"
                     onClick={() => setImgIdx((i) => (i + 1) % images.length)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[rgba(10,14,26,0.7)] flex items-center justify-center text-[#4A7FA5] hover:text-[#E8F4FD] transition-all"
                   >
-                    <ChevronRight size={15} />
+                    <ChevronRight size={15} aria-hidden="true" />
                   </button>
                 </>
               )}
@@ -240,6 +242,7 @@ export default function QuickViewModal({ product, onClose }: Props) {
                 {inStock ? <><ShoppingCart size={15} /> ADD TO CART</> : <><Zap size={15} /> SOLD OUT</>}
               </button>
               <button
+                aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                 onClick={() => toggleWishlist(product)}
                 className={`w-11 flex items-center justify-center border rounded transition-all ${
                   wishlisted
@@ -247,7 +250,7 @@ export default function QuickViewModal({ product, onClose }: Props) {
                     : 'border-[rgba(0,212,255,0.25)] text-[#4A7FA5] hover:border-[#FF3366] hover:text-[#FF3366]'
                 }`}
               >
-                <Heart size={16} className={wishlisted ? 'fill-[#FF3366]' : ''} />
+                <Heart size={16} aria-hidden="true" className={wishlisted ? 'fill-[#FF3366]' : ''} />
               </button>
             </div>
 

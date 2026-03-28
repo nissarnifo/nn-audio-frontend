@@ -581,10 +581,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   <p className="font-mono text-xs text-[#4A7FA5] mb-2">YOUR RATING</p>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((i) => (
-                      <button key={i} type="button" onClick={() => setRating(i)}
+                      <button key={i} type="button" aria-label={`Rate ${i} star${i > 1 ? 's' : ''}`} onClick={() => setRating(i)}
                         onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(0)}
                         className="transition-transform hover:scale-110">
-                        <Star size={28} className={i <= (hover || rating) ? 'fill-[#FFB700] text-[#FFB700]' : 'text-[#4A7FA5]'} />
+                        <Star size={28} aria-hidden="true" className={i <= (hover || rating) ? 'fill-[#FFB700] text-[#FFB700]' : 'text-[#4A7FA5]'} />
                       </button>
                     ))}
                   </div>

@@ -106,10 +106,11 @@ export default function Navbar() {
                 <User size={20} />
               </Link>
               <button
+                aria-label="Logout"
                 onClick={handleLogout}
                 className="p-2 text-[#4A7FA5] hover:text-[#FF3366] transition-colors hidden md:block"
               >
-                <LogOut size={20} />
+                <LogOut size={20} aria-hidden="true" />
               </button>
             </>
           ) : (
@@ -120,10 +121,12 @@ export default function Navbar() {
 
           {/* Mobile menu toggle */}
           <button
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
             onClick={() => { setMenuOpen(!menuOpen); setSearchOpen(false) }}
             className="p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors md:hidden"
           >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            {menuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
           </button>
         </div>
       </div>

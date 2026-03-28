@@ -4,10 +4,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X, Heart, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useClerk, useUser } from '@clerk/nextjs'
 import { useCartStore } from '@/store/cart.store'
 import { useWishlistStore } from '@/store/wishlist.store'
 import { useAuthStore } from '@/store/auth.store'
-import { authApi } from '@/services/api'
 import { cn } from '@/lib/utils'
 import SearchBar from './SearchBar'
 
@@ -21,14 +21,18 @@ export default function Navbar() {
   const router = useRouter()
   const { count } = useCartStore()
   const wishlistCount = useWishlistStore((s) => s.count)
-  const { isLoggedIn, isAdmin, logout } = useAuthStore()
+  const { isAdmin, logout: clearBackendAuth } = useAuthStore()
+  const { signOut } = useClerk()
+  const { isSignedIn } = useUser()
   const qc = useQueryClient()
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
 
   async function handleLogout() {
-    try { await authApi.logout() } catch {}
-    logout()
+    try {
+      await signOut()
+    } catch {}
+    clearBackendAuth()
     qc.clear()
     router.push('/')
   }
@@ -72,12 +76,12 @@ export default function Navbar() {
             className={`p-2 transition-colors ${searchOpen ? 'text-[#00D4FF]' : 'text-[#4A7FA5] hover:text-[#00D4FF]'}`}
             aria-label="Search"
           >
-            <Search size={20} />
+            <Search size={20} aria-hidden="true" />
           </button>
 
           {/* Wishlist */}
           <Link href="/account/wishlist" className="relative p-2 text-[#4A7FA5] hover:text-[#FF3366] transition-colors">
-            <Heart size={20} />
+            <Heart size={20} aria-hidden="true" />
             {wishlistCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#FF3366] text-white text-[10px] font-bold flex items-center justify-center font-mono">
                 {wishlistCount > 9 ? '9+' : wishlistCount}
@@ -87,7 +91,7 @@ export default function Navbar() {
 
           {/* Cart */}
           <Link href="/cart" className="relative p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors">
-            <ShoppingCart size={20} />
+            <ShoppingCart size={20} aria-hidden="true" />
             {count > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#00D4FF] text-[#0A0E1A] text-[10px] font-bold flex items-center justify-center font-mono">
                 {count > 9 ? '9+' : count}
@@ -95,15 +99,15 @@ export default function Navbar() {
             )}
           </Link>
 
-          {isLoggedIn ? (
+          {isSignedIn ? (
             <>
               {isAdmin && (
-                <Link href="/admin" className="p-2 text-[#4A7FA5] hover:text-[#FFB700] transition-colors hidden md:block">
-                  <LayoutDashboard size={20} />
+                <Link href="/admin" className="p-2 text-[#4A7FA5] hover:text-[#FFB700] transition-colors hidden md:block" aria-label="Admin dashboard">
+                  <LayoutDashboard size={20} aria-hidden="true" />
                 </Link>
               )}
-              <Link href="/account/profile" className="p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors hidden md:block">
-                <User size={20} />
+              <Link href="/account/profile" className="p-2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors hidden md:block" aria-label="My account">
+                <User size={20} aria-hidden="true" />
               </Link>
               <button
                 aria-label="Logout"
@@ -156,7 +160,7 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
-          {isLoggedIn ? (
+          {isSignedIn ? (
             <>
               {isAdmin && (
                 <Link href="/admin" onClick={() => setMenuOpen(false)} className="font-heading text-sm tracking-widest text-[#FFB700]">

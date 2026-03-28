@@ -226,3 +226,11 @@ export function Pagination({
     </div>
   )
 }
+
+/* ─── Re-exports from dedicated files ───────────────────────────── */
+export { ErrorBoundary } from './ErrorBoundary'
+export { Skeleton, ProductCardSkeleton, OrderCardSkeleton } from './Skeleton'
+export { PageHeader } from './PageHeader'
+export { ConfirmDialog } from './ConfirmDialog'
+export { EmptyState } from './EmptyState'
+export { Badge as StatusBadge, statusVariant } from './Badge'

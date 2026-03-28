@@ -3,10 +3,16 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '@/types'
 
+/**
+ * Stores the backend JWT + user record (with role) obtained after Clerk auth.
+ * Clerk manages the identity session; this store holds the API authorization token.
+ * Populated by ClerkSync after every Clerk sign-in, cleared on sign-out.
+ */
 interface AuthState {
   _hasHydrated: boolean
   user: User | null
   token: string | null
+  /** true once the backend JWT has been obtained after Clerk sign-in */
   isLoggedIn: boolean
   isAdmin: boolean
   setUser: (user: User, token: string) => void

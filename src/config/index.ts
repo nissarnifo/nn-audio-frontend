@@ -3,25 +3,19 @@
  *
  * ALL environment variables are read exactly once, here.
  *
- * LOOSE COUPLING GUIDE — to migrate after 3 months to your own server:
+ * LOOSE COUPLING GUIDE — to migrate to your own server:
  *   1. Change NEXT_PUBLIC_API_URL  → points to any backend, anywhere
- *   2. Change NEXTAUTH_URL         → your own domain
- *   3. Change NEXTAUTH_SECRET      → new random secret
- *   4. Set Razorpay live key       → switch from test to production
- *   5. That's it. Zero code changes needed.
+ *   2. Set Razorpay live key       → switch from test to production
+ *   3. Update Clerk keys           → use production Clerk instance
+ *   4. That's it. Zero code changes needed.
  *
- * CURRENT STACK (3-month free tier):
- *   Frontend  → Vercel (free)
- *   Backend   → Render (free)
- *   Database  → Neon PostgreSQL (free, via render.yaml)
- *   Storage   → Cloudinary (free tier)
+ * CURRENT STACK:
+ *   Auth      → Clerk (identity + session management)
+ *   Frontend  → Vercel
+ *   Backend   → Render (issues backend JWT after Clerk sync)
+ *   Database  → Neon PostgreSQL
+ *   Storage   → Cloudinary
  *   Payments  → Razorpay
- *
- * FUTURE STACK (own server):
- *   Frontend  → Any CDN / VPS / Docker
- *   Backend   → Any Node server / Docker
- *   Database  → Any PostgreSQL (same schema, pg_dump → restore)
- *   Storage   → Any S3-compatible / Cloudinary / own
  */
 
 // ─── Backend API ───────────────────────────────────────────────────────────────
@@ -40,28 +34,9 @@ export const APP_URL =
 // Switch from test to live by updating NEXT_PUBLIC_RAZORPAY_KEY_ID in .env
 export const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''
 
-// ─── OAuth Providers (all optional — enable by adding keys to .env) ───────────
-export const oauthConfig = {
-  google: {
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    enabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-  },
-  github: {
-    clientId: process.env.GITHUB_CLIENT_ID || '',
-    clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-    enabled: !!(
-      process.env.GITHUB_CLIENT_ID &&
-      process.env.GITHUB_CLIENT_SECRET &&
-      process.env.GITHUB_CLIENT_SECRET !== 'PASTE_YOUR_SECRET_HERE'
-    ),
-  },
-  discord: {
-    clientId: process.env.DISCORD_CLIENT_ID || '',
-    clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
-    enabled: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
-  },
-} as const
+// ─── OAuth Providers — now managed in the Clerk Dashboard ─────────────────────
+// Enable Google, GitHub, Discord, etc. from: https://dashboard.clerk.com
+// No environment variables needed on the frontend for OAuth any more.
 
 // ─── Image Hosting ─────────────────────────────────────────────────────────────
 // Add your own CDN hostname here when migrating to own server

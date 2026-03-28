@@ -153,7 +153,7 @@ export default function QuickViewModal({ product, onClose }: Props) {
                       i === imgIdx ? 'border-[#00D4FF]' : 'border-[rgba(0,212,255,0.15)] opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <Image src={cloudinaryUrl(img.url, 100)} alt="" width={48} height={48} className="object-cover w-full h-full" />
+                    <Image src={cloudinaryUrl(img.url, 100)} alt={`Thumbnail ${i + 1}`} width={48} height={48} className="object-cover w-full h-full" />
                   </button>
                 ))}
               </div>

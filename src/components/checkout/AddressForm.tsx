@@ -48,7 +48,7 @@ export default function AddressForm({ initial, onSubmit, loading, submitLabel = 
 
       <div>
         <label className="block text-xs text-[#4A7FA5] font-mono mb-1">PHONE *</label>
-        <input name="phone" value={form.phone} onChange={handleChange} required className="input-hud" placeholder="+91 XXXXX XXXXX" />
+        <input name="phone" value={form.phone} onChange={handleChange} required className="input-hud" placeholder="+91 XXXXX XXXXX" type="tel" />
       </div>
 
       <div className="sm:col-span-2">
@@ -73,7 +73,7 @@ export default function AddressForm({ initial, onSubmit, loading, submitLabel = 
 
       <div>
         <label className="block text-xs text-[#4A7FA5] font-mono mb-1">PIN CODE *</label>
-        <input name="pin" value={form.pin} onChange={handleChange} required className="input-hud" placeholder="6-digit PIN" maxLength={6} pattern="[0-9]{6}" />
+        <input name="pin" value={form.pin} onChange={handleChange} required className="input-hud" placeholder="6-digit PIN" maxLength={6} pattern="[0-9]{6}" inputMode="numeric" />
       </div>
 
       <div className="sm:col-span-2 flex justify-end pt-2">

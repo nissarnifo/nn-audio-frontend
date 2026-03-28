@@ -6,16 +6,17 @@ import type { OrderStatus } from '@/types'
 /* ─── Stars ──────────────────────────────────────────────────────── */
 export function Stars({ rating, count }: { rating: number; count?: number }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1" aria-label={`${rating.toFixed(1)} out of 5 stars${count !== undefined ? `, ${count} reviews` : ''}`}>
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
           size={14}
+          aria-hidden="true"
           className={i < Math.round(rating) ? 'fill-[#FFB700] text-[#FFB700]' : 'text-[#4A7FA5]'}
         />
       ))}
       {count !== undefined && (
-        <span className="text-xs text-[#4A7FA5] ml-1 font-mono">({count})</span>
+        <span className="text-xs text-[#4A7FA5] ml-1 font-mono" aria-hidden="true">({count})</span>
       )}
     </div>
   )
@@ -75,6 +76,8 @@ export function Divider({ className }: { className?: string }) {
 export function Spinner({ size = 20, className }: { size?: number; className?: string }) {
   return (
     <Loader2
+      role="status"
+      aria-label="Loading"
       size={size}
       className={cn('animate-spin text-[#00D4FF]', className)}
     />
@@ -184,6 +187,7 @@ export function Pagination({
           <button
             key={p}
             onClick={() => onPage(p as number)}
+            aria-current={page === p ? 'page' : undefined}
             className={cn(
               btnBase,
               page === p

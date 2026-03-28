@@ -222,3 +222,13 @@ body {
 
 .animate-fadeup   { animation: fadeup 0.5s ease-out; }
 .animate-cyanglow { animation: cyanglow 2s ease-in-out infinite; }
+
+/* ─── Reduced Motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}

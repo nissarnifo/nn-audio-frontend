@@ -9,7 +9,10 @@ export default function SSOCallbackPage() {
         <Spinner size={32} />
         <p className="text-[#4A7FA5] font-mono text-sm tracking-widest">AUTHENTICATING…</p>
       </div>
-      <AuthenticateWithRedirectCallback />
+      <AuthenticateWithRedirectCallback
+        afterSignInUrl="/"
+        afterSignUpUrl="/"
+      />
     </div>
   )
 }

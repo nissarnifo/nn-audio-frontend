@@ -1,18 +1,14 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { API_BASE_URL, ENDPOINTS } from '@/config'
+import { prisma } from '@/lib/prisma'
+import { signToken } from '@/lib/api-helpers'
 
-/**
- * POST /api/auth/clerk-sync
- *
- * Called by ClerkSync.tsx after a successful Clerk sign-in.
- * Forwards the Clerk user's identity to the backend /auth/oauth endpoint
- * to create or retrieve the backend JWT + user record (with role info).
- *
- * The backend must accept provider="clerk" as a valid OAuth provider.
- * If it only accepts google/github/discord, add "clerk" to the backend's
- * provider whitelist (one-line change on the backend).
- */
+export const dynamic = 'force-dynamic'
+
+function safeUser(u: any) {
+  return { id: u.id, name: u.name, email: u.email, phone: u.phone ?? '', role: u.role, created_at: u.createdAt }
+}
+
 export async function POST() {
   const { userId } = auth()
   if (!userId) {
@@ -28,45 +24,53 @@ export async function POST() {
     (e) => e.id === clerkUser.primaryEmailAddressId
   )?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress
 
+  if (!email) {
+    return NextResponse.json({ error: 'No email found on Clerk user' }, { status: 400 })
+  }
+
   const firstName = clerkUser.firstName ?? ''
   const lastName = clerkUser.lastName ?? ''
   const name = [firstName, lastName].filter(Boolean).join(' ') || email
 
-  // Phone stored in Clerk unsafe metadata during registration
-  const phone = (clerkUser.unsafeMetadata as { phone?: string })?.phone ?? ''
-
-  // Use the actual OAuth provider (google/github) if user signed in via OAuth
-  // Fall back to 'clerk' for email/password users
+  // Use real OAuth provider (google/github) or fall back to clerkId lookup
   const externalAccount = clerkUser.externalAccounts?.[0]
-  const provider = externalAccount?.provider ?? 'clerk'
-  const providerId = externalAccount?.externalId ?? clerkUser.id
+  const provider = externalAccount?.provider ?? null
+  const providerId = externalAccount?.externalId ?? null
 
   try {
-    const res = await fetch(`${API_BASE_URL}${ENDPOINTS.auth.oauth}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        provider,
-        providerId,
-        email,
-        name,
-        phone,
-      }),
-      signal: AbortSignal.timeout(25000),
-    })
+    const db = prisma.user as any
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      return NextResponse.json(
-        { error: (err as { message?: string }).message || 'Backend sync failed' },
-        { status: res.status }
-      )
+    // Look up by OAuth provider ID first, then fall back to email
+    const providerWhere =
+      provider === 'google' ? { googleId: providerId }
+      : provider === 'github' ? { githubId: providerId }
+      : null
+
+    let user = providerWhere
+      ? ((await db.findUnique({ where: providerWhere })) ?? (await db.findUnique({ where: { email } })))
+      : await db.findUnique({ where: { email } })
+
+    const providerData =
+      provider === 'google' ? { googleId: providerId }
+      : provider === 'github' ? { githubId: providerId }
+      : {}
+
+    if (user) {
+      // Link provider ID if not already linked
+      if (provider && !user[`${provider}Id`]) {
+        user = await db.update({ where: { id: user.id }, data: providerData })
+      }
+    } else {
+      // Create new user
+      user = await db.create({ data: { name, email, ...providerData } })
     }
 
-    const data = await res.json()
-    return NextResponse.json({ token: data.token, user: data.user })
-  } catch (err) {
-    console.error('[clerk-sync] Backend unreachable:', err)
-    return NextResponse.json({ error: 'Backend unreachable' }, { status: 503 })
+    return NextResponse.json({
+      token: signToken(user.id, user.role),
+      user: safeUser(user),
+    })
+  } catch (e) {
+    console.error('[clerk-sync] DB error:', e)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

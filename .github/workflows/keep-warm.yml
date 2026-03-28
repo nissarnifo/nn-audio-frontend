@@ -1,0 +1,24 @@
+name: Keep Backend Warm
+
+# Ping the Render backend every 14 minutes so it never spins down.
+# Render free tier sleeps after 15 min of inactivity — this prevents that.
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # allow manual trigger from GitHub UI
+
+jobs:
+  warmup:
+    name: Ping backend health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 60 \
+            https://nn-audio-backend.onrender.com/health)
+          echo "Backend responded with HTTP $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Warning: backend returned $STATUS (may be starting up)"
+          fi

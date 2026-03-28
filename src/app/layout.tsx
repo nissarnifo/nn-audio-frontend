@@ -25,6 +25,14 @@ export const metadata: Metadata = {
     title: 'N & N Audio Systems — Precision Audio, Made in India',
     description:
       'Premium amplifiers, speakers, subwoofers and audio equipment. Trusted by audiophiles across India.',
+    images: [
+      {
+        url: `${APP_URL}/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'N & N Audio Systems',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -51,6 +59,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         {/* Razorpay SDK — loaded once globally so window.Razorpay is always available */}
         <script src="https://checkout.razorpay.com/v1/checkout.js" async />
+        {/* Organization structured data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'N & N Audio Systems',
+              url: APP_URL,
+              logo: `${APP_URL}/og-image.jpg`,
+              contactPoint: {
+                '@type': 'ContactPoint',
+                telephone: '+91-9700929591',
+                contactType: 'customer service',
+                availableLanguage: ['English', 'Hindi'],
+              },
+            }),
+          }}
+        />
       </head>
       <body className="hud-grid flex flex-col min-h-screen">
         <Providers>

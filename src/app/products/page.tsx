@@ -28,7 +28,7 @@ export default function ProductsPage() {
   const [category, setCategory] = useState<ProductCategory | ''>('')
   const [sort, setSort] = useState('rating')
 
-  const { data, isLoading } = useProducts({
+  const { data, isLoading, isError, refetch } = useProducts({
     search: search || undefined,
     category: (category || undefined) as ProductCategory | undefined,
     sort: sort as 'rating' | 'newest' | 'price_asc' | 'price_desc',
@@ -95,7 +95,7 @@ export default function ProductsPage() {
         </p>
       )}
 
-      <ProductsGrid products={data?.data} isLoading={isLoading} />
+      <ProductsGrid products={data?.data} isLoading={isLoading} isError={isError} onRetry={refetch} />
     </div>
   )
 }

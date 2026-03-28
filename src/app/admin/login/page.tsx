@@ -119,13 +119,11 @@ export default function AdminLoginPage() {
 
             <button
               type="submit"
-              disabled={loading || !serverReady}
+              disabled={loading}
               className="btn-cyan w-full py-3 flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed font-heading tracking-widest"
             >
               {loading ? (
                 <><Spinner size={15} /> AUTHENTICATING…</>
-              ) : !serverReady ? (
-                <><Spinner size={15} /> CONNECTING…</>
               ) : (
                 <><Lock size={14} /> SIGN IN TO ADMIN</>
               )}
@@ -133,7 +131,7 @@ export default function AdminLoginPage() {
 
             {!serverReady && (
               <p className="text-center text-[#4A7FA5] text-[10px] font-mono">
-                Server waking up — please wait
+                Server is waking up — you can still try signing in
               </p>
             )}
           </form>

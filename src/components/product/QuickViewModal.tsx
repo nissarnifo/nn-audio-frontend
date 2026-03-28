@@ -36,6 +36,7 @@ export default function QuickViewModal({ product, onClose }: Props) {
     setSelectedVariant(product.variants.find((v) => v.is_active) ?? product.variants[0] ?? null)
     setQty(1)
     setImgIdx(0)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id])
 
   // Focus trap + Escape to close

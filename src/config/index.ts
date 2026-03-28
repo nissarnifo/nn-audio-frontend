@@ -25,10 +25,10 @@
  */
 
 // ─── Backend API ───────────────────────────────────────────────────────────────
-// Change NEXT_PUBLIC_API_URL in .env to point to ANY backend, anywhere.
-// Format: https://your-backend.com/api/v1
+// Backend is now co-located as Next.js API routes on Vercel.
+// In development, NEXT_PUBLIC_API_URL can override to a local Express server.
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+  process.env.NEXT_PUBLIC_API_URL || '/api/v1'
 
 // ─── Payments ──────────────────────────────────────────────────────────────────
 // Switch from test to live by updating NEXT_PUBLIC_RAZORPAY_KEY_ID in .env

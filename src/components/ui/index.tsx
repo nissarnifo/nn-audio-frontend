@@ -1,5 +1,5 @@
 'use client'
-import { Star, Loader2 } from 'lucide-react'
+import { Star, Loader2, Clock, Truck, CheckCircle2, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { OrderStatus } from '@/types'
 
@@ -59,8 +59,25 @@ const statusColors: Record<OrderStatus, 'cyan' | 'gold' | 'green' | 'red'> = {
   DELIVERED: 'green',
   CANCELLED: 'red',
 }
+const statusIcons: Record<OrderStatus, React.ReactNode> = {
+  PROCESSING: <Clock size={10} aria-hidden="true" />,
+  SHIPPED: <Truck size={10} aria-hidden="true" />,
+  DELIVERED: <CheckCircle2 size={10} aria-hidden="true" />,
+  CANCELLED: <XCircle size={10} aria-hidden="true" />,
+}
+const statusLabels: Record<OrderStatus, string> = {
+  PROCESSING: 'Processing',
+  SHIPPED: 'Shipped',
+  DELIVERED: 'Delivered',
+  CANCELLED: 'Cancelled',
+}
 export function StatusBadge({ status }: { status: OrderStatus }) {
-  return <Badge color={statusColors[status]}>{status}</Badge>
+  return (
+    <Badge color={statusColors[status]} className="inline-flex items-center gap-1">
+      {statusIcons[status]}
+      {statusLabels[status]}
+    </Badge>
+  )
 }
 
 /* ─── Divider ────────────────────────────────────────────────────── */

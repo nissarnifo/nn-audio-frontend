@@ -1,7 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, Clock, CheckCircle2, XCircle, RefreshCw } from 'lucide-react'
 import { useMyReturns } from '@/hooks'
 import { useAuthStore } from '@/store/auth.store'
 import { EmptyState, PageLoading } from '@/components/ui'
@@ -21,6 +21,13 @@ const STATUS_LABEL: Record<ReturnStatus, string> = {
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
   REFUNDED: 'Refunded',
+}
+
+const STATUS_ICON: Record<ReturnStatus, React.ReactNode> = {
+  REQUESTED: <Clock size={10} aria-hidden="true" />,
+  APPROVED: <CheckCircle2 size={10} aria-hidden="true" />,
+  REJECTED: <XCircle size={10} aria-hidden="true" />,
+  REFUNDED: <RefreshCw size={10} aria-hidden="true" />,
 }
 
 export default function MyReturnsPage() {
@@ -57,9 +64,10 @@ export default function MyReturnsPage() {
                 </div>
                 <div className="text-right">
                   <span
-                    className="font-mono text-xs px-2.5 py-1 rounded-full border"
+                    className="inline-flex items-center gap-1 font-mono text-xs px-2.5 py-1 rounded-full border"
                     style={{ color: STATUS_COLOR[r.status], borderColor: `${STATUS_COLOR[r.status]}40`, background: `${STATUS_COLOR[r.status]}10` }}
                   >
+                    {STATUS_ICON[r.status]}
                     {STATUS_LABEL[r.status]}
                   </span>
                   <p className="font-mono text-xs text-[#4A7FA5] mt-1.5">{fmtDate(r.created_at)}</p>

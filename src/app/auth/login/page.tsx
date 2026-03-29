@@ -179,20 +179,11 @@ function LoginForm() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="btn-gold w-full py-3 flex items-center justify-center gap-2 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={loading || !isLoaded}
+              className="btn-cyan w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <><Spinner size={16} /> SIGNING IN...</>
-              ) : (
-                'SIGN IN'
-              )}
+              {loading ? <><Spinner size={16} /> SIGNING IN…</> : 'SIGN IN'}
             </button>
-            {!serverReady && (
-              <p className="text-center text-[#4A7FA5] text-xs font-mono mt-1">
-                <Spinner size={10} /> Server is waking up — you can still try signing in
-              </p>
-            )}
           </form>
 
           <div className="mt-6 text-center">

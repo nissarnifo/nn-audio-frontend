@@ -121,8 +121,11 @@ export default function RegisterPage() {
         await setActive({ session: result.createdSessionId })
         toast.success('Account created! Welcome to N & N Audio Systems.')
         router.push('/')
+      } else if (result.status === 'missing_requirements') {
+        const missing = result.missingFields?.join(', ') || 'unknown fields'
+        toast.error(`Additional info required: ${missing}`)
       } else {
-        toast.error('Verification incomplete. Please try again.')
+        toast.error(`Verification incomplete (status: ${result.status})`)
       }
     } catch (err: unknown) {
       const clerkErr = err as { errors?: Array<{ message: string; code: string }> }

@@ -23,6 +23,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ClerkProvider
+      proxyUrl="/clerk"
       appearance={{
         variables: {
           colorPrimary: '#00D4FF',

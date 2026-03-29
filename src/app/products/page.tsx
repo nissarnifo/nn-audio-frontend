@@ -59,8 +59,8 @@ function ProductsInner() {
   const debouncedSearch = useDebounce(search, 350)
   const hasActiveFilters = minPrice !== '' || maxPrice !== '' || inStock || minRating > 0 || onSale
 
-  const { data, isLoading } = useProducts({
-    search: debouncedSearch || undefined,
+  const { data, isLoading, isError, refetch } = useProducts({
+    search: search || undefined,
     category: (category || undefined) as ProductCategory | undefined,
     sort: sort as 'rating' | 'newest' | 'price_asc' | 'price_desc',
     page,
@@ -205,13 +205,8 @@ function ProductsInner() {
         </p>
       )}
 
-      <ProductsGrid products={data?.data} isLoading={isLoading} />
+      <ProductsGrid products={data?.data} isLoading={isLoading} isError={isError} onRetry={refetch} />
 
-      <Pagination
-        page={page}
-        totalPages={data?.total_pages ?? 1}
-        onPage={setPage}
-      />
     </div>
   )
 }

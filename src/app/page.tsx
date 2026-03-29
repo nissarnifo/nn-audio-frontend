@@ -272,8 +272,8 @@ function DealCard({ title, offer, slug, delay }: { title: string; offer: string;
 
 /* ─── Page ───────────────────────────────────────────────────────── */
 export default function HomePage() {
-  const { data: bestsellers, isLoading } = useProducts({ sort: 'rating', limit: 8 })
-  const recentlyViewed = useRecentlyViewedStore((s) => s.items)
+  const { data: bestsellers, isLoading, isError: bestsellersError, refetch: refetchBestsellers } = useProducts({ sort: 'rating', limit: 8 })
+  const recentlyViewed = useRecentlyViewedStore(s => s.items)
 
   return (
     <div>
@@ -308,7 +308,7 @@ export default function HomePage() {
       {/* Bestsellers */}
       <section className="max-w-7xl mx-auto px-4 py-10 border-t border-[rgba(0,212,255,0.1)]">
         <SectionHeader title="BESTSELLERS" subtitle="Our most loved products by audiophiles across India" />
-        <ProductsGrid products={bestsellers?.data} isLoading={isLoading} />
+        <ProductsGrid products={bestsellers?.data} isLoading={isLoading} isError={bestsellersError} onRetry={refetchBestsellers} />
         <div className="mt-10 text-center">
           <Link href="/products" className="btn-gold px-10 py-3 text-base">VIEW ALL PRODUCTS</Link>
         </div>

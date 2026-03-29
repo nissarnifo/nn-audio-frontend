@@ -1,6 +1,7 @@
 'use client'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/auth.store'
 
 /**
  * /admin/login — redirects to the main sign-in page.
@@ -10,8 +11,16 @@ import { useRouter } from 'next/navigation'
  */
 export default function AdminLoginRedirect() {
   const router = useRouter()
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const isAdmin = useAuthStore((s) => s.isAdmin)
+
   useEffect(() => {
-    router.replace('/auth/login')
-  }, [router])
+    if (isLoggedIn && isAdmin) {
+      router.replace('/admin')
+    } else {
+      router.replace('/auth/login?from=/admin')
+    }
+  }, [isLoggedIn, isAdmin, router])
+
   return null
 }

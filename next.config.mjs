@@ -8,16 +8,6 @@ const nextConfig = {
     ],
   },
 
-  // ─── Clerk Proxy (bypasses need for clerk.audiosets.store CNAME) ──────────
-  async rewrites() {
-    return [
-      {
-        source: '/clerk/:path*',
-        destination: 'https://frontend-api.clerk.services/:path*',
-      },
-    ]
-  },
-
   // ─── Security Headers ─────────────────────────────────────────────────────
   async headers() {
     return [

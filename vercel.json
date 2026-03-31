@@ -2,6 +2,7 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
+  "framework": "nextjs",
   "functions": {
     "src/app/api/warmup/route.ts": {
       "maxDuration": 60

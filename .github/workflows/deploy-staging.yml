@@ -1,20 +1,20 @@
-name: Deploy to Staging
+name: Staging — Deploy (develop)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Triggers on every push to the `develop` branch.
+# Triggers on every push to `develop`.
 #
-# What it does:
-#   1. Runs CI quality gate (lint + build) with staging env vars
-#   2. Triggers the Render staging backend deploy via deploy hook
-#   3. Posts a deployment summary with staging URLs
+# Vercel auto-deploys both projects via its GitHub integration:
+#   - Frontend → staging.audiosetstest.store  (develop branch assignment in Vercel)
+#   - Backend  → api-staging.audiosetstest.store  (develop branch assignment in Vercel)
 #
-# Required GitHub Secrets (repo → Settings → Secrets → Actions):
-#   RENDER_STAGING_DEPLOY_HOOK  — Render deploy hook URL for staging service
+# This workflow:
+#   1. Runs the full CI quality gate
+#   2. Posts a deployment summary with staging URLs
 #
-# Required GitHub Variables (repo → Settings → Variables → Actions):
-#   STAGING_API_URL             — https://nn-audio-backend-staging.onrender.com/api/v1
-#   STAGING_FRONTEND_URL        — Vercel preview URL for develop branch
-#   STAGING_RAZORPAY_KEY_ID     — rzp_test_XXXXXXXXXX  (always test key in staging)
+# Required GitHub Variables (Settings → Variables → Actions):
+#   STAGING_API_URL        — https://api-staging.audiosetstest.store/api/v1
+#   STAGING_FRONTEND_URL   — https://staging.audiosetstest.store
+#   STAGING_RAZORPAY_KEY_ID — rzp_test_XXXXXXXXXX
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
@@ -26,16 +26,11 @@ env:
 
 jobs:
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 1 — Quality Gate (must pass before deploying)
+# JOB 1 — Full CI Quality Gate
 # ─────────────────────────────────────────────────────────────────────────────
   ci:
     name: Quality Gate
     runs-on: ubuntu-latest
-    env:
-      NEXT_PUBLIC_API_URL: ${{ vars.STAGING_API_URL || 'http://localhost:5000/api/v1' }}
-      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ vars.STAGING_RAZORPAY_KEY_ID || 'rzp_test_dummy' }}
-      NEXTAUTH_URL: ${{ vars.STAGING_FRONTEND_URL || 'http://localhost:3000' }}
-      NEXTAUTH_SECRET: 'staging-ci-secret-32chars-placeholder'
     steps:
       - uses: actions/checkout@v4
 
@@ -44,49 +39,44 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      # Frontend checks
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
-      - run: npm run build
+      - name: Frontend build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.STAGING_API_URL || 'https://api-staging.audiosetstest.store/api/v1' }}
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ vars.STAGING_RAZORPAY_KEY_ID || 'rzp_test_dummy' }}
+          NEXTAUTH_URL: ${{ vars.STAGING_FRONTEND_URL || 'https://staging.audiosetstest.store' }}
+          NEXTAUTH_SECRET: 'staging-ci-secret-32chars-placeholder'
+        run: npm run build
+
+      # Backend checks
+      - name: Backend type check
+        working-directory: backend
+        run: |
+          npm ci
+          npx tsc --noEmit
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JOB 2 — Deploy Backend to Staging (Render)
+# JOB 2 — Deployment Summary
 # ─────────────────────────────────────────────────────────────────────────────
-  deploy-backend:
-    name: Deploy Backend → Staging (Render)
+  summary:
+    name: Staging Summary
     runs-on: ubuntu-latest
     needs: ci
     steps:
-      - name: Trigger Render Staging Deploy
-        run: |
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "${{ secrets.RENDER_STAGING_DEPLOY_HOOK }}")
-
-          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
-            echo "✅ Staging deploy triggered (HTTP $HTTP_STATUS)"
-          else
-            echo "❌ Render deploy hook failed with HTTP $HTTP_STATUS"
-            exit 1
-          fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# JOB 3 — Post Deployment Summary
-# ─────────────────────────────────────────────────────────────────────────────
-  summary:
-    name: Deployment Summary
-    runs-on: ubuntu-latest
-    needs: deploy-backend
-    steps:
       - name: Write summary
         run: |
-          echo "## 🚀 Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "## Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Vercel is deploying both services automatically." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Service | URL |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-----|" >> $GITHUB_STEP_SUMMARY
-          echo "| Frontend (Vercel Preview) | ${{ vars.STAGING_FRONTEND_URL }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend API (Render) | ${{ vars.STAGING_API_URL }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ vars.STAGING_FRONTEND_URL || 'https://staging.audiosetstest.store' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend API | ${{ vars.STAGING_API_URL || 'https://api-staging.audiosetstest.store/api/v1' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** \`develop\` → Staging" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`develop\` | **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> ⚠️ Always use Razorpay **test keys** in staging. Never use live keys." >> $GITHUB_STEP_SUMMARY
+          echo "> Use Razorpay **test cards** only in staging. Never use live keys." >> $GITHUB_STEP_SUMMARY

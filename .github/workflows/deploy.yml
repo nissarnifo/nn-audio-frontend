@@ -1,5 +1,9 @@
 name: CI
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs on every push to every branch and on PRs targeting develop or main.
+# Ensures code quality gates pass before any deployment.
+# ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
     branches:
@@ -7,13 +11,14 @@ on:
   pull_request:
     branches:
       - main
+      - develop
 
 env:
   NODE_VERSION: '20'
 
-# ─────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # JOB 1 — Lint & Type Check
-# ─────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
   lint:
     name: Lint & Type Check
@@ -30,16 +35,16 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
 
-# ─────────────────────────────────────────────────────────────────────
-# JOB 2 — Build Check
-# ─────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Build Check (uses staging env by default, safe dummy fallbacks)
+# ─────────────────────────────────────────────────────────────────────────────
   build-check:
     name: Build Check
     runs-on: ubuntu-latest
     needs: lint
     env:
-      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1' }}
-      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_dummy' }}
+      NEXT_PUBLIC_API_URL: ${{ vars.STAGING_API_URL || 'http://localhost:5000/api/v1' }}
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ vars.STAGING_RAZORPAY_KEY_ID || 'rzp_test_dummy' }}
       NEXTAUTH_URL: 'http://localhost:3000'
       NEXTAUTH_SECRET: 'build-check-secret-32chars-placeholder'
     steps:

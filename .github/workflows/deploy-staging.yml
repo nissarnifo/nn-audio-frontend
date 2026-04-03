@@ -1,0 +1,82 @@
+name: Staging — Deploy (develop)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Triggers on every push to `develop`.
+#
+# Vercel auto-deploys both projects via its GitHub integration:
+#   - Frontend → staging.audiosetstest.store  (develop branch assignment in Vercel)
+#   - Backend  → api-staging.audiosetstest.store  (develop branch assignment in Vercel)
+#
+# This workflow:
+#   1. Runs the full CI quality gate
+#   2. Posts a deployment summary with staging URLs
+#
+# Required GitHub Variables (Settings → Variables → Actions):
+#   STAGING_API_URL        — https://api-staging.audiosetstest.store/api/v1
+#   STAGING_FRONTEND_URL   — https://staging.audiosetstest.store
+#   STAGING_RAZORPAY_KEY_ID — rzp_test_XXXXXXXXXX
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches:
+      - develop
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Full CI Quality Gate
+# ─────────────────────────────────────────────────────────────────────────────
+  ci:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # Frontend checks
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - name: Frontend build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.STAGING_API_URL || 'https://api-staging.audiosetstest.store/api/v1' }}
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ vars.STAGING_RAZORPAY_KEY_ID || 'rzp_test_dummy' }}
+          NEXTAUTH_URL: ${{ vars.STAGING_FRONTEND_URL || 'https://staging.audiosetstest.store' }}
+          NEXTAUTH_SECRET: 'staging-ci-secret-32chars-placeholder'
+        run: npm run build
+
+      # Backend checks
+      - name: Backend type check
+        working-directory: backend
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Deployment Summary
+# ─────────────────────────────────────────────────────────────────────────────
+  summary:
+    name: Staging Summary
+    runs-on: ubuntu-latest
+    needs: ci
+    steps:
+      - name: Write summary
+        run: |
+          echo "## Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Vercel is deploying both services automatically." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ vars.STAGING_FRONTEND_URL || 'https://staging.audiosetstest.store' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend API | ${{ vars.STAGING_API_URL || 'https://api-staging.audiosetstest.store/api/v1' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`develop\` | **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Use Razorpay **test cards** only in staging. Never use live keys." >> $GITHUB_STEP_SUMMARY

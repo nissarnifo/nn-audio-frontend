@@ -1,5 +1,10 @@
 name: CI
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Runs on every push to every branch and on PRs targeting develop or main.
+# Vercel auto-deploys via its GitHub integration — this workflow is the
+# quality gate that must pass before a PR can be merged.
+# ─────────────────────────────────────────────────────────────────────────────
 on:
   push:
     branches:
@@ -7,16 +12,17 @@ on:
   pull_request:
     branches:
       - main
+      - develop
 
 env:
   NODE_VERSION: '20'
 
-# ─────────────────────────────────────────────────────────────────────
-# JOB 1 — Lint & Type Check
-# ─────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Frontend: Lint & Type Check
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
-  lint:
-    name: Lint & Type Check
+  frontend-lint:
+    name: Frontend — Lint & Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,17 +36,17 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
 
-# ─────────────────────────────────────────────────────────────────────
-# JOB 2 — Build Check
-# ─────────────────────────────────────────────────────────────────────
-  build-check:
-    name: Build Check
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Frontend: Build Check
+# ─────────────────────────────────────────────────────────────────────────────
+  frontend-build:
+    name: Frontend — Build Check
     runs-on: ubuntu-latest
-    needs: lint
+    needs: frontend-lint
     env:
-      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1' }}
-      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_dummy' }}
-      NEXTAUTH_URL: 'http://localhost:3000'
+      NEXT_PUBLIC_API_URL: ${{ vars.STAGING_API_URL || 'https://api-staging.audiosetstest.store/api/v1' }}
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ vars.STAGING_RAZORPAY_KEY_ID || 'rzp_test_dummy' }}
+      NEXTAUTH_URL: ${{ vars.STAGING_FRONTEND_URL || 'https://staging.audiosetstest.store' }}
       NEXTAUTH_SECRET: 'build-check-secret-32chars-placeholder'
     steps:
       - uses: actions/checkout@v4
@@ -52,3 +58,24 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 — Backend: Type Check
+# ─────────────────────────────────────────────────────────────────────────────
+  backend-typecheck:
+    name: Backend — Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npx tsc --noEmit

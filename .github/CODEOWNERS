@@ -1,0 +1,27 @@
+# =============================================================================
+# CODEOWNERS — defines who must review PRs for protected paths
+# =============================================================================
+# Syntax: <path-pattern>  <@github-username or @org/team>
+#
+# Replace @nissarnifo with the actual GitHub username(s) / team that should
+# approve PRs before merging to main or develop.
+#
+# GitHub Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# =============================================================================
+
+# ─── Default owner for everything ────────────────────────────────────────────
+*                           @nissarnifo
+
+# ─── CI/CD workflows — extra scrutiny required ────────────────────────────────
+.github/workflows/          @nissarnifo
+
+# ─── Environment & deployment config ──────────────────────────────────────────
+render.yaml                 @nissarnifo
+vercel.json                 @nissarnifo
+*.example                   @nissarnifo
+
+# ─── Backend source ───────────────────────────────────────────────────────────
+backend/                    @nissarnifo
+
+# ─── Database schema ──────────────────────────────────────────────────────────
+backend/prisma/             @nissarnifo

@@ -1,0 +1,115 @@
+name: Production — Deploy (main)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Triggers ONLY on push to `main` (i.e., after a PR is merged from develop).
+#
+# Vercel auto-deploys both projects via its GitHub integration:
+#   - Frontend → audiosetstest.store       (main branch = production in Vercel)
+#   - Backend  → api.audiosetstest.store   (main branch = production in Vercel)
+#
+# This workflow:
+#   1. Runs full CI with production env vars
+#   2. Creates a versioned GitHub Release tag
+#   3. Posts a deployment summary
+#
+# Required GitHub Secrets (Settings → Secrets → Actions):
+#   NEXT_PUBLIC_API_URL         — https://api.audiosetstest.store/api/v1
+#   NEXT_PUBLIC_RAZORPAY_KEY_ID — rzp_live_XXXXXXXXXX
+#   NEXTAUTH_URL                — https://audiosetstest.store
+#   NEXTAUTH_SECRET             — production secret (32+ chars)
+#
+# Required GitHub Variables (Settings → Variables → Actions):
+#   PRODUCTION_FRONTEND_URL     — https://audiosetstest.store
+#   PRODUCTION_API_URL          — https://api.audiosetstest.store/api/v1
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches:
+      - main
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Full CI Quality Gate (production env vars)
+# ─────────────────────────────────────────────────────────────────────────────
+  ci:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # Frontend checks
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - name: Frontend build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: ${{ secrets.NEXT_PUBLIC_RAZORPAY_KEY_ID }}
+          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+        run: npm run build
+
+      # Backend checks
+      - name: Backend type check
+        working-directory: backend
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Create GitHub Release Tag
+# ─────────────────────────────────────────────────────────────────────────────
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: ci
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release tag
+        id: tag
+        run: |
+          RELEASE_TAG="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+          echo "tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            --title "Release ${{ steps.tag.outputs.tag }}" \
+            --notes "Deployed to production from commit ${{ github.sha }}" \
+            --latest
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 — Deployment Summary
+# ─────────────────────────────────────────────────────────────────────────────
+  summary:
+    name: Production Summary
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+      - name: Write summary
+        run: |
+          echo "## Production Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Vercel is deploying both services automatically." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | URL | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ vars.PRODUCTION_FRONTEND_URL || 'https://audiosetstest.store' }} | Deploying via Vercel |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend API | ${{ vars.PRODUCTION_API_URL || 'https://api.audiosetstest.store/api/v1' }} | Deploying via Vercel |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`main\` | **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

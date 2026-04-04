@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
 import { requireAuth, apiError } from '@/lib/api-auth'

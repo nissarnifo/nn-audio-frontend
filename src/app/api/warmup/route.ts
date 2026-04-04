@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 
 // Instant response — everything is on Vercel, no external backend to warm up

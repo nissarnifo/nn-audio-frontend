@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, err } from '@/lib/api-helpers'
-import { formatProduct } from '../_shared'
+import { formatProduct } from '../../_shared'
 
 const productInclude = { images: { orderBy: { order: 'asc' as const } }, variants: true }
 

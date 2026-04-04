@@ -3,7 +3,7 @@
     "silent": true
   },
   "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ] && exit 0 || exit 1",
-  "buildCommand": "npx prisma generate && next build",
+  "buildCommand": "npx prisma generate && npx prisma db push && next build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
   "functions": {
@@ -17,6 +17,12 @@
       "maxDuration": 60
     },
     "src/app/api/v1/orders/[id]/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/orders/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/orders/[id]/route.ts": {
       "maxDuration": 60
     }
   }

@@ -1,6 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ─── Image Optimization ───────────────────────────────────────────────────
+  // ─── NextAuth URL ─────────────────────────────────────────────────────────────
+  serverRuntimeConfig: {
+    NEXTAUTH_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXTAUTH_URL,
+  },
+  env: {
+    NEXTAUTH_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXTAUTH_URL ?? 'http://localhost:3000',
+  },
+
+  // ─── Image Optimization ───────────────────────────────────────────────────────
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
@@ -8,7 +20,7 @@ const nextConfig = {
     ],
   },
 
-  // ─── Security Headers ─────────────────────────────────────────────────────
+  // ─── Security Headers ─────────────────────────────────────────────────────────
   async headers() {
     return [
       {

@@ -2,12 +2,10 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut, Boxes, Tag, RotateCcw, MessageCircle, Settings, Star, Mail } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Users, TrendingUp, LogOut, Boxes } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useClerk, useUser } from '@clerk/nextjs'
 import { useAuthStore } from '@/store/auth.store'
 import { PageLoading } from '@/components/ui'
-import NotificationBell from '@/components/admin/NotificationBell'
 
 const NAV = [
   { href: '/admin', label: 'DASHBOARD', icon: <LayoutDashboard size={16} />, exact: true },
@@ -16,48 +14,36 @@ const NAV = [
   { href: '/admin/orders',    label: 'ORDERS',    icon: <ShoppingBag size={16} /> },
   { href: '/admin/customers', label: 'CUSTOMERS', icon: <Users size={16} /> },
   { href: '/admin/analytics', label: 'ANALYTICS', icon: <TrendingUp size={16} /> },
-  { href: '/admin/coupons',   label: 'COUPONS',   icon: <Tag size={16} /> },
-  { href: '/admin/returns',   label: 'RETURNS',   icon: <RotateCcw size={16} /> },
-  { href: '/admin/questions', label: 'Q&A',       icon: <MessageCircle size={16} /> },
-  { href: '/admin/reviews',   label: 'REVIEWS',   icon: <Star size={16} /> },
-  { href: '/admin/newsletter', label: 'NEWSLETTER', icon: <Mail size={16} /> },
-  { href: '/admin/settings',  label: 'SETTINGS',  icon: <Settings size={16} /> },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { isAdmin, _hasHydrated, logout: clearBackendAuth } = useAuthStore()
-  const { isLoaded, isSignedIn } = useUser()
-  const { signOut } = useClerk()
+  const { isAdmin, isLoggedIn, _hasHydrated, logout } = useAuthStore()
   const qc = useQueryClient()
 
+  // ── /admin/login is inside this layout but must NOT be guarded ──
   const isLoginPage = pathname === '/admin/login'
 
   useEffect(() => {
-    if (!isLoaded || isLoginPage) return
-    // Redirect to Clerk sign-in if not authenticated
-    if (!isSignedIn) {
-      router.push('/auth/login')
-      return
-    }
-    // Wait for backend sync (ClerkSync populates _hasHydrated + isAdmin)
-    if (_hasHydrated && !isAdmin) {
+    if (!_hasHydrated || isLoginPage) return
+    if (!isLoggedIn) {
+      router.push('/admin/login')
+    } else if (!isAdmin) {
       router.push('/')
     }
-  }, [isLoaded, isSignedIn, _hasHydrated, isAdmin, isLoginPage, router])
+  }, [_hasHydrated, isAdmin, isLoggedIn, isLoginPage, router])
 
-  // Admin login redirect to main login (admin uses same Clerk login)
+  // Render login page without sidebar chrome
   if (isLoginPage) return <>{children}</>
 
-  // Not loaded yet or not admin
-  if (!isLoaded || !isSignedIn || !_hasHydrated || !isAdmin) return <PageLoading />
+  // Wait for hydration or auth check
+  if (!_hasHydrated || !isAdmin) return <PageLoading />
 
   function handleLogout() {
-    signOut()
-    clearBackendAuth()
+    logout()
     qc.clear()
-    router.push('/')
+    router.push('/admin/login')
   }
 
   return (
@@ -103,15 +89,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="flex items-center justify-end gap-3 px-6 py-3 border-b border-[rgba(0,212,255,0.08)] bg-[#080C16] flex-shrink-0">
-          <NotificationBell />
-        </header>
-        <main className="flex-1 overflow-auto">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
     </div>
   )
 }

@@ -1,52 +1,43 @@
 /**
  * CENTRAL CONFIGURATION — src/config/index.ts
  *
- * ALL environment variables are read exactly once, here.
+ * Single-server setup: Next.js handles both frontend and API routes.
+ * All API calls go to /api/* (same origin — no CORS, no external server).
  *
- * LOOSE COUPLING GUIDE — to migrate to your own server:
- *   1. Change NEXT_PUBLIC_API_URL  → points to any backend, anywhere
- *   2. Set Razorpay live key       → switch from test to production
- *   3. Update Clerk keys           → use production Clerk instance
- *   4. That's it. Zero code changes needed.
- *
- * CURRENT STACK:
- *   Auth      → Clerk (identity + session management)
- *   Frontend  → Vercel
- *   Backend   → Render (issues backend JWT after Clerk sync)
- *   Database  → Neon PostgreSQL
- *   Storage   → Cloudinary
- *   Payments  → Razorpay
+ * Environment variables needed:
+ *   DATABASE_URL          → PostgreSQL connection string (Neon / Supabase)
+ *   DIRECT_URL            → Direct DB URL (optional — for Neon with connection pooling)
+ *   JWT_SECRET            → Random secret for signing tokens (min 32 chars)
+ *   NEXTAUTH_SECRET       → Random secret for NextAuth
+ *   NEXTAUTH_URL          → Your app URL (auto-set on Vercel)
+ *   CLOUDINARY_CLOUD_NAME → Cloudinary cloud name
+ *   CLOUDINARY_API_KEY    → Cloudinary API key
+ *   CLOUDINARY_API_SECRET → Cloudinary API secret
+ *   RAZORPAY_KEY_ID       → Razorpay key ID (public)
+ *   RAZORPAY_KEY_SECRET   → Razorpay key secret
+ *   EMAIL_USER            → SMTP username (optional — for password reset emails)
+ *   EMAIL_PASS            → SMTP password (optional)
+ *   TELEGRAM_BOT_TOKEN    → Telegram bot token (optional — for order notifications)
+ *   TELEGRAM_CHAT_ID      → Telegram chat ID (optional)
  */
 
-// ─── Backend API ───────────────────────────────────────────────────────────────
-// The API now runs as Next.js Route Handlers on the same Vercel project.
-// In production, NEXT_PUBLIC_API_URL should be omitted (relative /api/v1 works automatically)
-// or set to https://audiosets.store/api/v1
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || '/api/v1'
+// ─── API base — empty string = same origin (Next.js API routes at /api/*) ──────
+export const API_BASE_URL = '/api'
 
 // ─── App (Frontend) URL ────────────────────────────────────────────────────────
-// Used for canonical URLs, sitemap, OG tags
 export const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL || 'https://nnaudio.in'
 
 // ─── Payments ──────────────────────────────────────────────────────────────────
-// Switch from test to live by updating NEXT_PUBLIC_RAZORPAY_KEY_ID in .env
 export const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''
 
-// ─── OAuth Providers — now managed in the Clerk Dashboard ─────────────────────
-// Enable Google, GitHub, Discord, etc. from: https://dashboard.clerk.com
-// No environment variables needed on the frontend for OAuth any more.
-
 // ─── Image Hosting ─────────────────────────────────────────────────────────────
-// Add your own CDN hostname here when migrating to own server
 export const allowedImageHostnames = [
   'res.cloudinary.com',
   'images.unsplash.com',
 ] as const
 
 // ─── API Endpoint Paths ────────────────────────────────────────────────────────
-// All backend routes defined here — change once if backend URL structure changes
 export const ENDPOINTS = {
   auth: {
     login: '/auth/login',
@@ -61,7 +52,7 @@ export const ENDPOINTS = {
   products: {
     list: '/products',
     bySlug: (slug: string) => `/products/${slug}`,
-    byId: (id: string) => `/products/id/${id}`,
+    byId: (id: string) => `/products/${id}`,        // smart detection: slug or cuid
     create: '/products',
     update: (id: string) => `/products/${id}`,
     delete: (id: string) => `/products/${id}`,

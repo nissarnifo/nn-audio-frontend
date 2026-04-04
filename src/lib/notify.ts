@@ -95,7 +95,7 @@ function buildEmailHtml(p: OrderNotifyPayload): string {
   return `
   <div style="font-family:sans-serif;background:#0a0a0a;color:#e0e0e0;max-width:600px;margin:auto;border-radius:8px;overflow:hidden">
     <div style="background:#111;padding:24px;border-bottom:2px solid #00D4FF">
-      <h2 style="margin:0;color:#00D4FF">🛒 New Order Received!</h2>
+      <h2 style="margin:0;color:#00D4FF">New Order Received!</h2>
       <p style="margin:4px 0 0;color:#888">N &amp; N Audio — Admin Notification</p>
     </div>
     <div style="padding:24px">
@@ -111,10 +111,10 @@ function buildEmailHtml(p: OrderNotifyPayload): string {
       </table>
 
       <h3 style="color:#00D4FF;border-bottom:1px solid #222;padding-bottom:8px">Customer</h3>
-      <p style="margin:4px 0">👤 ${p.customerName}</p>
-      <p style="margin:4px 0">📧 ${p.customerEmail}</p>
-      <p style="margin:4px 0">📞 ${p.customerPhone || 'N/A'}</p>
-      <p style="margin:4px 0">📍 ${addrLine}</p>
+      <p style="margin:4px 0">${p.customerName}</p>
+      <p style="margin:4px 0">${p.customerEmail}</p>
+      <p style="margin:4px 0">${p.customerPhone || 'N/A'}</p>
+      <p style="margin:4px 0">${addrLine}</p>
 
       <h3 style="color:#00D4FF;border-bottom:1px solid #222;padding-bottom:8px;margin-top:24px">Items</h3>
       <table style="width:100%;border-collapse:collapse">
@@ -143,30 +143,32 @@ function buildEmailHtml(p: OrderNotifyPayload): string {
 
 function buildTelegramText(p: OrderNotifyPayload): string {
   const itemLines = p.items
-    .map((i) => `  • ${i.productName} (${i.variantLabel}) x${i.qty} — ₹${(i.price * i.qty).toLocaleString('en-IN')}`)
+    .map((i) => `  - ${i.productName} (${i.variantLabel}) x${i.qty} - Rs.${(i.price * i.qty).toLocaleString('en-IN')}`)
     .join('\n')
 
   const addrLine = [p.address.line1, p.address.line2, p.address.city, p.address.state, p.address.pin]
     .filter(Boolean)
     .join(', ')
 
-  return `🛒 *New Order — N\\&N Audio*
+  const payment = p.paymentMethod === 'RAZORPAY' ? 'PAID (Razorpay)' : 'Cash on Delivery'
 
-📦 Order: \`${p.orderNumber}\`
-💳 Payment: ${p.paymentMethod === 'RAZORPAY' ? 'PAID \\(Razorpay\\)' : 'Cash on Delivery'}
+  return `New Order - N&N Audio
 
-👤 *Customer*
-Name: ${escTg(p.customerName)}
-Email: ${escTg(p.customerEmail)}
+Order: ${p.orderNumber}
+Payment: ${payment}
+
+Customer:
+Name: ${p.customerName}
+Email: ${p.customerEmail}
 Phone: ${p.customerPhone || 'N/A'}
-Address: ${escTg(addrLine)}
+Address: ${addrLine}
 
-🧾 *Items*
+Items:
 ${itemLines}
 
-💰 Subtotal: ₹${p.subtotal.toLocaleString('en-IN')}
-🚚 Shipping: ${p.shipping === 0 ? 'Free' : '₹' + p.shipping.toLocaleString('en-IN')}
-✅ *Total: ₹${p.total.toLocaleString('en-IN')}*`
+Subtotal: Rs.${p.subtotal.toLocaleString('en-IN')}
+Shipping: ${p.shipping === 0 ? 'Free' : 'Rs.' + p.shipping.toLocaleString('en-IN')}
+Total: Rs.${p.total.toLocaleString('en-IN')}`
 }
 
 export async function sendStockAlertEmail(payload: {
@@ -185,7 +187,7 @@ export async function sendStockAlertEmail(payload: {
   const html = `
   <div style="font-family:sans-serif;background:#0a0a0a;color:#e0e0e0;max-width:600px;margin:auto;border-radius:8px;overflow:hidden">
     <div style="background:#111;padding:24px;border-bottom:2px solid #00D4FF">
-      <h2 style="margin:0;color:#00D4FF">🔔 Back in Stock!</h2>
+      <h2 style="margin:0;color:#00D4FF">Back in Stock!</h2>
       <p style="margin:4px 0 0;color:#888">N &amp; N Audio Systems</p>
     </div>
     <div style="padding:24px">
@@ -196,14 +198,14 @@ export async function sendStockAlertEmail(payload: {
       </div>
       <a href="${productUrl}"
         style="display:inline-block;background:#FFB700;color:#000;text-decoration:none;padding:12px 28px;border-radius:4px;font-weight:bold;font-size:14px;letter-spacing:1px">
-        VIEW PRODUCT →
+        VIEW PRODUCT
       </a>
       <p style="margin-top:20px;font-size:12px;color:#555">
-        Hurry — stock is limited! This alert was sent because you signed up at N &amp; N Audio Systems.
+        Hurry - stock is limited! This alert was sent because you signed up at N &amp; N Audio Systems.
       </p>
     </div>
     <div style="background:#111;padding:12px 24px;color:#555;font-size:12px">
-      N &amp; N Audio Systems · Precision Audio, Made in India
+      N &amp; N Audio Systems - Precision Audio, Made in India
     </div>
   </div>`
 
@@ -217,7 +219,7 @@ export async function sendStockAlertEmail(payload: {
     await transporter.sendMail({
       from: `"N & N Audio" <${emailFrom}>`,
       to: payload.toEmail,
-      subject: `🔔 Back in Stock: ${payload.productName} (${payload.variantLabel})`,
+      subject: `Back in Stock: ${payload.productName} (${payload.variantLabel})`,
       html,
     })
     console.log(`[notify] Stock alert sent to ${payload.toEmail} for ${payload.productName}`)
@@ -242,7 +244,7 @@ export async function sendOrderConfirmationEmail(p: OrderNotifyPayload) {
 
   const body = `
     <p style="margin:0 0 16px;color:#8a9ab0;font-size:14px">Hi ${p.customerName},</p>
-    <p style="margin:0 0 20px">Thank you for your order! We've received it and will begin processing soon.</p>
+    <p style="margin:0 0 20px">Thank you for your order! We have received it and will begin processing soon.</p>
 
     <div style="background:#0d1520;border:1px solid #1a2a3a;border-radius:6px;padding:14px 16px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between">
@@ -266,25 +268,25 @@ export async function sendOrderConfirmationEmail(p: OrderNotifyPayload) {
 
     <div style="text-align:right;margin-bottom:20px">
       <p style="margin:4px 0;color:#4a6a8a;font-size:13px">Subtotal: ${fmtInr(p.subtotal)}</p>
-      <p style="margin:4px 0;color:#4a6a8a;font-size:13px">Shipping: ${p.shipping === 0 ? '<span style="color:#00FF88">FREE</span>' : fmtInr(p.shipping)}</p>
+      <p style="margin:4px 0;color:#4a6a8a;font-size:13px">Shipping: ${p.shipping === 0 ? 'FREE' : fmtInr(p.shipping)}</p>
       <p style="margin:8px 0;font-size:18px;font-weight:bold;color:#FFB700">Total: ${fmtInr(p.total)}</p>
     </div>
 
     <div style="background:#0d1520;border:1px solid #1a2a3a;border-radius:6px;padding:14px 16px;margin-bottom:20px">
       <p style="margin:0 0 4px;color:#4a6a8a;font-size:11px;letter-spacing:1px">DELIVERY ADDRESS</p>
-      <p style="margin:0;font-size:13px">${p.address.name} · ${p.address.phone}</p>
+      <p style="margin:0;font-size:13px">${p.address.name} - ${p.address.phone}</p>
       <p style="margin:4px 0 0;font-size:13px;color:#8a9ab0">${addrLine}</p>
     </div>
 
-    <p style="font-size:13px;color:#8a9ab0">You'll receive another email when your order ships. For help, reply to this email.</p>`
+    <p style="font-size:13px;color:#8a9ab0">You will receive another email when your order ships. For help, reply to this email.</p>`
 
-  const html = wrap('#00D4FF', `<h2 style="margin:0;color:#E8F4FD;font-size:18px">Order Confirmed ✓</h2>`, body)
+  const html = wrap('#00D4FF', `<h2 style="margin:0;color:#E8F4FD;font-size:18px">Order Confirmed</h2>`, body)
 
   try {
     await transport.sendMail({
       from: fromAddress(),
       to: p.customerEmail,
-      subject: `Order Confirmed — ${p.orderNumber}`,
+      subject: `Order Confirmed - ${p.orderNumber}`,
       html,
     })
     console.log(`[mailer] Order confirmation sent to ${p.customerEmail}`)
@@ -306,11 +308,10 @@ export async function sendOrderStatusEmail(p: {
 
   const isShipped = p.status === 'SHIPPED'
   const color = isShipped ? '#00D4FF' : '#00FF88'
-  const emoji = isShipped ? '🚚' : '📦'
   const title = isShipped ? 'Your Order Has Shipped!' : 'Order Delivered!'
   const message = isShipped
-    ? 'Great news — your order is on its way! You should receive it within 3–5 business days.'
-    : "Your order has been delivered. We hope you love your new gear! If you have any issues, please contact us within 30 days."
+    ? 'Great news - your order is on its way! You should receive it within 3-5 business days.'
+    : 'Your order has been delivered. We hope you love your new gear! If you have any issues, please contact us within 30 days.'
 
   const body = `
     <p style="margin:0 0 16px;color:#8a9ab0;font-size:14px">Hi ${p.customerName},</p>
@@ -329,16 +330,16 @@ export async function sendOrderStatusEmail(p: {
         <span style="color:#FFB700;font-weight:bold">${fmtInr(p.total)}</span>
       </div>
     </div>
-    ${!isShipped ? `<p style="font-size:13px;color:#8a9ab0">Enjoying your purchase? Leave a review on our website — it helps other customers and means a lot to us!</p>` : ''}
+    ${!isShipped ? `<p style="font-size:13px;color:#8a9ab0">Enjoying your purchase? Leave a review on our website - it helps other customers and means a lot to us!</p>` : ''}
     <p style="font-size:13px;color:#8a9ab0">If you have any questions, just reply to this email.</p>`
 
-  const html = wrap(color, `<h2 style="margin:0;color:#E8F4FD;font-size:18px">${emoji} ${title}</h2>`, body)
+  const html = wrap(color, `<h2 style="margin:0;color:#E8F4FD;font-size:18px">${title}</h2>`, body)
 
   try {
     await transport.sendMail({
       from: fromAddress(),
       to: p.customerEmail,
-      subject: `${emoji} ${title} — ${p.orderNumber}`,
+      subject: `${title} - ${p.orderNumber}`,
       html,
     })
     console.log(`[mailer] Order status (${p.status}) email sent to ${p.customerEmail}`)
@@ -358,13 +359,13 @@ export async function sendReturnStatusEmail(p: {
   const transport = makeTransport()
   if (!transport) return
 
-  const meta: Record<string, { color: string; emoji: string; title: string; message: string }> = {
-    APPROVED:  { color: '#00D4FF', emoji: '✅', title: 'Return Request Approved', message: 'Your return request has been approved. Please ship the item(s) back to us using the address we will provide via phone.' },
-    REJECTED:  { color: '#FF3366', emoji: '❌', title: 'Return Request Rejected', message: 'Unfortunately, your return request could not be approved at this time.' },
-    REFUNDED:  { color: '#00FF88', emoji: '💸', title: 'Refund Processed', message: 'Great news — your refund has been processed. It should reflect in your account within 5–7 business days.' },
+  const meta: Record<string, { color: string; title: string; message: string }> = {
+    APPROVED: { color: '#00D4FF', title: 'Return Request Approved', message: 'Your return request has been approved. Please ship the item(s) back to us using the address we will provide via phone.' },
+    REJECTED: { color: '#FF3366', title: 'Return Request Rejected', message: 'Unfortunately, your return request could not be approved at this time.' },
+    REFUNDED: { color: '#00FF88', title: 'Refund Processed', message: 'Great news - your refund has been processed. It should reflect in your account within 5-7 business days.' },
   }
 
-  const { color, emoji, title, message } = meta[p.status]
+  const { color, title, message } = meta[p.status]
 
   const body = `
     <p style="margin:0 0 16px;color:#8a9ab0;font-size:14px">Hi ${p.customerName},</p>
@@ -382,23 +383,19 @@ export async function sendReturnStatusEmail(p: {
     ${p.adminNote ? `<div style="background:#0d1520;border-left:3px solid ${color};padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:20px"><p style="margin:0 0 4px;color:#4a6a8a;font-size:11px">NOTE FROM SUPPORT</p><p style="margin:0;font-size:13px">${p.adminNote}</p></div>` : ''}
     <p style="font-size:13px;color:#8a9ab0">Questions? Reply to this email and our support team will get back to you.</p>`
 
-  const html = wrap(color, `<h2 style="margin:0;color:#E8F4FD;font-size:18px">${emoji} ${title}</h2>`, body)
+  const html = wrap(color, `<h2 style="margin:0;color:#E8F4FD;font-size:18px">${title}</h2>`, body)
 
   try {
     await transport.sendMail({
       from: fromAddress(),
       to: p.customerEmail,
-      subject: `${emoji} ${title} — ${p.orderNumber}`,
+      subject: `${title} - ${p.orderNumber}`,
       html,
     })
     console.log(`[mailer] Return status (${p.status}) email sent to ${p.customerEmail}`)
   } catch (err) {
     console.error('[mailer] Return status email failed:', err)
   }
-}
-
-function escTg(s: string): string {
-  return s.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, (c) => '\\' + c)
 }
 
 export async function sendOrderNotification(payload: OrderNotifyPayload) {
@@ -419,7 +416,7 @@ export async function sendOrderNotification(payload: OrderNotifyPayload) {
       await transporter.sendMail({
         from: `"N & N Audio" <${emailFrom}>`,
         to: adminEmail,
-        subject: `🛒 New Order ${payload.orderNumber} — ₹${payload.total.toLocaleString('en-IN')}`,
+        subject: `New Order ${payload.orderNumber} - Rs.${payload.total.toLocaleString('en-IN')}`,
         html: buildEmailHtml(payload),
       })
       console.log(`[notify] Admin email sent for order ${payload.orderNumber}`)
@@ -438,7 +435,7 @@ export async function sendOrderNotification(payload: OrderNotifyPayload) {
       const res = await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: tgChatId, text, parse_mode: 'MarkdownV2' }),
+        body: JSON.stringify({ chat_id: tgChatId, text }),
       })
       if (!res.ok) {
         const body = await res.text()

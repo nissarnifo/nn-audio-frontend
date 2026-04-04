@@ -1,207 +1,221 @@
 'use client'
-import { useState, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
-import { useSignIn } from '@clerk/nextjs'
+import { signIn } from 'next-auth/react'
+import { authApi } from '@/services/api'
+import { useAuthStore } from '@/store/auth.store'
+import { useServerStore } from '@/store/server.store'
 import { Spinner } from '@/components/ui'
 import toast from 'react-hot-toast'
 
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
-  )
-}
+const ALL_PROVIDERS = [
+  {
+    id: 'google',
+    label: 'Google',
+    icon: (
+      <svg className="w-5 h-5" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'github',
+    label: 'GitHub',
+    icon: (
+      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+    ),
+  },
+]
 
-function GitHubIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-    </svg>
-  )
-}
-
-function LoginForm() {
+export default function LoginPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const fromPath = searchParams.get('from')
-  const { signIn, setActive, isLoaded } = useSignIn()
+  const setUser = useAuthStore((s) => s.setUser)
+  const serverReady = useServerStore((s) => s.serverReady)
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [oauthLoading, setOauthLoading] = useState<'google' | 'github' | null>(null)
+  const [oauthLoading, setOauthLoading] = useState<string | null>(null)
+  const [enabledProviders, setEnabledProviders] = useState<string[]>([])
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
+  // Fetch which OAuth providers are actually configured on the server
+  useEffect(() => {
+    fetch('/api/auth/available-providers')
+      .then((r) => r.json())
+      .then((d) => setEnabledProviders(d.providers ?? []))
+      .catch(() => setEnabledProviders([]))
+  }, [])
+
+  // Show error from NextAuth redirect (e.g. provider not configured)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const error = params.get('error')
+    if (error) {
+      if (error === 'OAuthAccountNotLinked') {
+        toast.error('This email is already registered with a different sign-in method.')
+      } else if (error === 'Configuration') {
+        toast.error('OAuth provider is not configured. Please use email & password.')
+      } else {
+        toast.error('Sign-in failed. Please use email & password instead.')
+      }
+    }
+  }, [])
+
+  const socialProviders = ALL_PROVIDERS.filter((p) => enabledProviders.includes(p.id))
+
+  async function handleOAuth(provider: string) {
+    setOauthLoading(provider)
+    await signIn(provider, { callbackUrl: '/' })
+    setOauthLoading(null)
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!isLoaded) return
+    if (!form.email.trim() || !form.password.trim()) {
+      toast.error('Please enter your email and password.')
+      return
+    }
     setLoading(true)
     try {
-      const result = await signIn.create({
-        identifier: form.email,
-        password: form.password,
-      })
-
-      if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId })
-        router.push(fromPath ?? '/')
-      } else {
-        toast.error('Additional verification required. Please try again.')
-      }
+      const { data } = await authApi.login(form)
+      setUser(data.user, data.token)
+      toast.success(`Welcome back, ${data.user.name}!`)
+      router.push(data.user.role === 'ADMIN' ? '/admin' : '/')
     } catch (err: unknown) {
-      const clerkErr = err as { errors?: Array<{ message: string; code: string }> }
-      const code = clerkErr?.errors?.[0]?.code
-      const msg = clerkErr?.errors?.[0]?.message
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } }; code?: string }
+      const status = axiosErr?.response?.status
+      const serverMsg = axiosErr?.response?.data?.message
+      const isTimeout = axiosErr?.code === 'ECONNABORTED'
 
-      if (code === 'form_identifier_not_found') {
-        toast.error('No account found with this email.')
-      } else if (code === 'form_password_incorrect') {
-        toast.error('Incorrect password. Please try again.')
-      } else if (code === 'too_many_requests') {
-        toast.error('Too many attempts — please wait a moment.')
+      if (isTimeout) {
+        toast.error('Server is waking up — please wait 30 seconds and try again. (Render free tier cold start)', { duration: 6000 })
+      } else if (status === 401 || status === 400) {
+        toast.error(serverMsg || 'Invalid email or password.')
+      } else if (status === 404) {
+        toast.error('No account found with this email. Please register first.')
+      } else if (status === 500) {
+        toast.error('Server error — please try again in a moment.')
+      } else if (!status) {
+        toast.error('Server is starting up — please wait ~30 seconds and try again.', { duration: 8000 })
       } else {
-        toast.error(msg || 'Sign in failed. Please try again.')
+        toast.error(serverMsg || 'Login failed. Please try again.')
       }
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleOAuth(provider: 'oauth_google' | 'oauth_github') {
-    if (!isLoaded) return
-    setOauthLoading(provider === 'oauth_google' ? 'google' : 'github')
-    try {
-      await signIn.authenticateWithRedirect({
-        strategy: provider,
-        redirectUrl: `${window.location.origin}/sso-callback`,
-        redirectUrlComplete: `${window.location.origin}${fromPath ?? '/'}`,
-      })
-    } catch (err: unknown) {
-      const clerkErr = err as { errors?: Array<{ message: string }> }
-      toast.error(clerkErr?.errors?.[0]?.message || 'OAuth sign in failed.')
-      setOauthLoading(null)
-    }
-  }
-
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-10">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 pb-24">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="font-heading text-4xl text-[#E8F4FD] tracking-widest">SIGN IN</div>
           <div className="h-0.5 w-10 bg-[#00D4FF] mx-auto mt-3" />
-          <p className="text-[#4A7FA5] text-sm mt-3">Welcome back to N &amp; N Audio Systems</p>
+          <p className="text-[#4A7FA5] text-sm mt-3">Access your N &amp; N Audio account</p>
         </div>
 
         <div className="hud-card p-8">
-          {/* Social Login Buttons */}
-          <div className="space-y-3 mb-6">
-            <button
-              type="button"
-              onClick={() => handleOAuth('oauth_google')}
-              disabled={!isLoaded || oauthLoading !== null}
-              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] hover:bg-[rgba(0,212,255,0.08)] hover:border-[rgba(0,212,255,0.4)] text-[#E8F4FD] font-mono text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {oauthLoading === 'google' ? <Spinner size={16} /> : <GoogleIcon />}
-              Continue with Google
-            </button>
-            <button
-              type="button"
-              onClick={() => handleOAuth('oauth_github')}
-              disabled={!isLoaded || oauthLoading !== null}
-              className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] hover:bg-[rgba(0,212,255,0.08)] hover:border-[rgba(0,212,255,0.4)] text-[#E8F4FD] font-mono text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {oauthLoading === 'github' ? <Spinner size={16} /> : <GitHubIcon />}
-              Continue with GitHub
-            </button>
-          </div>
+          {/* Social login — temporarily disabled */}
+          {/* {socialProviders.length > 0 && (
+            <>
+              <div className="space-y-3 mb-6">
+                {socialProviders.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleOAuth(p.id)}
+                    disabled={!!oauthLoading}
+                    className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded border border-[rgba(0,212,255,0.2)] bg-[rgba(0,212,255,0.04)] text-[#E8F4FD] hover:border-[rgba(0,212,255,0.5)] hover:bg-[rgba(0,212,255,0.08)] transition-all font-mono text-sm"
+                  >
+                    {oauthLoading === p.id ? <Spinner size={18} /> : p.icon}
+                    Continue with {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+                <span className="text-[#4A7FA5] text-xs font-mono">OR</span>
+                <div className="flex-1 h-px bg-[rgba(0,212,255,0.15)]" />
+              </div>
+            </>
+          )} */}
 
-          {/* Divider */}
-          <div className="relative flex items-center mb-6">
-            <div className="flex-1 border-t border-[rgba(0,212,255,0.15)]" />
-            <span className="mx-4 text-[#4A7FA5] font-mono text-xs">OR</span>
-            <div className="flex-1 border-t border-[rgba(0,212,255,0.15)]" />
-          </div>
-
-          {/* Email/Password Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="login-email" className="block text-xs text-[#4A7FA5] font-mono mb-1.5">EMAIL *</label>
+              <label className="block text-xs text-[#4A7FA5] font-mono mb-1.5">EMAIL ADDRESS</label>
               <input
-                id="login-email"
-                name="email"
                 type="email"
                 value={form.email}
-                onChange={handleChange}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 required
-                autoComplete="email"
                 className="input-hud"
                 placeholder="you@example.com"
+                autoComplete="email"
               />
             </div>
+
             <div>
-              <label htmlFor="login-password" className="block text-xs text-[#4A7FA5] font-mono mb-1.5">PASSWORD *</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-[#4A7FA5] font-mono">PASSWORD</label>
+                <Link href="/auth/forgot-password" className="text-xs text-[#00D4FF] hover:underline font-mono">
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
-                  id="login-password"
-                  name="password"
                   type={showPass ? 'text' : 'password'}
                   value={form.password}
-                  onChange={handleChange}
+                  onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                   required
-                  autoComplete="current-password"
                   className="input-hud pr-10"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
-                  aria-label={showPass ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPass((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#4A7FA5] hover:text-[#00D4FF] transition-colors"
                 >
-                  {showPass ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <div className="text-right">
-              <Link href="/auth/forgot-password" className="font-mono text-xs text-[#4A7FA5] hover:text-[#00D4FF] transition-colors">
-                Forgot password?
-              </Link>
-            </div>
-
             <button
               type="submit"
-              disabled={loading || !isLoaded}
-              className="btn-cyan w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || !serverReady}
+              className="btn-gold w-full py-3 flex items-center justify-center gap-2 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? <><Spinner size={16} /> SIGNING IN…</> : 'SIGN IN'}
+              {loading ? (
+                <><Spinner size={16} /> SIGNING IN...</>
+              ) : !serverReady ? (
+                <><Spinner size={16} /> CONNECTING TO SERVER…</>
+              ) : (
+                'SIGN IN'
+              )}
             </button>
+            {!serverReady && (
+              <p className="text-center text-[#4A7FA5] text-xs font-mono mt-1">
+                Server is waking up — form will unlock shortly
+              </p>
+            )}
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-[#4A7FA5] text-sm">
               Don&apos;t have an account?{' '}
-              <Link href="/auth/register" className="text-[#00D4FF] hover:underline">Create one</Link>
+              <Link href="/auth/register" className="text-[#00D4FF] hover:underline">
+                Register here
+              </Link>
             </p>
           </div>
         </div>
       </div>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
   )
 }

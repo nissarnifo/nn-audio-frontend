@@ -107,7 +107,8 @@ export default function RegisterPage() {
       if (isTimeout) {
         toast.error('Server is waking up — please wait 30 seconds and try again. (Render free tier cold start)', { duration: 6000 })
       } else if (status === 409) {
-        toast.error('An account with this email already exists. Please sign in.')
+        toast.error('This email is already registered. Please sign in or use forgot password.', { duration: 5000 })
+        router.push('/auth/login')
       } else if (status === 400) {
         toast.error(serverMsg || 'Please check all fields and try again.')
       } else if (status === 500) {

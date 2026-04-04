@@ -2,35 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import slugify from 'slugify'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, apiError } from '@/lib/api-auth'
+import { formatProduct } from './_shared'
 
 const productInclude = {
   images: { orderBy: { order: 'asc' as const } },
   variants: true,
-}
-
-export function formatProduct(p: {
-  id: string; name: string; slug: string; sku: string; description: string
-  category: string; badge?: string | null; specs: unknown; rating: number
-  reviewCount: number; isActive: boolean; createdAt: Date
-  images: { id: string; url: string; isPrimary: boolean; order: number }[]
-  variants: { id: string; label: string; price: number; stockQty: number; isActive: boolean }[]
-}) {
-  return {
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    sku: p.sku,
-    description: p.description,
-    category: p.category,
-    badge: p.badge?.replace('_', ' ') ?? null,
-    specs: p.specs,
-    rating: p.rating,
-    review_count: p.reviewCount,
-    is_active: p.isActive,
-    created_at: p.createdAt,
-    images: p.images.map((img) => ({ id: img.id, url: img.url, is_primary: img.isPrimary, order: img.order })),
-    variants: p.variants.map((v) => ({ id: v.id, label: v.label, price: v.price, stock_qty: v.stockQty, is_active: v.isActive })),
-  }
 }
 
 // GET /api/products — list with filters/pagination

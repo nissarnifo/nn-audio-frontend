@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import slugify from 'slugify'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin, apiError } from '@/lib/api-auth'
-import { formatProduct } from '../route'
+import { formatProduct } from '../_shared'
 
 const productInclude = {
   images: { orderBy: { order: 'asc' as const } },

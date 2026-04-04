@@ -8,7 +8,6 @@ export const orderInclude = {
   address: true,
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatOrder(o: any) {
   return {
     id: o.id,

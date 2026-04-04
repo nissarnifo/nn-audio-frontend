@@ -44,7 +44,6 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') ?? '12')
     const skip = (page - 1) * limit
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { isActive: true }
     if (category) where.category = category
     if (search) where.OR = [
@@ -52,7 +51,6 @@ export async function GET(req: NextRequest) {
       { description: { contains: search, mode: 'insensitive' } },
     ]
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let orderBy: any = { createdAt: 'desc' }
     if (sort === 'price_asc') orderBy = { variants: { _min: { price: 'asc' } } }
     else if (sort === 'price_desc') orderBy = { variants: { _min: { price: 'desc' } } }
@@ -93,7 +91,6 @@ export async function POST(req: NextRequest) {
         badge: badge?.replace(' ', '_') || null,
         specs: specs || {},
         variants: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           create: variants?.map((v: any) => ({ label: v.label, price: v.price, stockQty: v.stock_qty ?? 0 })) || [],
         },
       },

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, apiError } from '@/lib/api-auth'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fmt(a: any) {
   return {
     id: a.id, label: a.label, name: a.name, phone: a.phone,

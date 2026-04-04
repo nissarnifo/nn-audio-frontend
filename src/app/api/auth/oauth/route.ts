@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
       : provider === 'github' ? { githubId: providerId }
       : { discordId: providerId }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = prisma.user as any
     let user = (await db.findUnique({ where: providerWhere })) ?? (await db.findUnique({ where: { email } }))
 

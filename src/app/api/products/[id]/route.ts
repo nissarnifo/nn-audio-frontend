@@ -31,7 +31,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     requireAdmin(req)
     const { name, description, category, badge, specs, is_active, variants } = await req.json()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: any = {}
     if (name) { data.name = name; data.slug = slugify(name, { lower: true, strict: true }) }
     if (description) data.description = description
@@ -47,7 +46,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         ...(variants && {
           variants: {
             deleteMany: {},
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             create: variants.map((v: any) => ({
               label: v.label, price: v.price, stockQty: v.stock_qty ?? 0, isActive: v.is_active ?? true,
             })),

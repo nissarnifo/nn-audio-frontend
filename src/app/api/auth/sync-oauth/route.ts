@@ -1,7 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
-import { API_BASE_URL, ENDPOINTS } from '@/config'
+import { prisma } from '@/lib/prisma'
+import { signToken } from '@/lib/api-auth'
 
 export async function POST() {
   const session = await getServerSession(authOptions)
@@ -10,28 +11,45 @@ export async function POST() {
     return NextResponse.json({ error: 'No OAuth session found' }, { status: 401 })
   }
 
-  try {
-    const res = await fetch(`${API_BASE_URL}${ENDPOINTS.auth.oauth}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        provider: session.oauthProvider,
-        providerId: session.oauthProviderId,
-        email: session.oauthEmail,
-        name: session.oauthName,
-      }),
-      signal: AbortSignal.timeout(9000), // fail fast — never hang past Vercel's 10s limit
-    })
+  // If the JWT callback already synced successfully, return the cached result
+  if (session.backendToken && session.backendUser) {
+    return NextResponse.json({ token: session.backendToken, user: session.backendUser })
+  }
 
-    if (!res.ok) {
-      const text = await res.text()
-      return NextResponse.json({ error: `Backend error: ${text}` }, { status: res.status })
+  try {
+    const provider = session.oauthProvider as 'google' | 'github' | 'discord'
+    const providerId = session.oauthProviderId
+
+    const providerWhere =
+      provider === 'google' ? { googleId: providerId }
+      : provider === 'github' ? { githubId: providerId }
+      : { discordId: providerId }
+
+    const providerData =
+      provider === 'google' ? { googleId: providerId }
+      : provider === 'github' ? { githubId: providerId }
+      : { discordId: providerId }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = prisma.user as any
+    let user =
+      (await db.findUnique({ where: providerWhere })) ??
+      (await db.findUnique({ where: { email: session.oauthEmail } }))
+
+    if (user) {
+      if (!user[`${provider}Id`]) {
+        user = await db.update({ where: { id: user.id }, data: providerData })
+      }
+    } else {
+      user = await db.create({
+        data: { name: session.oauthName || session.oauthEmail, email: session.oauthEmail, ...providerData },
+      })
     }
 
-    const data = await res.json()
-    return NextResponse.json({ token: data.token, user: data.user })
+    const safeUser = { id: user.id, name: user.name, email: user.email, phone: user.phone ?? '', role: user.role, created_at: user.createdAt }
+    return NextResponse.json({ token: signToken(user.id, user.role), user: safeUser })
   } catch (err) {
-    console.error('sync-oauth retry failed', err)
-    return NextResponse.json({ error: 'Backend unreachable' }, { status: 503 })
+    console.error('sync-oauth failed', err)
+    return NextResponse.json({ error: 'OAuth sync failed' }, { status: 500 })
   }
 }

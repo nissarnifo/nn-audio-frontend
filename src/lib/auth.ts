@@ -2,7 +2,9 @@ import { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import GithubProvider from 'next-auth/providers/github'
 import DiscordProvider from 'next-auth/providers/discord'
-import { API_BASE_URL, ENDPOINTS, oauthConfig } from '@/config'
+import { oauthConfig } from '@/config'
+import { prisma } from '@/lib/prisma'
+import { signToken } from '@/lib/api-auth'
 
 const providers: NextAuthOptions['providers'] = []
 
@@ -27,34 +29,61 @@ if (oauthConfig.discord.enabled) {
   }))
 }
 
+async function handleOAuthLogin(params: {
+  provider: string
+  providerId: string
+  email: string
+  name: string
+}) {
+  const { provider, providerId, email, name } = params
+
+  const providerWhere =
+    provider === 'google' ? { googleId: providerId }
+    : provider === 'github' ? { githubId: providerId }
+    : { discordId: providerId }
+
+  const providerData =
+    provider === 'google' ? { googleId: providerId }
+    : provider === 'github' ? { githubId: providerId }
+    : { discordId: providerId }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = prisma.user as any
+  let user = (await db.findUnique({ where: providerWhere })) ?? (await db.findUnique({ where: { email } }))
+
+  if (user) {
+    if (!user[`${provider}Id`]) {
+      user = await db.update({ where: { id: user.id }, data: providerData })
+    }
+  } else {
+    user = await db.create({ data: { name: name || email, email, ...providerData } })
+  }
+
+  return {
+    user: { id: user.id, name: user.name, email: user.email, phone: user.phone ?? '', role: user.role, created_at: user.createdAt },
+    token: signToken(user.id, user.role),
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers,
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, account, profile }) {
-      if (account && profile) {
-        // Store for client-side retry if backend is sleeping
+    async jwt({ token, account }) {
+      if (account) {
         token.oauthProvider = account.provider
         token.oauthProviderId = account.providerAccountId
         try {
-          const res = await fetch(`${API_BASE_URL}${ENDPOINTS.auth.oauth}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              provider: account.provider,
-              providerId: account.providerAccountId,
-              email: token.email,
-              name: token.name,
-            }),
-            signal: AbortSignal.timeout(25000),
+          const { user, token: jwt } = await handleOAuthLogin({
+            provider: account.provider,
+            providerId: account.providerAccountId,
+            email: token.email!,
+            name: token.name || token.email!,
           })
-          if (res.ok) {
-            const data = await res.json()
-            token.backendToken = data.token
-            token.backendUser = data.user
-          }
+          token.backendToken = jwt
+          token.backendUser = user
         } catch (err) {
-          console.error('Backend OAuth sync failed, will retry on client', err)
+          console.error('OAuth DB sync failed', err)
         }
       }
       return token

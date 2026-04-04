@@ -1,37 +1,30 @@
 /**
  * CENTRAL CONFIGURATION — src/config/index.ts
  *
- * ALL environment variables are read exactly once, here.
+ * Single-server setup: Next.js handles both frontend and API routes.
+ * All API calls go to /api/* (same origin — no CORS, no external server).
  *
- * LOOSE COUPLING GUIDE — to migrate after 3 months to your own server:
- *   1. Change NEXT_PUBLIC_API_URL  → points to any backend, anywhere
- *   2. Change NEXTAUTH_URL         → your own domain
- *   3. Change NEXTAUTH_SECRET      → new random secret
- *   4. Set Razorpay live key       → switch from test to production
- *   5. That's it. Zero code changes needed.
- *
- * CURRENT STACK (3-month free tier):
- *   Frontend  → Vercel (free)
- *   Backend   → Render (free)
- *   Database  → Neon PostgreSQL (free, via render.yaml)
- *   Storage   → Cloudinary (free tier)
- *   Payments  → Razorpay
- *
- * FUTURE STACK (own server):
- *   Frontend  → Any CDN / VPS / Docker
- *   Backend   → Any Node server / Docker
- *   Database  → Any PostgreSQL (same schema, pg_dump → restore)
- *   Storage   → Any S3-compatible / Cloudinary / own
+ * Environment variables needed:
+ *   DATABASE_URL          → PostgreSQL connection string (Vercel Postgres / Neon)
+ *   DIRECT_URL            → Direct DB URL (required by Vercel Postgres / Neon)
+ *   JWT_SECRET            → Random secret for signing tokens (min 32 chars)
+ *   NEXTAUTH_SECRET       → Random secret for NextAuth
+ *   NEXTAUTH_URL          → Your app URL (auto-set on Vercel)
+ *   CLOUDINARY_CLOUD_NAME → Cloudinary cloud name
+ *   CLOUDINARY_API_KEY    → Cloudinary API key
+ *   CLOUDINARY_API_SECRET → Cloudinary API secret
+ *   RAZORPAY_KEY_ID       → Razorpay key ID (public)
+ *   RAZORPAY_KEY_SECRET   → Razorpay key secret
+ *   EMAIL_USER            → SMTP username (optional — for password reset emails)
+ *   EMAIL_PASS            → SMTP password (optional)
+ *   TELEGRAM_BOT_TOKEN    → Telegram bot token (optional — for order notifications)
+ *   TELEGRAM_CHAT_ID      → Telegram chat ID (optional)
  */
 
-// ─── Backend API ───────────────────────────────────────────────────────────────
-// Change NEXT_PUBLIC_API_URL in .env to point to ANY backend, anywhere.
-// Format: https://your-backend.com/api/v1
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'
+// ─── API base — empty string = same origin (Next.js API routes at /api/*) ──────
+export const API_BASE_URL = '/api'
 
 // ─── Payments ──────────────────────────────────────────────────────────────────
-// Switch from test to live by updating NEXT_PUBLIC_RAZORPAY_KEY_ID in .env
 export const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''
 
 // ─── OAuth Providers (all optional — enable by adding keys to .env) ───────────
@@ -58,14 +51,12 @@ export const oauthConfig = {
 } as const
 
 // ─── Image Hosting ─────────────────────────────────────────────────────────────
-// Add your own CDN hostname here when migrating to own server
 export const allowedImageHostnames = [
   'res.cloudinary.com',
   'images.unsplash.com',
 ] as const
 
 // ─── API Endpoint Paths ────────────────────────────────────────────────────────
-// All backend routes defined here — change once if backend URL structure changes
 export const ENDPOINTS = {
   auth: {
     login: '/auth/login',
@@ -80,7 +71,7 @@ export const ENDPOINTS = {
   products: {
     list: '/products',
     bySlug: (slug: string) => `/products/${slug}`,
-    byId: (id: string) => `/products/id/${id}`,
+    byId: (id: string) => `/products/${id}`,        // smart detection: slug or cuid
     create: '/products',
     update: (id: string) => `/products/${id}`,
     delete: (id: string) => `/products/${id}`,

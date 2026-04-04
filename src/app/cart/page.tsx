@@ -5,9 +5,12 @@ import { Trash2, ShoppingBag } from 'lucide-react'
 import { useCartStore } from '@/store/cart.store'
 import { fmt, cloudinaryUrl, getPrimaryImage } from '@/lib/utils'
 import { Divider, EmptyState } from '@/components/ui'
+import { usePublicSettings } from '@/hooks'
 
 export default function CartPage() {
   const { items, subtotal, shipping, total, removeItem, updateQty } = useCartStore()
+  const { data: storeSettings } = usePublicSettings()
+  const freeShipThreshold = parseFloat(storeSettings?.shipping_threshold ?? '5000')
 
   if (items.length === 0) {
     return (
@@ -111,9 +114,9 @@ export default function CartPage() {
                   {shipping === 0 ? 'FREE' : fmt(shipping)}
                 </span>
               </div>
-              {shipping > 0 && (
+              {shipping > 0 && subtotal < freeShipThreshold && (
                 <p className="text-xs text-[#4A7FA5] font-mono">
-                  Add {fmt(5000 - subtotal)} more for free shipping
+                  Add {fmt(freeShipThreshold - subtotal)} more for free shipping
                 </p>
               )}
             </div>

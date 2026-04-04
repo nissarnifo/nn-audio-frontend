@@ -22,10 +22,8 @@ export function fmtDate(dateStr: string): string {
   })
 }
 
-export function getShipping(subtotal: number): number {
-  if (subtotal >= 5000) return 0
-  if (subtotal >= 2000) return 199
-  return 499
+export function getShipping(subtotal: number, threshold = 5000, fee = 299): number {
+  return subtotal >= threshold ? 0 : fee
 }
 
 export function cloudinaryUrl(url: string, width = 800): string {

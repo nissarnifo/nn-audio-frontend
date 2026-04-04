@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   // Uncomment directUrl when using Vercel Postgres or Neon with connection pooling:
   // directUrl = env("DIRECT_URL")
 }
@@ -49,11 +49,23 @@ enum ProductCategory {
   accessory
 }
 
+enum CouponType {
+  PERCENT
+  FLAT
+}
+
 enum StockMovementType {
   PURCHASE
   SALE
   ADJUSTMENT
   RETURN
+}
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  REFUNDED
 }
 
 enum ProductBadge {
@@ -78,10 +90,13 @@ model User {
   resetTokenExpiry DateTime? @map("reset_token_expiry")
   createdAt        DateTime  @default(now()) @map("created_at")
 
-  addresses Address[]
-  orders    Order[]
-  reviews   Review[]
-  cart      Cart?
+  addresses     Address[]
+  orders        Order[]
+  reviews       Review[]
+  returns       Return[]
+  questions     Question[]
+  cart          Cart?
+  wishlistItems WishlistItem[]
 
   @@map("users")
 }
@@ -97,14 +112,19 @@ model Product {
   specs       Json            @default("{}")
   rating      Float           @default(0)
   reviewCount Int             @default(0) @map("review_count")
+  salePrice   Float?          @map("sale_price")
+  saleStartAt DateTime?       @map("sale_start_at")
+  saleEndAt   DateTime?       @map("sale_end_at")
   isActive    Boolean         @default(true) @map("is_active")
   createdAt   DateTime        @default(now()) @map("created_at")
 
-  images     ProductImage[]
-  variants   ProductVariant[]
-  reviews    Review[]
-  orderItems OrderItem[]
-  cartItems  CartItem[]
+  images        ProductImage[]
+  variants      ProductVariant[]
+  reviews       Review[]
+  questions     Question[]
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+  wishlistItems WishlistItem[]
 
   @@map("products")
 }
@@ -134,6 +154,7 @@ model ProductVariant {
   cartItems      CartItem[]
   orderItems     OrderItem[]
   stockMovements StockMovement[]
+  stockAlerts    StockAlert[]
 
   @@map("product_variants")
 }
@@ -165,6 +186,22 @@ model Review {
   @@map("reviews")
 }
 
+model Question {
+  id          String    @id @default(cuid())
+  productId   String    @map("product_id")
+  userId      String    @map("user_id")
+  question    String
+  answer      String?
+  isPublished Boolean   @default(false) @map("is_published")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  answeredAt  DateTime? @map("answered_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
 model Cart {
   id     String     @id @default(cuid())
   userId String     @unique @map("user_id")
@@ -172,6 +209,19 @@ model Cart {
   items  CartItem[]
 
   @@map("carts")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
 }
 
 model CartItem {
@@ -221,14 +271,65 @@ model Order {
   total             Float
   razorpayOrderId   String?       @map("razorpay_order_id")
   razorpayPaymentId String?       @map("razorpay_payment_id")
+  couponCode        String?       @map("coupon_code")
+  discount          Float         @default(0)
+  trackingNumber    String?       @map("tracking_number")
+  trackingUrl       String?       @map("tracking_url")
+  notes             String?
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
   user    User        @relation(fields: [userId], references: [id])
   address Address     @relation(fields: [addressId], references: [id])
   items   OrderItem[]
+  return  Return?
 
   @@map("orders")
+}
+
+model StockAlert {
+  id         String    @id @default(cuid())
+  email      String
+  variantId  String    @map("variant_id")
+  notifiedAt DateTime? @map("notified_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([email, variantId])
+  @@map("stock_alerts")
+}
+
+model Coupon {
+  id        String     @id @default(cuid())
+  code      String     @unique
+  type      CouponType
+  value     Float
+  minOrder  Float      @default(0) @map("min_order")
+  maxUses   Int?       @map("max_uses")
+  usedCount Int        @default(0) @map("used_count")
+  expiresAt DateTime?  @map("expires_at")
+  isActive  Boolean    @default(true) @map("is_active")
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@map("coupons")
+}
+
+model Return {
+  id        String       @id @default(cuid())
+  orderId   String       @unique @map("order_id")
+  userId    String       @map("user_id")
+  reason    String
+  notes     String?
+  status    ReturnStatus @default(REQUESTED)
+  adminNote String?      @map("admin_note")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("returns")
 }
 
 model OrderItem {
@@ -244,4 +345,22 @@ model OrderItem {
   variant ProductVariant @relation(fields: [variantId], references: [id])
 
   @@map("order_items")
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model NewsletterSubscriber {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  source       String   @default("footer")
+  unsubscribed Boolean  @default(false) @map("unsubscribed")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("newsletter_subscribers")
 }

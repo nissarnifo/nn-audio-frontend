@@ -27,6 +27,10 @@ export interface Product {
   variants: ProductVariant[]
   rating: number
   review_count: number
+  sale_price: number | null
+  sale_start_at: string | null
+  sale_end_at: string | null
+  on_sale: boolean
   is_active: boolean
   created_at: string
 }
@@ -54,6 +58,38 @@ export interface Review {
   rating: number
   comment: string
   created_at: string
+}
+
+/* ─── Question ───────────────────────────────────────────────────── */
+export interface Question {
+  id: string
+  question: string
+  answer: string | null
+  is_published: boolean
+  created_at: string
+  answered_at: string | null
+  user_name?: string
+  // admin only
+  user?: { name: string; email: string }
+  product?: { id: string; name: string; slug: string }
+}
+
+/* ─── Return ─────────────────────────────────────────────────────── */
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'REFUNDED'
+
+export interface ReturnRequest {
+  id: string
+  order_number: string
+  order_total: number
+  order_date: string
+  reason: string
+  notes: string | null
+  status: ReturnStatus
+  admin_note: string | null
+  created_at: string
+  updated_at: string
+  // admin list only
+  user?: { name: string; email: string }
 }
 
 /* ─── Cart ───────────────────────────────────────────────────────── */
@@ -109,9 +145,57 @@ export interface Order {
   status: OrderStatus
   subtotal: number
   shipping: number
+  discount: number
+  coupon_code: string | null
   total: number
+  tracking_number: string | null
+  tracking_url: string | null
+  notes: string | null
   created_at: string
   updated_at: string
+}
+
+/* ─── Coupon ──────────────────────────────────────────────────────── */
+export type CouponType = 'PERCENT' | 'FLAT'
+
+export interface Coupon {
+  id: string
+  code: string
+  type: CouponType
+  value: number
+  min_order: number
+  max_uses: number | null
+  used_count: number
+  expires_at: string | null
+  is_active: boolean
+  created_at: string
+}
+
+export interface CouponValidation {
+  valid: boolean
+  code: string
+  type: CouponType
+  value: number
+  discount: number
+}
+
+export interface CouponUsageOrder {
+  id: string
+  date: string
+  customer: string
+  email: string
+  subtotal: number
+  discount: number
+  total: number
+  status: string
+}
+
+export interface CouponUsage {
+  code: string
+  used_count: number
+  max_uses: number | null
+  total_discount: number
+  orders: CouponUsageOrder[]
 }
 
 /* ─── User / Auth ────────────────────────────────────────────────── */
@@ -140,6 +224,7 @@ export interface AdminStats {
   monthly_revenue: Array<{ month: string; revenue: number }>
   top_products: Array<{ name: string; revenue: number }>
   orders_by_status: Array<{ status: string; count: number }>
+  low_stock_variants: Array<{ id: string; label: string; stock_qty: number; product_id: string; product_name: string; sku: string }>
 }
 
 /* ─── API Filters ────────────────────────────────────────────────── */
@@ -149,6 +234,11 @@ export interface ProductFilters {
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest'
   page?: number
   limit?: number
+  min_price?: number
+  max_price?: number
+  in_stock?: boolean
+  min_rating?: number
+  on_sale?: boolean
 }
 
 export interface PaginatedResponse<T> {

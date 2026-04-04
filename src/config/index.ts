@@ -5,8 +5,8 @@
  * All API calls go to /api/* (same origin — no CORS, no external server).
  *
  * Environment variables needed:
- *   DATABASE_URL          → PostgreSQL connection string (Vercel Postgres / Neon)
- *   DIRECT_URL            → Direct DB URL (required by Vercel Postgres / Neon)
+ *   DATABASE_URL          → PostgreSQL connection string (Neon / Supabase)
+ *   DIRECT_URL            → Direct DB URL (optional — for Neon with connection pooling)
  *   JWT_SECRET            → Random secret for signing tokens (min 32 chars)
  *   NEXTAUTH_SECRET       → Random secret for NextAuth
  *   NEXTAUTH_URL          → Your app URL (auto-set on Vercel)
@@ -24,31 +24,12 @@
 // ─── API base — empty string = same origin (Next.js API routes at /api/*) ──────
 export const API_BASE_URL = '/api'
 
+// ─── App (Frontend) URL ────────────────────────────────────────────────────────
+export const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL || 'https://nnaudio.in'
+
 // ─── Payments ──────────────────────────────────────────────────────────────────
 export const RAZORPAY_KEY_ID = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || ''
-
-// ─── OAuth Providers (all optional — enable by adding keys to .env) ───────────
-export const oauthConfig = {
-  google: {
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    enabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-  },
-  github: {
-    clientId: process.env.GITHUB_CLIENT_ID || '',
-    clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-    enabled: !!(
-      process.env.GITHUB_CLIENT_ID &&
-      process.env.GITHUB_CLIENT_SECRET &&
-      process.env.GITHUB_CLIENT_SECRET !== 'PASTE_YOUR_SECRET_HERE'
-    ),
-  },
-  discord: {
-    clientId: process.env.DISCORD_CLIENT_ID || '',
-    clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
-    enabled: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
-  },
-} as const
 
 // ─── Image Hosting ─────────────────────────────────────────────────────────────
 export const allowedImageHostnames = [
@@ -81,6 +62,8 @@ export const ENDPOINTS = {
     imageDelete: (productId: string, imageId: string) =>
       `/products/${productId}/images/${imageId}`,
     reviews: (slug: string) => `/products/${slug}/reviews`,
+    sale: (id: string) => `/products/${id}/sale`,
+    questions: (slug: string) => `/products/${slug}/questions`,
   },
   cart: {
     root: '/cart',
@@ -101,14 +84,53 @@ export const ENDPOINTS = {
     razorpayOrder: '/payments/razorpay/order',
     razorpayVerify: '/payments/razorpay/verify',
   },
+  coupons: {
+    validate: '/coupons/validate',
+    root: '/coupons',
+    byId: (id: string) => `/coupons/${id}`,
+    usage: (id: string) => `/coupons/${id}/usage`,
+  },
+  stockAlerts: {
+    subscribe: '/stock-alerts',
+    adminList: '/stock-alerts/admin',
+  },
+  returns: {
+    root: '/returns',
+    me: '/returns/me',
+  },
+  wishlist: {
+    root: '/wishlist',
+    item: (productId: string) => `/wishlist/${productId}`,
+  },
+  settings: {
+    public: '/settings',
+    all: '/settings/all',
+    update: '/settings',
+  },
+  newsletter: {
+    subscribe: '/newsletter/subscribe',
+    unsubscribe: '/newsletter/unsubscribe',
+    subscribers: '/newsletter/subscribers',
+    export: '/newsletter/export',
+    deleteSubscriber: (id: string) => `/newsletter/subscribers/${id}`,
+  },
   admin: {
     stats: '/admin/stats',
+    analytics: '/admin/analytics',
     orders: '/admin/orders',
     orderStatus: (id: string) => `/admin/orders/${id}/status`,
     customers: '/admin/customers',
+    customerById: (id: string) => `/admin/customers/${id}`,
     inventory: '/admin/inventory',
     inventoryRestock: '/admin/inventory/restock',
     inventoryAdjust: '/admin/inventory/adjust',
     inventoryMovements: '/admin/inventory/movements',
+    returns: '/admin/returns',
+    returnStatus: (id: string) => `/admin/returns/${id}/status`,
+    questions: '/admin/questions',
+    questionById: (id: string) => `/admin/questions/${id}`,
+    notifications: '/admin/notifications',
+    reviews: '/admin/reviews',
+    reviewById: (id: string) => `/admin/reviews/${id}`,
   },
 } as const

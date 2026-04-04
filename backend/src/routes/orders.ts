@@ -1,11 +1,19 @@
 import { Router } from 'express'
 import { prisma, requireAuth, AuthRequest } from '../middleware/auth'
-import { sendOrderNotification } from '../utils/notify'
+import { sendOrderNotification, sendOrderConfirmationEmail } from '../utils/notify'
+import { calcDiscount } from './coupons'
 
 const router = Router()
 
-const SHIPPING_THRESHOLD = 5000
-const SHIPPING_FEE = 299
+async function getShippingSettings(): Promise<{ threshold: number; fee: number }> {
+  const rows = await prisma.setting.findMany({ where: { key: { in: ['shipping_threshold', 'shipping_fee'] } } })
+  const map: Record<string, string> = {}
+  for (const r of rows) map[r.key] = r.value
+  return {
+    threshold: parseFloat(map.shipping_threshold ?? '5000'),
+    fee: parseFloat(map.shipping_fee ?? '299'),
+  }
+}
 
 const orderInclude = {
   items: {
@@ -26,7 +34,12 @@ function formatOrder(o: any) {
     payment_status: o.paymentStatus,
     subtotal: o.subtotal,
     shipping: o.shipping,
+    discount: o.discount,
+    coupon_code: o.couponCode ?? null,
     total: o.total,
+    tracking_number: o.trackingNumber ?? null,
+    tracking_url: o.trackingUrl ?? null,
+    notes: o.notes ?? null,
     created_at: o.createdAt,
     updated_at: o.updatedAt,
     address: {
@@ -68,7 +81,7 @@ function formatOrder(o: any) {
 
 // POST /api/v1/orders
 router.post('/', requireAuth, async (req: AuthRequest, res) => {
-  const { paymentMethod, addressId, razorpay } = req.body
+  const { paymentMethod, addressId, razorpay, couponCode, notes } = req.body
 
   const cart = await prisma.cart.findUnique({
     where: { userId: req.user!.id },
@@ -80,8 +93,25 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   }
 
   const subtotal = cart.items.reduce((sum, i) => sum + i.variant.price * i.qty, 0)
-  const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE
-  const total = subtotal + shipping
+  const { threshold, fee } = await getShippingSettings()
+  const shipping = subtotal >= threshold ? 0 : fee
+
+  // Apply coupon
+  let discount = 0
+  let appliedCouponCode: string | null = null
+  if (couponCode) {
+    const coupon = await prisma.coupon.findUnique({ where: { code: String(couponCode).toUpperCase() } })
+    if (coupon && coupon.isActive && subtotal >= coupon.minOrder &&
+        (!coupon.expiresAt || coupon.expiresAt > new Date()) &&
+        (coupon.maxUses === null || coupon.usedCount < coupon.maxUses)) {
+      discount = calcDiscount(coupon, subtotal)
+      appliedCouponCode = coupon.code
+      // Increment usedCount
+      await prisma.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } })
+    }
+  }
+
+  const total = Math.max(0, subtotal + shipping - discount)
 
   const orderNumber = `NNA-${Date.now()}`
 
@@ -94,7 +124,10 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       paymentStatus: paymentMethod === 'RAZORPAY' ? 'PAID' : 'PENDING',
       subtotal,
       shipping,
+      discount,
+      couponCode: appliedCouponCode,
       total,
+      notes: notes ? String(notes).trim().slice(0, 500) || null : null,
       razorpayOrderId: razorpay?.razorpay_order_id ?? null,
       razorpayPaymentId: razorpay?.razorpay_payment_id ?? null,
       items: {
@@ -123,10 +156,10 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   // Clear cart
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } })
 
-  // Notify admin about new order (fire-and-forget — never blocks response)
+  // Notifications (fire-and-forget — never blocks response)
   prisma.user.findUnique({ where: { id: req.user!.id } }).then((user) => {
     if (!user) return
-    return sendOrderNotification({
+    const payload = {
       orderNumber,
       customerName: user.name,
       customerEmail: user.email,
@@ -151,7 +184,11 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
         qty: i.qty,
         price: i.variant.price,
       })),
-    })
+    }
+    return Promise.all([
+      sendOrderNotification(payload),       // admin email + telegram
+      sendOrderConfirmationEmail(payload),  // customer confirmation email
+    ])
   }).catch(() => {}) // swallow errors — notification failure must not break order
 
   res.status(201).json(formatOrder(order))

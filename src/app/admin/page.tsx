@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { TrendingUp, ShoppingBag, Users, Package, AlertCircle } from 'lucide-react'
+import { TrendingUp, ShoppingBag, Users, Package, AlertCircle, AlertTriangle } from 'lucide-react'
 import { useAdminStats } from '@/hooks'
 import { fmt } from '@/lib/utils'
 import { PageLoading, StatusBadge, SectionHeader } from '@/components/ui'
@@ -23,6 +23,8 @@ export default function AdminDashboard() {
     { href: '/admin/customers', label: 'CUSTOMERS', icon: <Users size={20} /> },
     { href: '/admin/analytics', label: 'ANALYTICS', icon: <TrendingUp size={20} /> },
   ]
+
+  const lowStock = stats?.low_stock_variants ?? []
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -49,8 +51,8 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Stats summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Stats + Low Stock */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="hud-card p-6">
           <h3 className="font-heading text-base text-[#E8F4FD] tracking-wider mb-4">ORDERS BY STATUS</h3>
           <div className="space-y-3">
@@ -78,6 +80,53 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Low Stock Alerts */}
+      {lowStock.length > 0 && (
+        <div className="hud-card p-6 border border-[rgba(255,183,0,0.2)] bg-[rgba(255,183,0,0.02)]">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={16} className="text-[#FFB700]" />
+              <h3 className="font-heading text-base text-[#FFB700] tracking-wider">LOW STOCK ALERTS</h3>
+              <span className="font-mono text-[10px] bg-[rgba(255,183,0,0.15)] text-[#FFB700] border border-[rgba(255,183,0,0.3)] px-2 py-0.5 rounded-full">
+                {lowStock.length}
+              </span>
+            </div>
+            <Link
+              href="/admin/inventory"
+              className="font-mono text-xs text-[#00D4FF] hover:text-[#E8F4FD] transition-colors"
+            >
+              VIEW INVENTORY →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {lowStock.map((v) => (
+              <div
+                key={v.id}
+                className={`flex items-center justify-between px-3 py-2.5 rounded border ${
+                  v.stock_qty === 0
+                    ? 'border-[rgba(255,51,102,0.3)] bg-[rgba(255,51,102,0.05)]'
+                    : 'border-[rgba(255,183,0,0.2)] bg-[rgba(255,183,0,0.04)]'
+                }`}
+              >
+                <div className="min-w-0 mr-3">
+                  <p className="font-mono text-[10px] text-[#4A7FA5] truncate">{v.sku}</p>
+                  <p className="text-xs text-[#E8F4FD] truncate leading-tight">{v.product_name}</p>
+                  <p className="font-mono text-[10px] text-[#4A7FA5] mt-0.5">{v.label}</p>
+                </div>
+                <span
+                  className={`font-mono text-sm font-bold flex-shrink-0 ${
+                    v.stock_qty === 0 ? 'text-[#FF3366]' : 'text-[#FFB700]'
+                  }`}
+                >
+                  {v.stock_qty === 0 ? 'OUT' : v.stock_qty}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
     const variant = await prisma.productVariant.findUnique({ where: { id: variantId } })
     if (!variant) return NextResponse.json({ error: 'Variant not found' }, { status: 404 })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const existing = cart.items.find((i: any) => i.variant.id === variantId)
     if (existing) {
       await prisma.cartItem.update({ where: { id: existing.id }, data: { qty: existing.qty + qty } })

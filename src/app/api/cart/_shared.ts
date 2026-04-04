@@ -10,7 +10,6 @@ export const cartInclude = {
   },
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatCart(cart: any) {
   const items = cart.items.map((item: any) => ({
     id: item.id,

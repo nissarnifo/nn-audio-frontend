@@ -3,7 +3,7 @@
     "silent": true
   },
   "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ] && exit 0 || exit 1",
-  "buildCommand": "npx prisma generate && npx prisma db push && next build",
+  "buildCommand": "npx prisma generate && npx prisma db push && npx tsx prisma/seed.ts && next build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
   "functions": {

@@ -22,12 +22,39 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') ?? '12')
     const skip = (page - 1) * limit
 
+    // Optional filters
+    const minPrice = searchParams.get('min_price') ? Number(searchParams.get('min_price')) : undefined
+    const maxPrice = searchParams.get('max_price') ? Number(searchParams.get('max_price')) : undefined
+    const inStock = searchParams.get('in_stock') === 'true'
+    const minRating = searchParams.get('min_rating') ? Number(searchParams.get('min_rating')) : undefined
+    const onSale = searchParams.get('on_sale') === 'true'
+    const idsParam = searchParams.get('ids')
+
     const where: any = { isActive: true }
     if (category) where.category = category
     if (search) where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
       { description: { contains: search, mode: 'insensitive' } },
     ]
+    if (idsParam) where.id = { in: idsParam.split(',') }
+    if (minRating !== undefined) where.rating = { gte: minRating }
+
+    // Variant-level filters (price range + stock)
+    const variantFilter: any = { isActive: true }
+    if (minPrice !== undefined) variantFilter.price = { ...variantFilter.price, gte: minPrice }
+    if (maxPrice !== undefined) variantFilter.price = { ...variantFilter.price, lte: maxPrice }
+    if (inStock) variantFilter.stockQty = { gt: 0 }
+    if (Object.keys(variantFilter).length > 1) where.variants = { some: variantFilter }
+
+    // On-sale filter
+    if (onSale) {
+      const now = new Date()
+      where.salePrice = { not: null }
+      where.AND = [
+        { OR: [{ saleStartAt: null }, { saleStartAt: { lte: now } }] },
+        { OR: [{ saleEndAt: null }, { saleEndAt: { gt: now } }] },
+      ]
+    }
 
     let orderBy: any = { createdAt: 'desc' }
     if (sort === 'price_asc') orderBy = { variants: { _min: { price: 'asc' } } }

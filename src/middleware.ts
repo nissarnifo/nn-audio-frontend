@@ -1,12 +1,21 @@
-// Middleware is intentionally minimal.
-// Auth protection is handled at the page/layout level using:
-//   - useAuthStore (Zustand) for client components
-//   - JWT verification in API routes via src/lib/api-auth.ts
-// NextAuth session management is handled by the [...nextauth] route.
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-export { default } from 'next-auth/middleware'
+// Routes that require authentication — Clerk will redirect to sign-in if not logged in
+const isProtectedRoute = createRouteMatcher([
+  '/account(.*)',
+  '/cart',
+  '/admin(.*)',
+])
+
+export default clerkMiddleware(async (auth, req) => {
+  if (isProtectedRoute(req)) {
+    await auth.protect()
+  }
+})
 
 export const config = {
-  // Only run middleware on routes that need session checking
-  matcher: [],
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jte?|ttf|woff2?|bmp|ico|gif|jpe?g|jpg|png|svg|webp)).*)',
+    '/(api|trpc)(.*)',
+  ],
 }

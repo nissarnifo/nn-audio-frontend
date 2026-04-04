@@ -5,11 +5,11 @@
  * All API calls go to /api/* (same origin — no CORS, no external server).
  *
  * Environment variables needed:
- *   DATABASE_URL          → PostgreSQL connection string (Neon / Supabase)
- *   DIRECT_URL            → Direct DB URL (optional — for Neon with connection pooling)
- *   JWT_SECRET            → Random secret for signing tokens (min 32 chars)
- *   NEXTAUTH_SECRET       → Random secret for NextAuth
- *   NEXTAUTH_URL          → Your app URL (auto-set on Vercel)
+ *   DATABASE_URL                       → PostgreSQL connection string (Neon / Supabase)
+ *   DIRECT_URL                         → Direct DB URL (optional — for Neon with connection pooling)
+ *   JWT_SECRET                         → Random secret for signing backend tokens (min 32 chars)
+ *   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY  → Clerk publishable key (from Clerk dashboard)
+ *   CLERK_SECRET_KEY                   → Clerk secret key (from Clerk dashboard)
  *   CLOUDINARY_CLOUD_NAME → Cloudinary cloud name
  *   CLOUDINARY_API_KEY    → Cloudinary API key
  *   CLOUDINARY_API_SECRET → Cloudinary API secret

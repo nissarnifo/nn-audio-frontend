@@ -4,9 +4,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ShoppingCart, User, LogOut, LayoutDashboard, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useClerk } from '@clerk/nextjs'
 import { useCartStore } from '@/store/cart.store'
 import { useAuthStore } from '@/store/auth.store'
-import { authApi } from '@/services/api'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
@@ -19,14 +19,14 @@ export default function Navbar() {
   const router = useRouter()
   const { count } = useCartStore()
   const { isLoggedIn, isAdmin, logout } = useAuthStore()
+  const { signOut } = useClerk()
   const qc = useQueryClient()
   const [menuOpen, setMenuOpen] = useState(false)
 
   async function handleLogout() {
-    try { await authApi.logout() } catch {}
     logout()
     qc.clear()
-    router.push('/')
+    await signOut({ redirectUrl: '/' })
   }
 
   return (

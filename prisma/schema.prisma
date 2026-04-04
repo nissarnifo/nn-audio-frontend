@@ -82,6 +82,7 @@ model User {
   email            String    @unique
   phone            String?
   password         String?
+  clerkId          String?   @unique @map("clerk_id")
   googleId         String?   @unique @map("google_id")
   githubId         String?   @unique @map("github_id")
   discordId        String?   @unique @map("discord_id")
